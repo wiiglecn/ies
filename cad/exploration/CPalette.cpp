@@ -28,22 +28,12 @@
 #error _DEBUG should not be defined except in internal Adesk debug builds
 #endif
 
-#include "aduiPalette.h"
+
 #include "CPalette.h"
 #include "PaletteSet.h"
+//#include "PolylineMarker.h"
 
 
-
-//Utility functions to add and get the child node from the parent XML-DOM node
-extern BOOL GetChildNode(MSXML::IXMLDOMNode* pNode, 
-								LPCTSTR pszNodeName, 
-								MSXML::IXMLDOMNode** ppChild);
-
-extern BOOL AddChildNode(MSXML::IXMLDOMNode* pNode, LPCTSTR pszChildNodeName,
-						 short nNodeType, MSXML::IXMLDOMNode** ppChild);
-
-// The file name of the persisted palette 
-#define DATA_PALETTE_FILENAME _T("TestDataPalette.xml")
 
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
@@ -89,40 +79,6 @@ CDataPalette::~CDataPalette()
 // Load the data from xml.
 BOOL CDataPalette::Load(IUnknown* pUnk) 
 {	
-	// Call base class first 
-	//CAdUiPalette::Load(pUnk);
-	//
-	//CComQIPtr<MSXML::IXMLDOMNode> pNode(pUnk);
-	//MSXML::IXMLDOMNodePtr pChild, pChild1;
-
-	//BSTR text;
-	//////////////// Item 1 ///////////////////////
-	//GetChildNode(pNode, _T("Item1"), &pChild);
-	//GetChildNode(pChild, _T("String"), &pChild1);
-	//pChild1->get_text(&text);
-	//str[0] = CString(text);
-
-	//GetChildNode(pChild, _T("Integer"), &pChild1);
-	//pChild1->get_text(&text);
-	//integer[0] = _ttoi(CString(text));
-
-	//GetChildNode(pChild, _T("Real"), &pChild1);
-	//pChild1->get_text(&text);
-	//real[0] = _tstof(CString(text));
-
-	/////////////////// Item 2 ///////////////////
-	//GetChildNode(pNode, _T("Item2"), &pChild);
-	//GetChildNode(pChild, _T("String"), &pChild1);
-	//pChild1->get_text(&text);
-	//str[1] = CString(text);
-
-	//GetChildNode(pChild, _T("Integer"), &pChild1);
-	//pChild1->get_text(&text);
-	//integer[1] = _ttoi(CString(text));
-
-	//GetChildNode(pChild, _T("Real"), &pChild1);
-	//pChild1->get_text(&text);
-	//real[1] = _tstof(CString(text));
 
 	return TRUE;
 }
@@ -132,39 +88,6 @@ BOOL CDataPalette::Save(IUnknown* pUnk)
 {
 	// Call base class first 
 	CAdUiPalette::Save(pUnk);
-	
-	//CComQIPtr<MSXML::IXMLDOMNode> pNode(pUnk);
-	//MSXML::IXMLDOMNodePtr pChild, pChild1;
-	//CString *pText=new CString;
-	//int  n = m_Combo.GetCount();
-
-	/////////////////// Item 1 ///////////////////////
-	//AddChildNode(pNode,_T("Item1"),MSXML::NODE_ELEMENT, &pChild);	
-	//AddChildNode(pChild, _T("String"), MSXML::NODE_ELEMENT, &pChild1);
-	//pChild1->put_text(CString(str[0]).AllocSysString());
-	//
-
-	//AddChildNode(pChild, _T("Integer"), MSXML::NODE_ELEMENT, &pChild1);
-	//pChild1->put_text(bstr_t(integer[0]));
-	//
-
-	//AddChildNode(pChild, _T("Real"), MSXML::NODE_ELEMENT, &pChild1);
-	//pChild1->put_text(bstr_t(real[0]));
-	//
-	//////////////////// Item 2 /////////////////////////
-	//AddChildNode(pNode,_T("Item2"),MSXML::NODE_ELEMENT, &pChild);	
-	//AddChildNode(pChild, _T("String"), MSXML::NODE_ELEMENT, &pChild1);
-	//pChild1->put_text(CString(str[1]).AllocSysString());
-	//
-
-	//AddChildNode(pChild, _T("Integer"), MSXML::NODE_ELEMENT, &pChild1);
-	//pChild1->put_text(bstr_t(integer[1]));
-	//
-
-	//AddChildNode(pChild, _T("Real"), MSXML::NODE_ELEMENT, &pChild1);
-	//pChild1->put_text(bstr_t(real[1]));
-
-	/////////////////////////////
 
 	return TRUE;
 }
@@ -179,80 +102,6 @@ void CDataPalette::OnSetActive()
     UpdateHtmlDisplay();
 }
 
-
-//LRESULT CDataPalette::OnCtlColorStatic(WPARAM wParam, LPARAM lParam)
-//{
-//	HDC hDC = (HDC)wParam;
-//
-//	// match the background of all static controls to the palette's background color 
-//	CDC *pDC = CDC::FromHandle(hDC);
-//	pDC->SetBkMode(TRANSPARENT);
-//	return (LRESULT)HBRUSH(m_Brush);
-//
-//}
-
-// Changes text in edit boxes for "Item1" and "Item2"
-//void CDataPalette::OnComboChange() 
-//{
-//	CString s;
-//	if(m_Combo.GetCurSel() == 0) {
-//		m_StringEdit.SetWindowText(str[0]);
-//		s.Format(_T("%d"), integer[0]);
-//		m_IntEdit.SetWindowText(s);
-//		s.Format(_T("%.3f"),real[0]);
-//		m_RealEdit.SetWindowText(s);
-//		m_TextLabel.SetWindowText(_T("Item 1"));
-//	} else if (m_Combo.GetCurSel() == 1) {
-//		m_StringEdit.SetWindowText(str[1]);
-//		s.Format(_T("%d"), integer[1]);
-//		m_IntEdit.SetWindowText(s);
-//		s.Format(_T("%.3f"),real[1]);
-//		m_RealEdit.SetWindowText(s);
-//		m_TextLabel.SetWindowText(_T("Item 2"));
-//	}
-//}
-
-// "Integer" edit box update
-//void CDataPalette::OnIntChange()
-//{
-//	CString s;
-//	if(m_Combo.GetCurSel() == 0) { 
-//		m_IntEdit.GetWindowText(s);
-//		integer[0] = _ttoi((LPCTSTR)s);
-//	} else if(m_Combo.GetCurSel() == 1) { 
-//		m_IntEdit.GetWindowText(s);
-//		integer[1] = _ttoi((LPCTSTR)s);
-//	}
-//}
-
-// "String" edit box update
-//void CDataPalette::OnStringChange()
-//{
-//	CString s;
-//	if(m_Combo.GetCurSel() == 0) { 
-//		m_StringEdit.GetWindowText(s);
-//		str[0] = s;
-//	} else if(m_Combo.GetCurSel() == 1) { 
-//		m_StringEdit.GetWindowText(s);
-//		str[1] = s;
-//	}
-//}
-
-// "Real" edit box update
-//void CDataPalette::OnRealChange()
-//{
-//	CString s;
-//	if(m_Combo.GetCurSel() == 0) { 
-//		m_RealEdit.GetWindowText(s);
-//		real[0] = _tstof((LPCTSTR)s);
-//	} else if(m_Combo.GetCurSel() == 1) { 
-//		m_RealEdit.GetWindowText(s);
-//		real[1] = _tstof((LPCTSTR)s);
-//	}
-//}
-
-//void CDataPalette::addControls()
-//{
 int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
     if (CAdUiPalette::OnCreate(lpCreateStruct) == -1)
@@ -333,26 +182,24 @@ void CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
     PostMessage(WM_JS_COMMAND, 0, (LPARAM)pData);
 }
 
-// 修改函数签名以匹配头文件声明和 MFC 消息映射要求
+
 LRESULT CDataPalette::HandleJsCommandInternal(WPARAM wParam, LPARAM lParam)
 {
-    // 定义相同的结构体以便解析
+    
     struct JsCmdData {
         CString cmd;
         CString param;
     };
 
-    // 从 lParam 中恢复数据指针
+    
     JsCmdData* pData = reinterpret_cast<JsCmdData*>(lParam);
     if (!pData) {
         return 0;
     }
 
-    // 提取字符串数据
     CString szCommand = pData->cmd;
     CString szParam = pData->param;
 
-    // 重要：删除堆上分配的内存，防止内存泄漏
     delete pData;
 
     // Output szParam to AutoCAD console
@@ -428,7 +275,8 @@ LRESULT CDataPalette::HandleJsCommandInternal(WPARAM wParam, LPARAM lParam)
     }
     else if (_tcscmp(szCommand, _T("PreSelectBlock")) == 0)
     {
-       
+       //CPolylineMarker marker;
+        //marker.ExecuteSelectionAndMark();
     }
     else if (_tcscmp(szCommand, _T("SwitchItem")) == 0)
     {

@@ -51,13 +51,7 @@ static char THIS_FILE[] = __FILE__;
 // Initialize static member
 cJSON* CMyPaletteSet::s_pJsonConfig = NULL;
 
-//Utility functions to add and get the child node from the parent XML-DOM node
-extern BOOL GetChildNode(MSXML::IXMLDOMNode* pNode, 
-						 LPCTSTR pszNodeName, 
-						 MSXML::IXMLDOMNode** ppChild);
 
-extern BOOL AddChildNode(MSXML::IXMLDOMNode* pNode, LPCTSTR pszChildNodeName,
-						 short nNodeType, MSXML::IXMLDOMNode** ppChild);
 
 //-----------------------------------------------------------------------------
 IMPLEMENT_DYNCREATE(CMyPaletteSet, CAdUiPaletteSet)

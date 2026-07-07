@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 6.00.0366 */
-/* at Mon Jul 06 14:01:56 2026
+/* at Tue Jul 07 10:58:36 2026
  */
 /* Compiler settings for .\CustPalette.idl:
     Oicf, W1, Zp8, env=Win32 (32b run)
