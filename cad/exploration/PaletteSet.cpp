@@ -247,10 +247,31 @@ void CMyPaletteSet::SavePaletteSet()
 // Static accessor implementation
 cJSON* CMyPaletteSet::GetJsonConfig()
 {
-	if (!s_pJsonConfig) {
+    // 1. Initialize if NULL
+    if (!s_pJsonConfig) {
         s_pJsonConfig = cJSON_CreateObject();
     }
-	return s_pJsonConfig;
+
+    // 2. Check if 'profile' object exists, if not, create it and set defaults
+    cJSON* profile = cJSON_GetObjectItem(s_pJsonConfig, "profile");
+    
+    if (!profile || !cJSON_IsObject(profile)) {
+        // Create the profile object
+        profile = cJSON_AddObjectToObject(s_pJsonConfig, "profile");
+        
+        // Add default values
+        // Note: cJSON_AddStringToObject creates a copy of the string
+        cJSON_AddStringToObject(profile, "hole_diameter", "1");
+    } else {
+        // 3. Optional: Check if specific keys inside 'profile' are missing
+        // If you want to ensure hole_diameter exists even if 'profile' exists but is empty
+        cJSON* holeDiameter = cJSON_GetObjectItem(profile, "hole_diameter");
+        if (!holeDiameter || !cJSON_IsString(holeDiameter)) {
+            cJSON_AddStringToObject(profile, "hole_diameter", "1");
+        }
+    }
+
+    return s_pJsonConfig;
 }
 
 void CMyPaletteSet::FreeJsonConfig()

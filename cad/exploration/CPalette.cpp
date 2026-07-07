@@ -31,8 +31,8 @@
 
 #include "CPalette.h"
 #include "PaletteSet.h"
-//#include "PolylineMarker.h"
-
+#include "PolylineMarker.h"
+#include "LineHolePlacer.h"
 
 
 //-----------------------------------------------------------------------------
@@ -54,12 +54,17 @@ BEGIN_MESSAGE_MAP(CDataPalette, CAdUiPalette)
 	ON_WM_CREATE()
 	ON_WM_DESTROY()
 	ON_WM_SIZE()
-	ON_MESSAGE(WM_JS_COMMAND, HandleJsCommandInternal)
+	//ON_MESSAGE(WM_JS_COMMAND, HandleJsCommandInternal)
 //	ON_CBN_SELCHANGE(ID_COMBO, OnComboChange)
 //	ON_EN_UPDATE(ID_STRING_EDIT, OnStringChange)
 //	ON_EN_UPDATE(ID_INT_EDIT, OnIntChange)
 //	ON_EN_UPDATE(ID_REAL_EDIT, OnRealChange)
 END_MESSAGE_MAP()
+
+struct JsCmdData {
+        CString cmd;
+        CString param;
+    };
 
 CDataPalette::CDataPalette()
 {
@@ -164,35 +169,46 @@ void CDataPalette::SavePalette()
 {
 	
 }
-void CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
+//void CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
+//{
+//    // Check if we are already on the main thread? 
+//    // Or just always post to be safe.
+//    
+//    
+//    
+//    JsCmdData* pData = new JsCmdData();
+//    pData->cmd = szCommand;
+//    pData->param = szParam;
+//    
+//    // Post to self. This returns immediately. The actual work happens in OnJsCommand.
+//    PostMessage(WM_JS_COMMAND, 0, (LPARAM)pData);
+//}
+// Helper function to set focus to AutoCAD Drawing Area (VC8 compatible)
+static void FocusAcadDrawing()
 {
-    // Check if we are already on the main thread? 
-    // Or just always post to be safe.
-    
-    struct JsCmdData {
-        CString cmd;
-        CString param;
-    };
-    
-    JsCmdData* pData = new JsCmdData();
-    pData->cmd = szCommand;
-    pData->param = szParam;
-    
-    // Post to self. This returns immediately. The actual work happens in OnJsCommand.
-    PostMessage(WM_JS_COMMAND, 0, (LPARAM)pData);
+    // Try to get the active document's viewport window
+    CWnd* pDwgView = acedGetAcadDwgView();
+    if (pDwgView && pDwgView->GetSafeHwnd())
+    {
+        ::SetFocus(pDwgView->GetSafeHwnd());
+    }
+    else 
+    {
+        // Fallback: If dwg view is not available, try the main frame
+        if (acedGetAcadFrame())
+            ::SetFocus(acedGetAcadFrame()->m_hWnd);
+    }
 }
 
-
-LRESULT CDataPalette::HandleJsCommandInternal(WPARAM wParam, LPARAM lParam)
+LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 {
     
-    struct JsCmdData {
-        CString cmd;
-        CString param;
-    };
-
+    FocusAcadDrawing();
+    // Restore focus to AutoCAD
     
-    JsCmdData* pData = reinterpret_cast<JsCmdData*>(lParam);
+       //if (acedGetAcadFrame())
+           //::SetFocus(acedGetAcadFrame()->m_hWnd);
+    /*JsCmdData* pData = reinterpret_cast<JsCmdData*>(lParam);
     if (!pData) {
         return 0;
     }
@@ -200,7 +216,7 @@ LRESULT CDataPalette::HandleJsCommandInternal(WPARAM wParam, LPARAM lParam)
     CString szCommand = pData->cmd;
     CString szParam = pData->param;
 
-    delete pData;
+    delete pData;*/
 
     // Output szParam to AutoCAD console
     //acutPrintf(_T("\nDebug: HandleJsCommandInternal szCommand = %s\n"), szCommand);
@@ -211,9 +227,9 @@ LRESULT CDataPalette::HandleJsCommandInternal(WPARAM wParam, LPARAM lParam)
         acutPrintf(_T("\nDebug: SetProfile Param = %s\n"), szParam);
 
         // szParam is a JSON string
-        if (szParam.IsEmpty()) {
+        /*if (szParam.IsEmpty()) {
             return 0;
-        }
+        }*/
 
         // 1. Parse the incoming JSON string
         // Convert CString/TCHAR* to UTF-8 char* for cJSON if necessary.
@@ -275,8 +291,17 @@ LRESULT CDataPalette::HandleJsCommandInternal(WPARAM wParam, LPARAM lParam)
     }
     else if (_tcscmp(szCommand, _T("PreSelectBlock")) == 0)
     {
-       //CPolylineMarker marker;
-        //marker.ExecuteSelectionAndMark();
+       CPolylineMarker marker;
+        marker.ExecuteSelectionAndMark();
+    }
+    else if (_tcscmp(szCommand, _T("PreSelectLine")) == 0)
+    {
+       CLineHolePlacer marker;
+	   marker.Execute();
+    }
+	else if (_tcscmp(szCommand, _T("Init")) == 0)
+    {
+       this->onPageReady();
     }
     else if (_tcscmp(szCommand, _T("SwitchItem")) == 0)
     {
@@ -306,5 +331,60 @@ void CDataPalette::OnSize(UINT nType, int cx, int cy)
     if (m_pHtmlView && m_pHtmlView->GetSafeHwnd())
     {
         m_pHtmlView->MoveWindow(0, 0, cx, cy, TRUE);
+    }
+}
+void CDataPalette::onPageReady()
+{
+	// 尝试注入 external 对象
+    // 注意：在较新的 IE 内核中，直接赋值 window.external 可能被禁止。
+    // 但我们可以通过执行脚本，让 JS 知道如何调用我们，或者使用一个中间层。
+    
+    // 这里我们采用一种变通方法：
+    // 如果 window.external 不可用，我们可以在 JS 中定义一个 fallback，
+    // 或者在这里执行一段 JS，将我们的 IDispatch 指针以某种方式暴露。
+    
+    // 但实际上，CHtmlView 的 default external 往往就是空的或者只支持 IOleCommandTarget。
+    // 为了彻底解决，建议修改 JS 调用方式，或者使用下面的“脚本注入”技巧来测试连通性。
+    
+    
+    cJSON* pRootConfig = CMyPaletteSet::GetJsonConfig();
+    acutPrintf(_T("[DEBUG] GetJsonConfig returned: %p\n"), pRootConfig);
+
+    if (pRootConfig) {
+        acutPrintf(_T("[DEBUG] Checking for 'profile' attribute...\n"));
+        
+        // Check if "profile" attribute exists
+        cJSON* pProfile = cJSON_GetObjectItem(pRootConfig, "profile");
+        
+        if (pProfile) {
+            acutPrintf(_T("[DEBUG] 'profile' attribute found.\n"));
+            
+            // Convert profile object to JSON string
+            char* profileJsonStr = cJSON_Print(pProfile);
+            acutPrintf(_T("[DEBUG] cJSON_Print returned: %p\n"), profileJsonStr);
+            
+            if (profileJsonStr) {
+                acutPrintf(_T("[DEBUG] Profile JSON String: %S\n"), profileJsonStr); // Use %S for char* in Unicode build
+
+                // Convert char* to CString/TCHAR* for CallJsFunction
+#ifdef UNICODE
+                CString strProfile(profileJsonStr);
+                acutPrintf(_T("[DEBUG] Calling onReady with CString length: %d\n"), strProfile.GetLength());
+                m_pHtmlView->CallJsFunction(_T("onReady"), strProfile);
+#else
+                acutPrintf(_T("[DEBUG] Calling onReady with char*\n"));
+                m_pHtmlView->CallJsFunction(_T("onReady"), profileJsonStr);
+#endif
+                // Free the string allocated by cJSON_Print
+                cJSON_free(profileJsonStr);
+                acutPrintf(_T("[DEBUG] Freed profileJsonStr.\n"));
+            } else {
+                acutPrintf(_T("[DEBUG] ERROR: cJSON_Print failed to serialize profile.\n"));
+            }
+        } else {
+            acutPrintf(_T("[DEBUG] 'profile' attribute NOT found in config.\n"));
+        }
+    } else {
+        acutPrintf(_T("[DEBUG] ERROR: pRootConfig is NULL.\n"));
     }
 }

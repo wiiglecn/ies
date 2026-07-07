@@ -52,59 +52,8 @@ void CHtmlPaletteView::OnDocumentComplete(LPCTSTR lpszURL)
 {
     CHtmlView::OnDocumentComplete(lpszURL);
 
-    // 尝试注入 external 对象
-    // 注意：在较新的 IE 内核中，直接赋值 window.external 可能被禁止。
-    // 但我们可以通过执行脚本，让 JS 知道如何调用我们，或者使用一个中间层。
-    
-    // 这里我们采用一种变通方法：
-    // 如果 window.external 不可用，我们可以在 JS 中定义一个 fallback，
-    // 或者在这里执行一段 JS，将我们的 IDispatch 指针以某种方式暴露。
-    
-    // 但实际上，CHtmlView 的 default external 往往就是空的或者只支持 IOleCommandTarget。
-    // 为了彻底解决，建议修改 JS 调用方式，或者使用下面的“脚本注入”技巧来测试连通性。
-    
     // 调试用：在控制台输出，确认 OnDocumentComplete 被触发
     acutPrintf(_T("\n[HtmlView] Document Complete: %s\n"), lpszURL);
-    cJSON* pRootConfig = CMyPaletteSet::GetJsonConfig();
-    acutPrintf(_T("[DEBUG] GetJsonConfig returned: %p\n"), pRootConfig);
-
-    if (pRootConfig) {
-        acutPrintf(_T("[DEBUG] Checking for 'profile' attribute...\n"));
-        
-        // Check if "profile" attribute exists
-        cJSON* pProfile = cJSON_GetObjectItem(pRootConfig, "profile");
-        
-        if (pProfile) {
-            acutPrintf(_T("[DEBUG] 'profile' attribute found.\n"));
-            
-            // Convert profile object to JSON string
-            char* profileJsonStr = cJSON_Print(pProfile);
-            acutPrintf(_T("[DEBUG] cJSON_Print returned: %p\n"), profileJsonStr);
-            
-            if (profileJsonStr) {
-                acutPrintf(_T("[DEBUG] Profile JSON String: %S\n"), profileJsonStr); // Use %S for char* in Unicode build
-
-                // Convert char* to CString/TCHAR* for CallJsFunction
-#ifdef UNICODE
-                CString strProfile(profileJsonStr);
-                acutPrintf(_T("[DEBUG] Calling onReady with CString length: %d\n"), strProfile.GetLength());
-                CallJsFunction(_T("onReady"), strProfile);
-#else
-                acutPrintf(_T("[DEBUG] Calling onReady with char*\n"));
-                CallJsFunction(_T("onReady"), profileJsonStr);
-#endif
-                // Free the string allocated by cJSON_Print
-                cJSON_free(profileJsonStr);
-                acutPrintf(_T("[DEBUG] Freed profileJsonStr.\n"));
-            } else {
-                acutPrintf(_T("[DEBUG] ERROR: cJSON_Print failed to serialize profile.\n"));
-            }
-        } else {
-            acutPrintf(_T("[DEBUG] 'profile' attribute NOT found in config.\n"));
-        }
-    } else {
-        acutPrintf(_T("[DEBUG] ERROR: pRootConfig is NULL.\n"));
-    }
 }
 // C++ 函数实现：被 JS 调用
 void CHtmlPaletteView::OnJsCallCpp(LPCTSTR szMessage)

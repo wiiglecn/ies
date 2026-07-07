@@ -265,6 +265,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\LineHolePlacer.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\LineJig.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Palette.cpp"
 				>
 			</File>
@@ -311,6 +319,14 @@
 			</File>
 			<File
 				RelativePath=".\InspPalette.h"
+				>
+			</File>
+			<File
+				RelativePath=".\LineHolePlacer.h"
+				>
+			</File>
+			<File
+				RelativePath=".\LineJig.h"
 				>
 			</File>
 			<File

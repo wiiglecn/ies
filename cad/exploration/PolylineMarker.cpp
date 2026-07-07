@@ -8,6 +8,7 @@
 
 CPolylineMarker::CPolylineMarker()
 {
+    m_fRadius = 1.0f;
 }
 
 CPolylineMarker::~CPolylineMarker()
@@ -16,6 +17,13 @@ CPolylineMarker::~CPolylineMarker()
 
 void CPolylineMarker::DrawRedCircle(const AcGePoint3d& center)
 {
+    // 1. Check if circle already exists
+    if (IsCircleExisting(center))
+    {
+        // Optional: Debug print to verify skipping
+        // acutPrintf(_T("\n[SKIP] DrawRedCircle: Circle already exists at (%.3f, %.3f, %.3f)"), center.x, center.y, center.z);
+        return;
+    }
     acutPrintf(_T("\n[DEBUG] DrawRedCircle: Center(%.3f, %.3f, %.3f)"), center.x, center.y, center.z);
 
     AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
@@ -46,7 +54,7 @@ void CPolylineMarker::DrawRedCircle(const AcGePoint3d& center)
     // Create Circle
     AcDbCircle* pCircle = new AcDbCircle();
     pCircle->setCenter(center);
-    pCircle->setRadius(1.5); // Adjust radius as needed
+    pCircle->setRadius(this->m_fRadius); // Adjust radius as needed
     pCircle->setColorIndex(1); // Red color
 
     // Add to Model Space
@@ -107,13 +115,13 @@ void CPolylineMarker::ExecuteSelectionAndMark()
     
     if (res != RTNORM)
     {
-        acutPrintf(_T("\n[INFO] ExecuteSelectionAndMark: No objects selected or selection cancelled."));
+        acutPrintf(_T("[INFO] ExecuteSelectionAndMark: No objects selected or selection cancelled.\n"));
         return;
     }
 
     long length = 0;
     acedSSLength(ssName, &length);
-    acutPrintf(_T("\n[INFO] ExecuteSelectionAndMark: Selected %ld entities."), length);
+    acutPrintf(_T("[INFO] ExecuteSelectionAndMark: Selected %ld entities.\n"), length);
 
 	AcApDocument* pDoc = acDocManager->curDocument();
 
@@ -221,4 +229,56 @@ void CPolylineMarker::ExecuteSelectionAndMark()
     acutPrintf(_T("\n[INFO] ExecuteSelectionAndMark: Processing complete. Red circles drawn at polyline vertices."));
 
 	acDocManager->unlockDocument(pDoc);
+}
+// Helper function to check if a circle already exists at the given center with the specific radius
+bool CPolylineMarker::IsCircleExisting(const AcGePoint3d& center)
+{
+    AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
+    if (!pDb) return false;
+
+    AcDbBlockTable* pBlockTable = NULL;
+    AcDbBlockTableRecord* pModelSpace = NULL;
+
+    // Open Model Space for read
+    if (pDb->getBlockTable(pBlockTable, AcDb::kForRead) != Acad::eOk)
+        return false;
+    
+    if (pBlockTable->getAt(ACDB_MODEL_SPACE, pModelSpace, AcDb::kForRead) != Acad::eOk)
+    {
+        pBlockTable->close();
+        return false;
+    }
+    pBlockTable->close();
+
+    bool found = false;
+    AcDbBlockTableRecordIterator* pIter = NULL;
+    if (pModelSpace->newIterator(pIter) == Acad::eOk)
+    {
+        for (pIter->start(); !pIter->done(); pIter->step())
+        {
+            AcDbEntity* pEnt = NULL;
+            if (pIter->getEntity(pEnt, AcDb::kForRead) == Acad::eOk)
+            {
+                // Check if it's a circle
+                AcDbCircle* pCircle = AcDbCircle::cast(pEnt);
+                if (pCircle)
+                {
+                    // Check radius and center
+                    // Using a small tolerance for floating point comparison
+                    const double tol = 1e-4; 
+                    if (pCircle->center().distanceTo(center) < tol)
+                    {
+                        found = true;
+                        pCircle->close();
+                        break; // Found one, no need to check further
+                    }
+                }
+                pEnt->close();
+            }
+        }
+        delete pIter;
+    }
+    pModelSpace->close();
+
+    return found;
 }

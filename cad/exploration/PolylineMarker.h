@@ -11,11 +11,13 @@ public:
 
     // Main entry point: Prompts user to select objects and processes them
     void ExecuteSelectionAndMark();
-
+    float m_fRadius;
 private:
     // Helper to draw a red circle at a specific point in Model Space
-    static void DrawRedCircle(const AcGePoint3d& center);
+    void DrawRedCircle(const AcGePoint3d& center);
 
     // Helper to process a Polyline and draw circles at vertices
-    static void ProcessPolylineVertices(AcDbPolyline* pPline, const AcGeMatrix3d& xform = AcGeMatrix3d::kIdentity);
+    void ProcessPolylineVertices(AcDbPolyline* pPline, 
+        const AcGeMatrix3d& xform = AcGeMatrix3d::kIdentity);
+    bool IsCircleExisting(const AcGePoint3d& center);
 };

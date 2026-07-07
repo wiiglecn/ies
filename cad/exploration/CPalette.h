@@ -60,13 +60,13 @@ public:
 
 protected:
 	DECLARE_MESSAGE_MAP()
-	afx_msg LRESULT HandleJsCommandInternal(WPARAM wParam, LPARAM lParam);
+	//afx_msg LRESULT HandleJsCommandInternal(WPARAM wParam, LPARAM lParam);
 public:
 	afx_msg int OnCreate (LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnDestroy(); 
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	// 新增：处理来自 HTML 视图的命令
-    void HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam);
+    LRESULT HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam);
 	// 新增：供视图调用，更新 HTML 显示
     void UpdateHtmlDisplay();
 private:
@@ -74,6 +74,7 @@ private:
 	void LoadPalette();
 	void SavePalette();
 
-	
+	void onPageReady();
+
 };
 
