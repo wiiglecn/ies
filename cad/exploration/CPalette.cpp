@@ -33,14 +33,15 @@
 #include "PaletteSet.h"
 #include "PolylineMarker.h"
 #include "LineHolePlacer.h"
-
-
+#include "Utils.h"
+#include "PaletteCleanup.h"
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+
 
 #define WM_JS_COMMAND (WM_USER + 100)
 
@@ -73,12 +74,7 @@ CDataPalette::CDataPalette()
 CDataPalette::~CDataPalette()
 {
 	//
-	if (m_pHtmlView)
-    {
-        m_pHtmlView->DestroyWindow();
-        delete m_pHtmlView;
-        m_pHtmlView = NULL;
-    }
+	
 }
 
 // Load the data from xml.
@@ -117,7 +113,7 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// if empty, set a default size for the palette
     if (rectClient.IsRectEmpty())
     {
-        rectClient.SetRect(0, 0, 250, 300);
+        rectClient.SetRect(0, 0, 260, 300);
     }
 
     m_pHtmlView = new CHtmlPaletteView();
@@ -135,7 +131,7 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
     m_pHtmlView->SetParentPalette(this);
 
 	m_pHtmlView->MoveWindow(&rectClient, TRUE);
-	 m_pHtmlView->OnInitialUpdate(); 
+	 m_pHtmlView->InitializeBrowser(); 
     // 
     LoadPalette();
     
@@ -148,6 +144,30 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 void CDataPalette::OnDestroy()
 {
+	acutPrintf(_T("\nCDataPalette::OnDestroy.\n"));
+
+	//CPaletteCleanup::SafeCleanupHtmlView(m_pHtmlView);
+
+	if (m_pHtmlView)
+    {
+ //       // 停止网页
+ //       m_pHtmlView->Stop();
+
+	//	// 3. 显式释放 IWebBrowser2 接口
+ //   // 减少 COM 引用计数，促使内部对象提前清理
+ //   LPDISPATCH pDisp = m_pHtmlView->GetApplication();
+ //   if (pDisp)
+ //   {
+ //       pDisp->Release();
+ //   }
+
+	//	//m_pHtmlView->Detach(); 
+       if (::IsWindow(m_pHtmlView->GetSafeHwnd()))
+           m_pHtmlView->DestroyWindow();
+ //       // 那么这里 delete
+        delete m_pHtmlView;
+        m_pHtmlView = NULL;
+    }
 	// Save Palette's persistent data
 	SavePalette();
 	CAdUiPalette::OnDestroy();
@@ -184,26 +204,12 @@ void CDataPalette::SavePalette()
 //    PostMessage(WM_JS_COMMAND, 0, (LPARAM)pData);
 //}
 // Helper function to set focus to AutoCAD Drawing Area (VC8 compatible)
-static void FocusAcadDrawing()
-{
-    // Try to get the active document's viewport window
-    CWnd* pDwgView = acedGetAcadDwgView();
-    if (pDwgView && pDwgView->GetSafeHwnd())
-    {
-        ::SetFocus(pDwgView->GetSafeHwnd());
-    }
-    else 
-    {
-        // Fallback: If dwg view is not available, try the main frame
-        if (acedGetAcadFrame())
-            ::SetFocus(acedGetAcadFrame()->m_hWnd);
-    }
-}
+
 
 LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 {
     
-    FocusAcadDrawing();
+    
     // Restore focus to AutoCAD
     
        //if (acedGetAcadFrame())
@@ -291,13 +297,17 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
     }
     else if (_tcscmp(szCommand, _T("PreSelectBlock")) == 0)
     {
-       CPolylineMarker marker;
+		CUtils::FocusAcadDrawing();
+        CPolylineMarker marker;
+        SetDiameter(marker);
         marker.ExecuteSelectionAndMark();
     }
     else if (_tcscmp(szCommand, _T("PreSelectLine")) == 0)
     {
-       CLineHolePlacer marker;
-	   marker.Execute();
+		CUtils::FocusAcadDrawing();
+        CLineHolePlacer marker;
+        SetDiameter(marker);
+        marker.Execute();
     }
 	else if (_tcscmp(szCommand, _T("Init")) == 0)
     {
@@ -386,5 +396,39 @@ void CDataPalette::onPageReady()
         }
     } else {
         acutPrintf(_T("[DEBUG] ERROR: pRootConfig is NULL.\n"));
+    }
+}
+void CDataPalette::SetDiameter(CBaseMarker& marker)
+{
+    cJSON* pRootConfig = CMyPaletteSet::GetJsonConfig();
+    if (pRootConfig) {
+        // Check if "profile" attribute exists
+        cJSON* pProfile = cJSON_GetObjectItem(pRootConfig, "profile");
+        
+        if (pProfile) {
+            cJSON* hole_diameter = cJSON_GetObjectItem(pProfile, "hole_diameter");
+             // Check if the item exists and is a string
+            if (hole_diameter && cJSON_IsString(hole_diameter) && (hole_diameter->valuestring != NULL))
+            {
+                // Convert char* (from cJSON) to CString (handles Unicode/MBCS conversion)
+                CString strDiameter(hole_diameter->valuestring);
+                
+                // Convert CString to float
+                float diameter = (float)_tstof(strDiameter);
+                
+                // Example: Set the diameter to the marker object
+                // Assuming BaseMarker has a method like SetDiameter or a public member m_Diameter
+                // marker.SetDiameter(diameter); 
+                // OR if m_Diameter is public:
+                // marker.m_Diameter = diameter;
+                
+                acutPrintf(_T("[INFO] Hole Diameter set to: %.3f\n"), diameter);
+                marker.SetDiameter(diameter);
+            }
+            else
+            {
+                acutPrintf(_T("[WARNING] hole_diameter is not a valid string in JSON.\n"));
+            }
+        }
     }
 }

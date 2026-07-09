@@ -3,6 +3,10 @@
 #include "HtmlPaletteView.h"
 #include "CPalette.h" 
 #include "PaletteSet.h"
+//#include  "Winuser.h"
+ //#ifndef WM_GETOBJECT
+ //#define WM_GETOBJECT 0x003D
+ //#endif
 
 IMPLEMENT_DYNCREATE(CHtmlPaletteView, CHtmlView)
 
@@ -18,6 +22,8 @@ CHtmlPaletteView::~CHtmlPaletteView()
 
 BEGIN_MESSAGE_MAP(CHtmlPaletteView, CHtmlView)
 //ON_WM_ERASEBKGND()
+ //ON_WM_DESTROY()
+ //ON_MESSAGE(WM_GETOBJECT, OnGetObject)
 END_MESSAGE_MAP()
 
 //BEGIN_INTERFACE_MAP(CHtmlPaletteView, CHtmlView)
@@ -34,14 +40,24 @@ void CHtmlPaletteView::SetParentPalette(CDataPalette* pParent)
 {
     m_pParentPalette = pParent;
 }
-
-void CHtmlPaletteView::OnInitialUpdate()
-{
-    CHtmlView::OnInitialUpdate();
-
-    
-    Navigate2(_T("file:///C:/Temp/PalettePage.html")); 
-}
+// 新增该函数实现
+//LRESULT CHtmlPaletteView::OnGetObject(WPARAM wParam, LPARAM lParam)
+//{
+//	acutPrintf(_T("CHtmlPaletteView::OnGetObject.\n"));
+//
+//    // 【关键修复】：直接返回 0。
+//    // 这会阻止 MFC 返回其内部的 XAccessible COM 对象。
+//    // 强制 AutoCAD 和 Windows 使用默认的系统辅助功能，
+//    // 彻底断绝焦点管理器缓存 C++ 对象指针的可能。
+//    return 0;
+//}
+//void CHtmlPaletteView::OnInitialUpdate()
+//{
+//    CHtmlView::OnInitialUpdate();
+//
+//    
+//    Navigate2(_T("file:///C:/Temp/PalettePage.html")); 
+//}
 HRESULT CHtmlPaletteView::OnGetExternal(LPDISPATCH *lppDispatch)
 {
 	*lppDispatch = GetIDispatch(TRUE);
@@ -114,6 +130,81 @@ void CHtmlPaletteView::CallJsFunction(LPCTSTR szFuncName, LPCTSTR szArg)
     }
     pDispatch->Release();
 }
+void CHtmlPaletteView::InitializeBrowser()
+{
+	Navigate2(_T("file:///C:/Temp/PalettePage.html")); 
+}
+void CHtmlPaletteView::OnDestroy()
+{
+    acutPrintf(_T("\CHtmlPaletteView::OnDestroy.\n"));
+
+    // 1. 确保焦点不在内部子窗口上
+   /* if (GetFocus() != NULL && (this == GetFocus() || IsChild(GetFocus())))
+    {
+        CWnd* pMain = AfxGetMainWnd();
+        if (pMain) pMain->SetFocus();
+    }*/
+
+    // 2. 切断 C++ 与 HTML 的 DOM 绑定，释放外部引用
+    LPDISPATCH pDisp = GetHtmlDocument();
+    if (pDisp)
+    {
+        IHTMLDocument2* pDoc2 = NULL;
+        if (SUCCEEDED(pDisp->QueryInterface(IID_IHTMLDocument2, (void**)&pDoc2)))
+        {
+            // 重置 HTML body，断开 JS 绑定
+            pDoc2->close(); 
+            pDoc2->Release();
+        }
+        pDisp->Release();
+    }
+
+    // 3. 导航到空白页，彻底销毁内部 DOM 树和焦点元素
+    // Navigate2(_T("about:blank"));
+
+    // 4. 获取底层的 WebBrowser 控件并关闭它
+    LPDISPATCH pAppDisp = GetApplication();
+    if (pAppDisp)
+    {
+        IWebBrowser2* pBrowser = NULL;
+        if (SUCCEEDED(pAppDisp->QueryInterface(IID_IWebBrowser2, (void**)&pBrowser)))
+        {
+            // 通过 IOleObject 关闭，防止触发 Accessibility 查询
+            IOleObject* pOleObj = NULL;
+            if (SUCCEEDED(pBrowser->QueryInterface(IID_IOleObject, (void**)&pOleObj)))
+            {
+                pOleObj->Close(OLECLOSE_NOSAVE);
+                pOleObj->SetClientSite(NULL);
+                pOleObj->Release();
+            }
+            pBrowser->Release();
+        }
+        pAppDisp->Release();
+    }
+
+    // 5. CoDisconnectObject - 断开所有外部引用 (MFC XAccessible)
+    LPUNKNOWN pUnk = GetInterface(&IID_IUnknown);
+    if (pUnk)
+    {
+        CoDisconnectObject(pUnk, 0);
+    }
+
+    // 调用基类
+    CHtmlView::OnDestroy();
+}
+//BOOL CHtmlPaletteView::PreCreateWindow(CREATESTRUCT& cs)
+//{
+//	// TODO: 在此处通过修改
+//	//  CREATESTRUCT cs 来修改窗口类或样式
+//
+//	return CHtmlView::PreCreateWindow(cs);
+//}
+//void CHtmlPaletteView::PostNcDestroy()
+//{
+//    CHtmlView::PostNcDestroy();
+//    delete this;
+//}
+
 //BOOL CHtmlPaletteView::OnEraseBkgnd(CDC* pDC)
 //{
 //    // Returning TRUE indicates that we have processed the background erasure to prevent flickering 

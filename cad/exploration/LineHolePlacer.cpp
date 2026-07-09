@@ -5,8 +5,10 @@
 #include "LineJig.h"
 //#include "arxHeaders.h"
 //#include "acadstrc.h"
+#include "Utils.h"
 
-CLineHolePlacer::CLineHolePlacer()
+
+CLineHolePlacer::CLineHolePlacer():CBaseMarker()
 {
 }
 
@@ -51,7 +53,7 @@ Acad::ErrorStatus CLineHolePlacer::Execute()
     //if (es != Acad::eOk) return es;
 
     // Step 2: Get Number of Holes
-    es = GetUserInt(_T("\nEnter number of exploration holes: "), nHoles);
+    es = GetUserInt(_T("\n请输入在该线条放几个勘探孔: "), nHoles);
     if (es != Acad::eOk) return es;
 
     if (nHoles <= 0)
@@ -115,7 +117,7 @@ Acad::ErrorStatus CLineHolePlacer::Execute()
             ptHole = ptStart + vec * (stepDist * i);
         }
         
-        es = CreateHole(ptHole);
+        es = CreateHole(ptHole,this->m_Diameter / 2.0); // Assuming m_Diameter is the diameter, radius = diameter / 2
         if (es != Acad::eOk)
         {
             acutPrintf(_T("\nError creating hole %d.\n"), i + 1);
@@ -154,6 +156,14 @@ Acad::ErrorStatus CLineHolePlacer::GetUserInt(const TCHAR* prompt, int& val)
 
 Acad::ErrorStatus CLineHolePlacer::CreateHole(const AcGePoint3d& center, double radius)
 {
+	// 1. Check if circle already exists
+	if (CUtils::IsCircleExisting(center))
+    {
+        // Optional: Debug print to verify skipping
+        // acutPrintf(_T("\n[SKIP] DrawRedCircle: Circle already exists at (%.3f, %.3f, %.3f)"), center.x, center.y, center.z);
+        return Acad::eOk;
+    }
+
     Acad::ErrorStatus es;
     
     // Create a new circle entity

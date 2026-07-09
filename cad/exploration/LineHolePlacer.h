@@ -5,8 +5,8 @@
 #include "acdb.h"
 #include "adslib.h"
 #include "rxregsvc.h"
-
-class CLineHolePlacer
+#include "BaseMarker.h"
+class CLineHolePlacer : public CBaseMarker
 {
 public:
     CLineHolePlacer();

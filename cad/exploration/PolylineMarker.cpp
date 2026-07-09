@@ -5,10 +5,10 @@
 #include "geassign.h"
 #include "acutads.h"
 #include "arxHeaders.h"
+#include "Utils.h"
 
-CPolylineMarker::CPolylineMarker()
+CPolylineMarker::CPolylineMarker():CBaseMarker()
 {
-    m_fRadius = 1.0f;
 }
 
 CPolylineMarker::~CPolylineMarker()
@@ -18,7 +18,7 @@ CPolylineMarker::~CPolylineMarker()
 void CPolylineMarker::DrawRedCircle(const AcGePoint3d& center)
 {
     // 1. Check if circle already exists
-    if (IsCircleExisting(center))
+	if (CUtils::IsCircleExisting(center))
     {
         // Optional: Debug print to verify skipping
         // acutPrintf(_T("\n[SKIP] DrawRedCircle: Circle already exists at (%.3f, %.3f, %.3f)"), center.x, center.y, center.z);
@@ -54,7 +54,7 @@ void CPolylineMarker::DrawRedCircle(const AcGePoint3d& center)
     // Create Circle
     AcDbCircle* pCircle = new AcDbCircle();
     pCircle->setCenter(center);
-    pCircle->setRadius(this->m_fRadius); // Adjust radius as needed
+    pCircle->setRadius(this->m_Diameter / 2.0); // Adjust radius as needed
     pCircle->setColorIndex(1); // Red color
 
     // Add to Model Space
@@ -106,7 +106,7 @@ void CPolylineMarker::ProcessPolylineVertices(AcDbPolyline* pPline, const AcGeMa
 
 void CPolylineMarker::ExecuteSelectionAndMark()
 {
-    acutPrintf(_T("\n[INFO] ExecuteSelectionAndMark: Starting selection..."));
+	acutPrintf(_T("\n[INFO] 昇龙助手: 开始选择参照物，选择块或者多段线...\n  绘制直径：%.3f"), this->m_Diameter);
 
     ads_name ssName;
     // Allow user to select objects. 
@@ -226,59 +226,7 @@ void CPolylineMarker::ExecuteSelectionAndMark()
     }
 
     acedSSFree(ssName);
-    acutPrintf(_T("\n[INFO] ExecuteSelectionAndMark: Processing complete. Red circles drawn at polyline vertices."));
+    acutPrintf(_T("\n[INFO] ExecuteSelectionAndMark: Processing complete. Red circles drawn at polyline vertices.\n"));
 
 	acDocManager->unlockDocument(pDoc);
-}
-// Helper function to check if a circle already exists at the given center with the specific radius
-bool CPolylineMarker::IsCircleExisting(const AcGePoint3d& center)
-{
-    AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
-    if (!pDb) return false;
-
-    AcDbBlockTable* pBlockTable = NULL;
-    AcDbBlockTableRecord* pModelSpace = NULL;
-
-    // Open Model Space for read
-    if (pDb->getBlockTable(pBlockTable, AcDb::kForRead) != Acad::eOk)
-        return false;
-    
-    if (pBlockTable->getAt(ACDB_MODEL_SPACE, pModelSpace, AcDb::kForRead) != Acad::eOk)
-    {
-        pBlockTable->close();
-        return false;
-    }
-    pBlockTable->close();
-
-    bool found = false;
-    AcDbBlockTableRecordIterator* pIter = NULL;
-    if (pModelSpace->newIterator(pIter) == Acad::eOk)
-    {
-        for (pIter->start(); !pIter->done(); pIter->step())
-        {
-            AcDbEntity* pEnt = NULL;
-            if (pIter->getEntity(pEnt, AcDb::kForRead) == Acad::eOk)
-            {
-                // Check if it's a circle
-                AcDbCircle* pCircle = AcDbCircle::cast(pEnt);
-                if (pCircle)
-                {
-                    // Check radius and center
-                    // Using a small tolerance for floating point comparison
-                    const double tol = 1e-4; 
-                    if (pCircle->center().distanceTo(center) < tol)
-                    {
-                        found = true;
-                        pCircle->close();
-                        break; // Found one, no need to check further
-                    }
-                }
-                pEnt->close();
-            }
-        }
-        delete pIter;
-    }
-    pModelSpace->close();
-
-    return found;
 }

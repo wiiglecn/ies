@@ -82,7 +82,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rxapi.lib acdb17.lib acge17.lib acgiapi.lib achapi17.lib acISMobj17.lib acad.lib acedapi.lib adui17.lib acui17.lib axdb.lib"
+				AdditionalDependencies="rxapi.lib acdb17.lib acge17.lib acgiapi.lib achapi17.lib acISMobj17.lib acad.lib acedapi.lib adui17.lib acui17.lib axdb.lib Oleacc.lib"
 				OutputFile="$(outdir)/KsExploration.arx"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib"
@@ -233,6 +233,10 @@
 			Filter="cpp;c;cc;cxx;def;idl;odl"
 			>
 			<File
+				RelativePath=".\BaseMarker.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\cJSON.c"
 				>
 			</File>
@@ -273,7 +277,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\MySafeHtmlView.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Palette.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\PaletteCleanup.cpp"
 				>
 			</File>
 			<File
@@ -292,11 +304,19 @@
 				RelativePath=".\StdAfx.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\Utils.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Include Files"
 			Filter="h;hh;hxx"
 			>
+			<File
+				RelativePath=".\BaseMarker.h"
+				>
+			</File>
 			<File
 				RelativePath=".\cJSON.h"
 				>
@@ -330,6 +350,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\MySafeHtmlView.h"
+				>
+			</File>
+			<File
+				RelativePath=".\PaletteCleanup.h"
+				>
+			</File>
+			<File
 				RelativePath=".\PaletteSet.h"
 				>
 			</File>
@@ -347,6 +375,10 @@
 			</File>
 			<File
 				RelativePath=".\StdAfx.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Utils.h"
 				>
 			</File>
 		</Filter>

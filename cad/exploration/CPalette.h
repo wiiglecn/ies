@@ -35,7 +35,7 @@
 #include "aduiPalette.h"
 #include "resource.h"
 #include "HtmlPaletteView.h"
-
+#include "BaseMarker.h"
 /////////////////////////////////////////////////////////////////////////////
 // Custom Palette class
 
@@ -75,6 +75,7 @@ private:
 	void SavePalette();
 
 	void onPageReady();
+	void SetDiameter(CBaseMarker& marker);
 
 };
 

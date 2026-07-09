@@ -2,6 +2,8 @@
 #pragma once
 #include <afxhtml.h>
 #include <mshtml.h>
+#include "MySafeHtmlView.h"
+
 // Forward Declaration
 class CDataPalette;
 
@@ -18,14 +20,17 @@ public:
     // Set the parent window pointer for callback
     void SetParentPalette(CDataPalette* pParent);
     void CallJsFunction(LPCTSTR szFuncName, LPCTSTR szArg);
+	void InitializeBrowser();
 protected:
     CDataPalette* m_pParentPalette;
 
     // {{AFX_VIRTUAL(CHtmlPaletteView)
 public:
-    virtual void OnInitialUpdate();
+    //virtual void OnInitialUpdate();
 	virtual void OnDocumentComplete(LPCTSTR lpszURL);
 	virtual HRESULT OnGetExternal(LPDISPATCH *lppDispatch);
+	//virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
+	//virtual void PostNcDestroy();
 
     // }}AFX_VIRTUAL
 
@@ -35,12 +40,16 @@ public:
     DECLARE_DISPATCH_MAP()
 	//DECLARE_INTERFACE_MAP()
 
+	
     
 public:
     // Methods exposed to JS calls
     void OnJsCallCpp(LPCTSTR szMessage);
     afx_msg void OnJsCommand(LPCTSTR szCommand, LPCTSTR szParam);
-
+	afx_msg void OnDestroy();
+    // 新增：拦截辅助功能查询
+    afx_msg LRESULT OnGetObject(WPARAM, LPARAM);
+    
     //DECLARE_EVENTSINK_MAP() 
     // Auxiliary function: calling JS from C++
     

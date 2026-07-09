@@ -32,7 +32,7 @@
 #include "PaletteSet.h"
 #include "CPalette.h"
 #include "InspPalette.h"
-
+#include "Utils.h"
 
 // Global Palette Set Instance
 CMyPaletteSet  *pPaletteSet ;
@@ -147,14 +147,22 @@ void InitApplication()
 // registered in InitApplication.
 void UnloadApplication()
 {
+	// CUtils::FocusAcadDrawing();
 	// Unregister commands
 	acedRegCmds->removeGroup(_T("ASDK"));
 
 	// Destroy the paletteset
 	if(pPaletteSet)
 	{
-		 // 1. Remove and delete all palettes added to the set
-        // Get the number of palettes
+		// 【关键新增 2】：获取 AutoCAD 主框架，清除活动视图！
+        // 这能阻止 AutoCAD 失去焦点时去通知已被销毁的 CHtmlView
+        CMDIFrameWnd* pAcadFrame = acedGetAcadFrame();
+        if (pAcadFrame != NULL && pAcadFrame->GetSafeHwnd() != NULL)
+        {
+            pAcadFrame->SetActiveView(NULL);
+        }
+
+
         int count = pPaletteSet->GetPaletteCount();
         for (int i = count - 1; i >= 0; i--)
         {
@@ -162,16 +170,30 @@ void UnloadApplication()
             CAdUiPalette* pPal = pPaletteSet->GetPalette(i);
             if (pPal)
             {
+				
                 // Remove from the set (this usually destroys the window association)
                 pPaletteSet->RemovePalette(i);
+
+				if (pPal->GetSafeHwnd())
+				{
+					acutPrintf (_T("CAdUiPalette DestroyWindow \n")) ;
+					pPal->DestroyWindow();
+				}
+
                 // Delete the object itself since it was created with 'new'
                 delete pPal;
             }
         }
-		
+		// 2. 隐藏面板，防止系统轮询
+		pPaletteSet->ShowWindow(SW_HIDE);
+		//pPaletteSet->RemoveAll();
 		pPaletteSet->DestroyWindow();
+		
 		delete pPaletteSet;
+
+		// pPaletteSet = NULL;
 	}
+	CoFreeUnusedLibraries();
 }
 
 // This functions registers an ARX command.
