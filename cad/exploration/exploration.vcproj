@@ -26,9 +26,11 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				CommandLine=""
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+				CommandLine=""
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -82,7 +84,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rxapi.lib acdb17.lib acge17.lib acgiapi.lib achapi17.lib acISMobj17.lib acad.lib acedapi.lib adui17.lib acui17.lib axdb.lib Oleacc.lib"
+				AdditionalDependencies="rxapi.lib acdb17.lib acge17.lib acgiapi.lib achapi17.lib acISMobj17.lib acad.lib acedapi.lib adui17.lib acui17.lib axdb.lib Oleacc.lib mongoose.lib"
 				OutputFile="$(outdir)/KsExploration.arx"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib"
@@ -117,6 +119,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="xcopy /Y /D &quot;$(ProjectDir)PalettePage.html&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -233,6 +236,14 @@
 			Filter="cpp;c;cc;cxx;def;idl;odl"
 			>
 			<File
+				RelativePath=".\AiApiRequest.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\AiApiServer.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\BaseMarker.cpp"
 				>
 			</File>
@@ -289,6 +300,11 @@
 				>
 			</File>
 			<File
+				RelativePath=".\PalettePage.html"
+				DeploymentContent="true"
+				>
+			</File>
+			<File
 				RelativePath=".\PaletteSet.cpp"
 				>
 			</File>
@@ -313,6 +329,14 @@
 			Name="Include Files"
 			Filter="h;hh;hxx"
 			>
+			<File
+				RelativePath=".\AiApiRequest.h"
+				>
+			</File>
+			<File
+				RelativePath=".\AiApiServer.h"
+				>
+			</File>
 			<File
 				RelativePath=".\BaseMarker.h"
 				>

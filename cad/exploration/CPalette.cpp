@@ -35,6 +35,7 @@
 #include "LineHolePlacer.h"
 #include "Utils.h"
 #include "PaletteCleanup.h"
+#include "AiApiRequest.h"
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -69,6 +70,8 @@ struct JsCmdData {
 
 CDataPalette::CDataPalette()
 {
+	
+
 }
 
 CDataPalette::~CDataPalette()
@@ -105,6 +108,9 @@ void CDataPalette::OnSetActive()
 
 int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
+	hServer=new AiApiRequest();
+	hServer->Start();
+
     if (CAdUiPalette::OnCreate(lpCreateStruct) == -1)
         return -1;
 
@@ -144,6 +150,10 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 void CDataPalette::OnDestroy()
 {
+	hServer->Stop();
+	delete hServer;
+	hServer = NULL;
+
 	acutPrintf(_T("\nCDataPalette::OnDestroy.\n"));
 
 	//CPaletteCleanup::SafeCleanupHtmlView(m_pHtmlView);

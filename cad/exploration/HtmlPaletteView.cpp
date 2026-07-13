@@ -3,6 +3,7 @@
 #include "HtmlPaletteView.h"
 #include "CPalette.h" 
 #include "PaletteSet.h"
+#include "Utils.h"
 //#include  "Winuser.h"
  //#ifndef WM_GETOBJECT
  //#define WM_GETOBJECT 0x003D
@@ -132,7 +133,19 @@ void CHtmlPaletteView::CallJsFunction(LPCTSTR szFuncName, LPCTSTR szArg)
 }
 void CHtmlPaletteView::InitializeBrowser()
 {
-	Navigate2(_T("file:///C:/Temp/PalettePage.html")); 
+	CString strFilePath = CUtils::GetArxFolder();
+    strFilePath.Replace(_T("\\"), _T("/"));
+
+     // 4. Construct the file:/// URL
+    CString strUrl;
+    strUrl.Format(_T("file:///%sPalettePage.html"), strFilePath);
+
+    // 6. Navigate
+    acutPrintf(_T("\n[HtmlView] Loading from: %s\n"), strUrl);
+    Navigate2(strUrl);
+
+
+	// Navigate2(_T("file:///C:/Temp/PalettePage.html")); 
 }
 void CHtmlPaletteView::OnDestroy()
 {

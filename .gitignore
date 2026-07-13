@@ -3,3 +3,7 @@ Debug
 *.user
 .vs
 bak
+/cad/library_src
+.suo
+*_i.c
+*_i.p

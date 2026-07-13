@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "Utils.h"
 #include "arxHeaders.h"
+
 CUtils::CUtils(void)
 {
 }
@@ -73,4 +74,40 @@ bool CUtils::IsCircleExisting(const AcGePoint3d& center)
     pModelSpace->close();
 
     return found;
+}
+CString GetArxPath()
+{
+    TCHAR szPath[MAX_PATH] = {0};
+
+    // 注意这里填写你的ARX文件名
+    HMODULE hModule = GetModuleHandle(_T("KsExploration.arx"));
+
+    if (hModule)
+    {
+        GetModuleFileName(hModule, szPath, MAX_PATH);
+        return CString(szPath);
+    }
+
+    return _T("");
+}
+CString CUtils::GetArxFolder()
+{
+    CString path = GetArxPath();
+
+    int pos = path.ReverseFind('\\');
+    if (pos != -1)
+        path = path.Left(pos + 1);
+
+    return path;
+}
+// Helper function to convert std::string to std::wstring
+std::wstring CUtils::StringToWString(const std::string& str)
+{
+    if (str.empty()) return std::wstring();
+    
+    // Get required size
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+    std::wstring wstrTo(size_needed, 0);
+    MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+    return wstrTo;
 }

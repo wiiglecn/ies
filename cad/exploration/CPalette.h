@@ -39,6 +39,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // Custom Palette class
 
+class AiApiRequest;
+
 class CDataPalette : public CAdUiPalette 
 { 
 	DECLARE_DYNCREATE(CDataPalette)
@@ -48,6 +50,7 @@ public:
 
 	CHtmlPaletteView* m_pHtmlView; // 改为新类型
 
+	
 	public:
     // Load the data from xml.
     virtual BOOL Load(IUnknown* pUnk);
@@ -76,6 +79,9 @@ private:
 
 	void onPageReady();
 	void SetDiameter(CBaseMarker& marker);
+
+private:
+	AiApiRequest* hServer;
 
 };
 

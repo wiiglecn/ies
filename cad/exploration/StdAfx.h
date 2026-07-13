@@ -76,6 +76,7 @@
 #pragma message ("     Compiling MFC / STL / ATL header files in release mode.")
 #endif
 
+
 //----- ObjectARX and OMF headers needs this
 #include <map>
 

@@ -90,7 +90,7 @@ void paletteShow()
 	CInspPalette *pPalette2;
 
 	pPaletteSet = new CMyPaletteSet;
-	CRect rect(0, 0, 250, 500);
+	CRect rect(0, 0, 300, 500);
 	pPaletteSet->Create(_T("Custom PaletteXXX"),
 		WS_OVERLAPPED | WS_DLGFRAME, 
 		rect, 
