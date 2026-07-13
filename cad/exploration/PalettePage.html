@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style>
+    /* General Body Styles */
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 10px;
+        overflow: hidden; /* Critical: Prevents scrollbars from triggering resize loops */
+        background-color: #F0F0F0; 
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+    }
+
+    /* Group Container */
+    .group-box {
+        border: 1px solid #999;
+        padding: 0;
+        margin-bottom: 10px;
+        background-color: #fff;
+        position: relative; /* For absolute positioning context if needed */
+    }
+
+    /* Header / Title Bar */
+    .group-header {
+        background-color: #e0e0e0;
+        padding: 5px 10px;
+        cursor: pointer;
+        border-bottom: 1px solid #999;
+        font-weight: bold;
+        color: #333;
+        user-select: none;
+        -moz-user-select: none;
+        -khtml-user-select: none;
+    }
+
+    .group-header:hover {
+        background-color: #d0d0d0;
+    }
+
+    /* Content Area */
+    .group-content {
+        padding: 10px;
+        display: block;
+        overflow: hidden; /* Contain floats/margins */
+    }
+
+    .group-content.collapsed {
+        display: none;
+    }
+
+    /* Property Table Layout */
+    .property-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .property-table td {
+        padding: 4px 2px;
+        vertical-align: middle;
+    }
+
+    .label-cell {
+        width: 50px;
+        color: #555;
+        text-align: right;
+        padding-right: 10px;
+    }
+
+    .input-cell {
+        width: auto;
+    }
+
+    /* Flat Textbox Style */
+    input[type="text"] {
+        width: 85%;
+        padding: 3px 5px;
+        border: 1px solid #ccc;
+        background-color: #fff;
+        color: #333;
+        font-size: 12px;
+        outline: none;
+    }
+
+    input[type="text"]:focus {
+        border-color: #666;
+        background-color: #fafafa;
+    }
+
+    /* Button Container */
+    .button-row-center {
+        margin-top: 10px;
+        text-align: center;
+        padding-top: 5px;
+        border-top: 1px solid #eee;
+    }
+
+    /* Custom Button Style */
+    .custom-btn {
+        background-color: #007acc;
+        color: white;
+        border: none;
+        padding: 5px 15px;
+        font-size: 12px;
+        cursor: pointer;
+        margin-left: 5px;
+    }
+
+    .custom-btn:hover {
+        background-color: #005f9e;
+    }
+
+    .custom-btn:active {
+        background-color: #004578;
+    }
+
+    .t5 {
+        margin-top: 5px;
+    }
+
+    /* --- AI Chat Component Styles --- */
+    .chat-container {
+        border: 1px solid #ddd;
+        background-color: #fafafa;
+        overflow-y: auto;
+        padding: 5px;
+        margin-bottom: 5px;
+        /* Height will be set by JS */
+    }
+
+    .chat-message {
+        margin-bottom: 8px;
+        line-height: 1.4;
+    }
+
+    .chat-message.user {
+        text-align: right;
+        color: #007acc;
+    }
+
+    .chat-message.ai {
+        text-align: left;
+        color: #333;
+    }
+
+    .chat-input-area {
+        width: 100%;
+    }
+
+    .chat-send-btn {
+        width: 60px;
+        padding: 4px;
+    }
+
+    .textarea-owner {
+        width: 95%;
+        padding: 5px;
+        border: 1px solid #ccc;
+        background-color: #fff;
+        color: #333;
+        font-size: 12px;
+        font-family: Arial, sans-serif;
+        outline: none;
+        resize: vertical;
+        min-height: 60px;
+    }
+
+    .textarea-owner:focus {
+        border-color: #666;
+        background-color: #fafafa;
+    }
+
+    /* Ensure the second group takes up remaining space */
+    #group-ai {
+        overflow: hidden;
+        position: relative;
+        /* Height will be set by JS */
+    }
+</style>
+
+<script>
+     if (!window.console) {
+        window.console = {
+            log: function() {},
+            error: function() {},
+            warn: function() {},
+            info: function() {}
+        };
+    }
+    if (!window.JSON) {
+        window.JSON = {
+            parse: function(sJson) {
+                return eval("(" + sJson + ")");
+            },
+            stringify: function(value) {
+                if (value === null) return "null";
+                if (value === undefined || typeof value === "function") return undefined;
+                var type = typeof value;
+                if (type === "number" || type === "boolean") return String(value);
+                if (type === "string") return '"' + escapeString(value) + '"';
+                if (type === "object") {
+                    if (value instanceof Date) return '"' + value.toISOString() + '"';
+                    if (value instanceof Array) {
+                        var arrResult = [];
+                        for (var i = 0; i < value.length; i++) {
+                            var itemStr = JSON.stringify(value[i]);
+                            if (itemStr === undefined) arrResult.push("null");
+                            else arrResult.push(itemStr);
+                        }
+                        return "[" + arrResult.join(",") + "]";
+                    }
+                    var objResult = [];
+                    for (var key in value) {
+                        if (value.hasOwnProperty(key)) {
+                            var valStr = JSON.stringify(value[key]);
+                            if (valStr !== undefined) {
+                                objResult.push('"' + escapeString(key) + '":' + valStr);
+                            }
+                        }
+                    }
+                    return "{" + objResult.join(",") + "}";
+                }
+            }
+        };
+
+        function escapeString(str) {
+            return str.replace(/["\\\x00-\x1f\x7f-\x9f]/g, function(match) {
+                switch (match) {
+                    case "\"": return "\\\"";
+                    case "\\": return "\\\\";
+                    case "\b": return "\\b";
+                    case "\f": return "\\f";
+                    case "\n": return "\\n";
+                    case "\r": return "\\r";
+                    case "\t": return "\\t";
+                    default:
+                        return "\\u" + ("0000" + match.charCodeAt(0).toString(16)).slice(-4);
+                }
+            });
+        }
+    }
+
+    // Helper function for IE7 compatibility
+    function getElementsByClass(searchClass, node, tag) {
+        node = node || document;
+        tag = tag || "*";
+        var elements = node.getElementsByTagName(tag);
+        var result = [];
+        for (var i = 0; i < elements.length; i++) {
+            if (elements[i].className.indexOf(searchClass) !== -1) {
+                result.push(elements[i]);
+            }
+        }
+        return result;
+    }
+
+    // Debounce variable
+    var resizeTimeout = null;
+
+    function resizeLayout() {
+
+        // Use debounce to prevent rapid firing
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+
+        var groupAi = document.getElementById('group-ai');
+        var groupContent = null;
+        // Option 1: Using your existing helper function (Recommended for IE7)
+        var contents = getElementsByClass('group-content', groupAi, 'div');
+        if (contents.length > 0) {
+            groupContent = contents[0];
+        }
+        
+        // If the content is collapsed, do not resize/return early
+        if (groupContent && groupContent.className.indexOf('collapsed') !== -1) {
+            resizeTimeout = null;
+            groupAi.style.height = "";
+            return;
+        }
+        
+        resizeTimeout = setTimeout(function() {
+            var bodyHeight = document.body.clientHeight;
+            var groupProbe = document.getElementById('group-probe');
+            
+            if (!groupProbe || !groupAi) return;
+
+            
+
+            // Calculate height of the first group including margins
+            var probeHeight = groupProbe.offsetHeight; 
+            var totalUsedHeight = probeHeight + 10; // margin-bottom
+            
+            // Calculate remaining height
+            // Body padding is 10px top + 10px bottom = 20px
+            var availableHeight = bodyHeight - totalUsedHeight - 40;
+
+            if (availableHeight < 100) availableHeight = 100;
+
+
+            // Fix: Handle empty string or NaN from style.height
+            var currentAiHeight = parseInt(groupAi.style.height, 10);
+            if (isNaN(currentAiHeight)) {
+                currentAiHeight = -1; // Force update on first run
+            }
+            // Only update if changed significantly to prevent layout thrashing
+            if (Math.abs(availableHeight - currentAiHeight) > 2) {
+                groupAi.style.height = availableHeight + "px";
+            }
+            
+            var aiChatHeight = availableHeight - 180; // Reserve space for input area
+            var chatContainer = document.getElementById('ai-chat-container');
+            chatContainer.style.height = aiChatHeight + "px";
+            
+            resizeTimeout = null;
+        }, 50); // 50ms delay
+    }
+
+    function init() {
+        if (window.external) {
+            try {
+                window.external.OnJsCommand("Init", "");
+            } catch (e) {
+                console.error("Error calling external: " + e.message);
+            }
+        }
+        
+        // Initial resize
+        resizeLayout();
+    }
+
+    // Attach resize event
+    window.onresize = resizeLayout;
+
+    // C++ calls this when document is loaded
+    function onReady(dataStr) {
+        if(dataStr){
+            try {
+                var data = JSON.parse(dataStr);
+                for (var key in data) {
+                    if (data.hasOwnProperty(key)) {
+                        var element = document.getElementById(key);
+                        if (element) {
+                            element.value = data[key];
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error processing data from C++: " + e.message);
+            }
+        }
+    }
+
+    function toggleGroup(headerElement) {
+        var content = headerElement.nextSibling;
+        while (content && content.nodeType !== 1) {
+            content = content.nextSibling;
+        }
+        
+        if (content) {
+            if (content.className.indexOf('collapsed') === -1) {
+                content.className += ' collapsed';
+            } else {
+                content.className = content.className.replace(' collapsed', '');
+            }
+            // Recalculate layout after toggle
+            setTimeout(resizeLayout, 100);
+        }
+    }
+
+    function callCppMessage() {
+        try {
+            window.external.ShowMessage("Test");
+        } catch (e) {
+            alert("Call failed: " + e.message);
+        }
+    }
+
+    function updateItem(dataStr) {
+        var parts = dataStr.split('|');
+        if (parts.length < 4) return;
+        var index = parts[0];
+        var strVal = parts[1];
+        var intVal = parts[2];
+        var realVal = parts[3];
+        var strEl = document.getElementById('str_' + index);
+        var intEl = document.getElementById('int_' + index);
+        var realEl = document.getElementById('real_' + index);
+        if (strEl) strEl.value = strVal;
+        if (intEl) intEl.value = intVal;
+        if (realEl) realEl.value = realVal;
+    }
+
+    function onProfileChange(txtObj) {
+        var val = txtObj.value;
+        var profileValue = {};
+        profileValue[txtObj.id] = val;
+        var profileValueStr = JSON.stringify(profileValue);
+        if (window.external) {
+            try {
+                window.external.OnJsCommand("SetProfile", profileValueStr);
+            } catch (e) {
+                alert("Error calling external: " + e.message);
+            }
+        } else {
+            alert("window.external is not available.");
+        }
+    }
+
+    function setBackgroundColor(color) {
+        document.body.style.backgroundColor = color;
+    }
+    
+    function onSelectBlock() {
+        if (window.external){
+            window.external.OnJsCommand("PreSelectBlock", "");
+        }
+    }
+    function onSelectLine(){
+        if (window.external){
+            window.external.OnJsCommand("PreSelectLine", "");
+        }
+    }
+
+    function sendChatMessage() {
+        var input = document.getElementById('ai-chat-input');
+        var message = input.value;
+        if (!message) return;
+
+        var chatContainer = document.getElementById('ai-chat-container');
+        
+        var userMsgDiv = document.createElement('div');
+        userMsgDiv.className = 'chat-message user';
+        userMsgDiv.innerText = message;
+        chatContainer.appendChild(userMsgDiv);
+
+        input.value = '';
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        setTimeout(function() {
+            var aiMsgDiv = document.createElement('div');
+            aiMsgDiv.className = 'chat-message ai';
+            aiMsgDiv.innerText = "昇龙助手: Received \"" + message + "\". Processing...";
+            chatContainer.appendChild(aiMsgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }, 500);
+    }
+
+    function checkEnter(event) {
+        if (event.keyCode === 13 && event.ctrlKey) {
+            sendChatMessage();
+        }
+    }
+</script>
+</head>
+<body scroll="no" onload="init()" >
+    <!-- oncontextmenu="return false;" -->
+    <!--勘探预审定孔 -->
+    <div class="group-box" id="group-probe">
+        <div class="group-header" onclick="toggleGroup(this)">
+            勘探预审定孔
+        </div>
+        <div class="group-content">
+            <table class="property-table">
+                <tr>
+                    <td class="label-cell">孔直径(m):</td>
+                    <td class="input-cell"><input type="text" id="hole_diameter" onchange="onProfileChange(this)" /></td>
+                </tr>
+            </table>
+            
+            <div class="button-row-center">
+                <button class="custom-btn" onclick="onSelectBlock()" title="选择多段线或者块，如果是块则块内的多段线则作为参照物进行计算">选择参照物智能部署</button>
+                <button class="custom-btn t5" onclick="onSelectLine()" title="通过拉取多段线进行智能部孔">划线智能部署</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group 2: AI Smart -->
+    <div class="group-box" id="group-ai">
+        <div class="group-header" onclick="toggleGroup(this)">
+            AI 智能
+        </div>
+        <div class="group-content">
+            
+            <!-- Chat Display Area -->
+            <div id="ai-chat-container" class="chat-container">
+                <div class="chat-message ai">昇龙助手: 您好! 今天我能帮助您做点什么吗?</div>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="chat-input-area">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 100%;">
+                            <textarea id="ai-chat-input" class="chat-input-field textarea-owner" placeholder="Type your question..." onkeydown="checkEnter(event)"></textarea>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 65px; text-align: right; vertical-align: bottom;">
+                            <button class="custom-btn chat-send-btn t5" onclick="sendChatMessage()">发送</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
