@@ -6,6 +6,7 @@
 
 // API 回调函数类型定义
 typedef void (*ApiHandlerFunc)(struct mg_connection* nc, 
+							   struct mg_http_message* hm,
                                 const std::map<std::string, std::string>& params,
                                 const std::string& body);
 
@@ -38,7 +39,7 @@ public:
     static void SendJsonResponse(struct mg_connection* nc, 
                                   int statusCode, 
                                   const std::string& jsonStr);
-
+    
 private:
     // Mongoose 事件回调
     static void EventHandler(struct mg_connection* nc, int ev, void *ev_data);

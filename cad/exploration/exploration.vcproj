@@ -432,6 +432,18 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="tools"
+			>
+			<File
+				RelativePath=".\ToolDraw.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ToolDraw.h"
+				>
+			</File>
+		</Filter>
 	</Files>
 	<Globals>
 	</Globals>

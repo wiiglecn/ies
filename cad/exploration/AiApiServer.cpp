@@ -155,7 +155,7 @@ void AiApiServer::HandleHttpRequest(struct mg_connection* nc, struct mg_http_mes
         
         acutPrintf(_T("\n[CAD DEBUG] Executing handler for: %s"), wUri.c_str());
 
-        it->second(nc, params, body);
+        it->second(nc, hm, params, body);
         
         // Debug: Handler finished
         acutPrintf(_T("\n[CAD DEBUG] Handler completed."));
