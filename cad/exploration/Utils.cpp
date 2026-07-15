@@ -111,3 +111,17 @@ std::wstring CUtils::StringToWString(const std::string& str)
     MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
     return wstrTo;
 }
+bool CUtils::utf8ToTChar(const char* utf8, TCHAR* outBuf, int bufLen)
+{
+    if (!utf8 || !outBuf || bufLen <= 0)
+        return false;
+#ifdef _UNICODE
+    int needed = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
+    if (needed <= 0 || needed > bufLen)
+        return false;
+    MultiByteToWideChar(CP_UTF8, 0, utf8, -1, outBuf, bufLen);
+    return true;
+#else
+    return strcpy_s(outBuf, bufLen, utf8) == 0;
+#endif
+}

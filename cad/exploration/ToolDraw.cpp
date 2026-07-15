@@ -3,6 +3,8 @@
 #include "cJSON.h"
 #include "adscodes.h"
 #include "dbents.h"
+#include "dbsymtb.h"
+#include "utils.h"
 
 ToolDraw::ToolDraw(void):pDoc(NULL),pModelSpace(NULL)
 {
@@ -124,4 +126,252 @@ void ToolDraw::create_line(cJSON* params)
     //acutPrintf(_T("create_line Result: %d\n"), result);
 
 	
+}
+void ToolDraw::create_circle(cJSON* params)
+{
+    cJSON* xItem = cJSON_GetObjectItem(params, "x");
+    cJSON* yItem = cJSON_GetObjectItem(params, "y");
+    cJSON* rItem = cJSON_GetObjectItem(params, "radius");
+
+    if (!xItem || !yItem || !rItem ||
+        !cJSON_IsNumber(xItem) || !cJSON_IsNumber(yItem) ||
+        !cJSON_IsNumber(rItem))
+    {
+        acutPrintf(_T("[ERROR] create_circle: invalid parameters.\n"));
+        return;
+    }
+
+    double x = xItem->valuedouble;
+    double y = yItem->valuedouble;
+    double radius = rItem->valuedouble;
+    if (radius <= 0.0)
+    {
+        acutPrintf(_T("[ERROR] create_circle: radius must be positive.\n"));
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcGePoint3d center(x, y, 0.0);
+    AcDbCircle* pCircle = new AcDbCircle(center, AcGeVector3d::kZAxis, radius);
+
+    AcDbObjectId circleId;
+    if (pModelSpace->appendAcDbEntity(circleId, pCircle) == Acad::eOk)
+    {
+        acutPrintf(_T("[INFO] create_circle: created successfully.\n"));
+        pCircle->close();
+    }
+    else
+    {
+        acutPrintf(_T("[ERROR] create_circle: failed to append to Model Space.\n"));
+        delete pCircle;
+    }
+
+    this->actionEnd();
+}
+void ToolDraw::create_rectangle(cJSON* params)
+{
+    cJSON* x1Item = cJSON_GetObjectItem(params, "x1");
+    cJSON* y1Item = cJSON_GetObjectItem(params, "y1");
+    cJSON* widthItem = cJSON_GetObjectItem(params, "width");
+    cJSON* heightItem = cJSON_GetObjectItem(params, "height");
+
+    if (!x1Item || !y1Item || !widthItem || !heightItem ||
+        !cJSON_IsNumber(x1Item) || !cJSON_IsNumber(y1Item) ||
+        !cJSON_IsNumber(widthItem) || !cJSON_IsNumber(heightItem))
+    {
+        acutPrintf(_T("[ERROR] create_rectangle: invalid parameters.\n"));
+        return;
+    }
+
+    double x1 = x1Item->valuedouble;
+    double y1 = y1Item->valuedouble;
+    double width = widthItem->valuedouble;
+    double height = heightItem->valuedouble;
+
+    if (this->actionBefore()) return;
+
+
+    AcGePoint3d pts[5] =
+    {
+        AcGePoint3d(x1,y1,0),
+        AcGePoint3d(x1+width,y1,0),
+        AcGePoint3d(x1+width,y1+height,0),
+        AcGePoint3d(x1,y1+height,0),
+		AcGePoint3d(x1,y1,0),
+    };
+
+    bool ok = true;
+    for (int i = 0; i < 4; i++)
+    {
+        AcDbLine* pLine = new AcDbLine(pts[i], pts[i + 1]);
+        AcDbObjectId lineId;
+        if (pModelSpace->appendAcDbEntity(lineId, pLine) == Acad::eOk)
+        {
+            pLine->close();
+        }
+        else
+        {
+            acutPrintf(_T("[ERROR] create_rectangle: failed to append edge %d.\n"), i + 1);
+            delete pLine;
+            ok = false;
+        }
+    }
+
+    if (ok)
+        acutPrintf(_T("[INFO] create_rectangle: created successfully.\n"));
+
+    this->actionEnd();
+}
+
+void ToolDraw::create_text(cJSON* params)
+{
+    cJSON* xItem = cJSON_GetObjectItem(params, "x");
+    cJSON* yItem = cJSON_GetObjectItem(params, "y");
+    cJSON* heightItem = cJSON_GetObjectItem(params, "height");
+    cJSON* textItem = cJSON_GetObjectItem(params, "text");
+
+    if (!xItem || !yItem || !textItem ||
+        !cJSON_IsNumber(xItem) || !cJSON_IsNumber(yItem) ||
+        !cJSON_IsString(textItem))
+    {
+        acutPrintf(_T("[ERROR] create_text: invalid parameters.\n"));
+        return;
+    }
+
+    double x = xItem->valuedouble;
+    double y = yItem->valuedouble;
+    double height = 1.0;
+    if (heightItem && cJSON_IsNumber(heightItem))
+        height = heightItem->valuedouble;
+
+    TCHAR textStr[512] = { 0 };
+	if (!CUtils::utf8ToTChar(textItem->valuestring, textStr, ARRAYSIZE(textStr)))
+    {
+        acutPrintf(_T("[ERROR] create_text: failed to convert text string.\n"));
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcDbText* pText = new AcDbText(AcGePoint3d(x, y, 0.0), textStr);
+    AcDbObjectId textId;
+    if (pModelSpace->appendAcDbEntity(textId, pText) == Acad::eOk)
+    {
+        acutPrintf(_T("[INFO] create_text: created successfully.\n"));
+        pText->close();
+    }
+    else
+    {
+        acutPrintf(_T("[ERROR] create_text: failed to append to Model Space.\n"));
+        delete pText;
+    }
+
+    this->actionEnd();
+}
+
+void ToolDraw::create_layer(cJSON* params)
+{
+    cJSON* nameItem = cJSON_GetObjectItem(params, "name");
+    //cJSON* colorItem = cJSON_GetObjectItem(params, "color");
+
+    if (!nameItem || !cJSON_IsString(nameItem))
+    {
+        acutPrintf(_T("[ERROR] create_layer: invalid parameters.\n"));
+        return;
+    }
+
+    TCHAR layerName[256] = { 0 };
+	if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName)))
+    {
+        acutPrintf(_T("[ERROR] create_layer: failed to convert layer name.\n"));
+        return;
+    }
+
+    /*int colorIndex = 7;
+    if (colorItem && cJSON_IsNumber(colorItem))
+        colorIndex = (int)colorItem->valuedouble;*/
+
+    if (this->actionBefore()) return;
+
+    AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
+    AcDbLayerTable* pLayerTable = NULL;
+    if (pDb->getLayerTable(pLayerTable, AcDb::kForWrite) != Acad::eOk)
+    {
+        acutPrintf(_T("[ERROR] create_layer: failed to open Layer Table.\n"));
+        this->actionEnd();
+        return;
+    }
+
+    AcDbObjectId layerId;
+    if (pLayerTable->getAt(layerName, layerId) == Acad::eOk)
+    {
+        acutPrintf(_T("[INFO] create_layer: layer \"%s\" already exists.\n"), layerName);
+        pLayerTable->close();
+        this->actionEnd();
+        return;
+    }
+
+    AcDbLayerTableRecord* pLayerRecord = new AcDbLayerTableRecord();
+    pLayerRecord->setName(layerName);
+    //pLayerRecord->setColorIndex(colorIndex);
+
+    if (pLayerTable->add(layerId, pLayerRecord) == Acad::eOk)
+    {
+        acutPrintf(_T("[INFO] create_layer: created successfully.\n"));
+        pLayerRecord->close();
+    }
+    else
+    {
+        acutPrintf(_T("[ERROR] create_layer: failed to add layer record.\n"));
+        delete pLayerRecord;
+    }
+
+    pLayerTable->close();
+    this->actionEnd();
+}
+
+void ToolDraw::list_layers(cJSON* params)
+{
+    if (this->actionBefore()) return;
+
+    AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
+    AcDbLayerTable* pLayerTable = NULL;
+    if (pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk)
+    {
+        acutPrintf(_T("[ERROR] list_layers: failed to open Layer Table.\n"));
+        this->actionEnd();
+        return;
+    }
+
+    AcDbLayerTableIterator* pIter = NULL;
+    if (pLayerTable->newIterator(pIter) == Acad::eOk)
+    {
+        for (; !pIter->done(); pIter->step())
+        {
+            AcDbLayerTableRecord* pLayerRecord = NULL;
+            if (pIter->getRecord(pLayerRecord, AcDb::kForRead) == Acad::eOk)
+            {
+                // Use getName to retrieve the layer name
+                const ACHAR* pName = NULL;
+                if (pLayerRecord->getName(pName) == Acad::eOk && pName != NULL)
+                {
+                    acutPrintf(_T("[LAYER] %s\n"), pName);
+                }
+                else
+                {
+                    acutPrintf(_T("[LAYER] <Unknown Name>\n"));
+                }
+                pLayerRecord->close();
+            }
+        }
+        delete pIter;
+    }
+    else
+    {
+        acutPrintf(_T("[ERROR] list_layers: failed to create Layer Table iterator.\n"));
+    }
+
+    pLayerTable->close();
+    this->actionEnd();
 }

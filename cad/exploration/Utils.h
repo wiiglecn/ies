@@ -14,4 +14,5 @@ public:
 	static void FocusAcadDrawing();
 	static CString GetArxFolder();
 	static std::wstring StringToWString(const std::string& str);
+	static bool utf8ToTChar(const char* utf8, TCHAR* outBuf, int bufLen);
 };

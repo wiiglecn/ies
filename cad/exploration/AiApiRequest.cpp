@@ -181,8 +181,15 @@ void AiApiRequest::Start()
     m_Server->RegisterRoute("POST", "/ai/chat", HandleAiChat);
     m_Server->RegisterRoute("POST", "/ai/generate", HandleAiGenerate);
 	m_Server->RegisterRoute("POST", "/ai/command", HandleAiCommand);
+	//tool
+
 	m_Server->RegisterRoute("POST", "/ai/tool/create_line", HandleAiTool, this);
 	m_Server->RegisterRoute("POST", "/ai/tool/create_circle", HandleAiTool, this);
+	m_Server->RegisterRoute("POST", "/ai/tool/create_rectangle", HandleAiTool, this);
+	m_Server->RegisterRoute("POST", "/ai/tool/create_text", HandleAiTool, this);
+	m_Server->RegisterRoute("POST", "/ai/tool/create_layer", HandleAiTool, this);
+	m_Server->RegisterRoute("POST", "/ai/tool/list_layers", HandleAiTool, this);
+
 	m_Server->StartHttpServer();
 }
 void AiApiRequest::Stop()
