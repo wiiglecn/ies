@@ -8,7 +8,8 @@
 typedef void (*ApiHandlerFunc)(struct mg_connection* nc, 
 							   struct mg_http_message* hm,
                                 const std::map<std::string, std::string>& params,
-                                const std::string& body);
+                                const std::string& body,
+                                void* user_data);
 
 
 
@@ -34,7 +35,8 @@ public:
     // 注册 API 路由
     void RegisterRoute(const std::string& method, 
                        const std::string& uri, 
-                       ApiHandlerFunc handler);
+                       ApiHandlerFunc handler,
+                        void* user_data = NULL);
 	// 发送 JSON 响应
     static void SendJsonResponse(struct mg_connection* nc, 
                                   int statusCode, 
@@ -64,7 +66,8 @@ private:
 	{
 		std::string method;
 		std::string uri;
-
+        void* user_data; // Store the context here
+        
 		bool operator<(const RouteKey& o) const
 		{
 			return std::make_pair(method, uri) <

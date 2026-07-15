@@ -138,7 +138,7 @@ void AiApiServer::HandleHttpRequest(struct mg_connection* nc, struct mg_http_mes
                wUri.c_str());
     
     // Routing logic
-    RouteKey key = { method, uri };
+    RouteKey key = { method, uri, NULL };
     std::map<RouteKey, ApiHandlerFunc>::iterator it = m_routes.find(key);
     
     if (it != m_routes.end()) {
@@ -155,7 +155,8 @@ void AiApiServer::HandleHttpRequest(struct mg_connection* nc, struct mg_http_mes
         
         acutPrintf(_T("\n[CAD DEBUG] Executing handler for: %s"), wUri.c_str());
 
-        it->second(nc, hm, params, body);
+		
+		it->second(nc, hm, params, body, it->first.user_data);
         
         // Debug: Handler finished
         acutPrintf(_T("\n[CAD DEBUG] Handler completed."));
@@ -172,9 +173,10 @@ void AiApiServer::HandleHttpRequest(struct mg_connection* nc, struct mg_http_mes
 
 void AiApiServer::RegisterRoute(const std::string& method, 
                                  const std::string& uri, 
-                                 ApiHandlerFunc handler)
+                                 ApiHandlerFunc handler,
+                                void* user_data)
 {
-    RouteKey key = { method, uri };
+    RouteKey key = { method, uri, user_data };
     m_routes[key] = handler;
 }
 

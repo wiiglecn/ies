@@ -3,7 +3,7 @@
 #include "AiApiRequest.h"
 #include "AiApiServer.h"
 #include "cJSON.h"
-#include "ToolDraw.h"
+#include "declare.h"
 
 AiApiRequest::AiApiRequest(void):m_Server(NULL),pAcadWnd(NULL)
 {
@@ -11,13 +11,17 @@ AiApiRequest::AiApiRequest(void):m_Server(NULL),pAcadWnd(NULL)
 
 AiApiRequest::~AiApiRequest(void)
 {
+	if (m_Server){
+		delete m_Server;
+	}
 }
 
 // AI 聊天接口
 void HandleAiChat(struct mg_connection* nc, 
 				  struct mg_http_message* hm,
                   const std::map<std::string, std::string>& params,
-                  const std::string& body)
+                  const std::string& body,
+				  void* user_data)
 {
     // 这里可以调用 OpenAI/百度文心/讯飞等 AI API
     // body 包含客户端发来的 JSON 请求数据
@@ -30,7 +34,8 @@ void HandleAiChat(struct mg_connection* nc,
 void HandleAiGenerate(struct mg_connection* nc,
 					  struct mg_http_message* hm,
                       const std::map<std::string, std::string>& params,
-                      const std::string& body)
+                      const std::string& body,
+					  void* user_data)
 {
     // 调用 AI 接口生成文本
     std::string response = "{\"text\":\"Generated content...\"}";
@@ -40,7 +45,8 @@ void HandleAiGenerate(struct mg_connection* nc,
 void HandleAiCommand(struct mg_connection* nc,
 					 struct mg_http_message* hm,
                       const std::map<std::string, std::string>& params,
-                      const std::string& body)
+                      const std::string& body,
+					  void* user_data)
 {
     std::string response;
     
@@ -131,7 +137,8 @@ bool EndsWith(const std::string& str, const std::string& suffix) {
 void HandleAiTool(struct mg_connection* nc,
 				  struct mg_http_message* hm,
                   const std::map<std::string, std::string>& params,
-                  const std::string& body)
+                  const std::string& body,
+				  void* user_data)
 {
 
 	std::string response;
@@ -148,7 +155,8 @@ void HandleAiTool(struct mg_connection* nc,
     if (EndsWith(uri, "/create_line") || EndsWith(uri, "create_line")) {
         // Handle Create Line Logic
         // Parse 'body' if needed
-		pAcadWnd->PostMessage(WM_USER_EXECUTE_COMMAND, 0, (LPARAM)root);
+		AiApiRequest* apiRequest = (AiApiRequest*) user_data;
+		apiRequest->getAcadWnd()->PostMessage(WM_USER_TOOL, WM_USER_A_CREATELINE, (LPARAM)root);
 
         response = "{\"status\":\"success\",\"message\":\"Line created\"}";
         AiApiServer::SendJsonResponse(nc, 200, response);
@@ -173,8 +181,8 @@ void AiApiRequest::Start()
     m_Server->RegisterRoute("POST", "/ai/chat", HandleAiChat);
     m_Server->RegisterRoute("POST", "/ai/generate", HandleAiGenerate);
 	m_Server->RegisterRoute("POST", "/ai/command", HandleAiCommand);
-	m_Server->RegisterRoute("POST", "/ai/tool/create_line", HandleAiTool);
-	m_Server->RegisterRoute("POST", "/ai/tool/create_circle", HandleAiTool);
+	m_Server->RegisterRoute("POST", "/ai/tool/create_line", HandleAiTool, this);
+	m_Server->RegisterRoute("POST", "/ai/tool/create_circle", HandleAiTool, this);
 	m_Server->StartHttpServer();
 }
 void AiApiRequest::Stop()
@@ -187,4 +195,8 @@ void AiApiRequest::Stop()
 void AiApiRequest::setAcadWnd(CWnd* pWnd)
 {
 	this->pAcadWnd=pWnd;
+}
+CWnd* AiApiRequest::getAcadWnd()
+{
+	return this->pAcadWnd;
 }

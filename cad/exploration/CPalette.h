@@ -70,6 +70,7 @@ public:
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	// 新增：处理来自 HTML 视图的命令
     LRESULT HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam);
+	LRESULT HandleApiCommand(WPARAM wParam, LPARAM lParam);
 	// 新增：供视图调用，更新 HTML 显示
     void UpdateHtmlDisplay();
 private:

@@ -5,8 +5,18 @@ class cJSON;
 class ToolDraw
 {
 public:
-	ToolDraw(void);
+	static ToolDraw& getInstance();
+	ToolDraw(const ToolDraw&);            
+    ToolDraw& operator=(const ToolDraw&); 
 public:
-	~ToolDraw(void);
-	static void create_line(cJSON* params);
+	void create_line(cJSON* params);
+private:
+	ToolDraw(void);
+    ~ToolDraw(void);
+
+	int actionBefore();
+	int actionEnd();
+	AcApDocument* pDoc;
+	//AcDbDatabase* pDb;
+	AcDbBlockTableRecord* pModelSpace;
 };

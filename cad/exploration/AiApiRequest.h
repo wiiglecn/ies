@@ -8,6 +8,7 @@ public:
 	void Start();
 	void Stop();
 	void setAcadWnd(CWnd* pWnd);
+	CWnd* getAcadWnd();
 public:
 	~AiApiRequest(void);
 

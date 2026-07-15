@@ -36,6 +36,8 @@
 #include "Utils.h"
 #include "PaletteCleanup.h"
 #include "AiApiRequest.h"
+#include "declare.h"
+#include "ToolDraw.h"
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -56,6 +58,7 @@ BEGIN_MESSAGE_MAP(CDataPalette, CAdUiPalette)
 	ON_WM_CREATE()
 	ON_WM_DESTROY()
 	ON_WM_SIZE()
+	ON_MESSAGE(WM_USER_TOOL, HandleApiCommand)
 	//ON_MESSAGE(WM_JS_COMMAND, HandleJsCommandInternal)
 //	ON_CBN_SELCHANGE(ID_COMBO, OnComboChange)
 //	ON_EN_UPDATE(ID_STRING_EDIT, OnStringChange)
@@ -110,6 +113,7 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
 	hServer=new AiApiRequest();
 	hServer->Start();
+	hServer->setAcadWnd(this);
 
     if (CAdUiPalette::OnCreate(lpCreateStruct) == -1)
         return -1;
@@ -441,4 +445,15 @@ void CDataPalette::SetDiameter(CBaseMarker& marker)
             }
         }
     }
+}
+LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
+{
+	cJSON* params=(cJSON*) lParam;
+	switch(wParam){
+		case WM_USER_A_CREATELINE:
+			ToolDraw::getInstance().create_line(params);
+			break;
+	}
+	cJSON_Delete(params);
+	return 0;
 }

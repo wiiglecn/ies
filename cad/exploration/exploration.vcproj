@@ -350,6 +350,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\declare.h"
+				>
+			</File>
+			<File
 				RelativePath=".\DWGPreview.h"
 				>
 			</File>
