@@ -60,8 +60,10 @@ int ToolDraw::actionEnd()
 	acDocManager->unlockDocument(this->pDoc);
 	return 0;
 }
-void ToolDraw::create_line(cJSON* params)
+void ToolDraw::create_line(AiToolCommandData* data)
 {
+	cJSON* params = data->jsonRoot;
+
     // 1. Get JSON items
     cJSON* x1Item = cJSON_GetObjectItem(params, "x1");
     cJSON* y1Item = cJSON_GetObjectItem(params, "y1");
@@ -127,8 +129,10 @@ void ToolDraw::create_line(cJSON* params)
 
 	
 }
-void ToolDraw::create_circle(cJSON* params)
+void ToolDraw::create_circle(AiToolCommandData* data)
 {
+	cJSON* params = data->jsonRoot;
+
     cJSON* xItem = cJSON_GetObjectItem(params, "x");
     cJSON* yItem = cJSON_GetObjectItem(params, "y");
     cJSON* rItem = cJSON_GetObjectItem(params, "radius");
@@ -169,8 +173,10 @@ void ToolDraw::create_circle(cJSON* params)
 
     this->actionEnd();
 }
-void ToolDraw::create_rectangle(cJSON* params)
+void ToolDraw::create_rectangle(AiToolCommandData* data)
 {
+	cJSON* params = data->jsonRoot;
+
     cJSON* x1Item = cJSON_GetObjectItem(params, "x1");
     cJSON* y1Item = cJSON_GetObjectItem(params, "y1");
     cJSON* widthItem = cJSON_GetObjectItem(params, "width");
@@ -224,8 +230,10 @@ void ToolDraw::create_rectangle(cJSON* params)
     this->actionEnd();
 }
 
-void ToolDraw::create_text(cJSON* params)
+void ToolDraw::create_text(AiToolCommandData* data)
 {
+	cJSON* params = data->jsonRoot;
+
     cJSON* xItem = cJSON_GetObjectItem(params, "x");
     cJSON* yItem = cJSON_GetObjectItem(params, "y");
     cJSON* heightItem = cJSON_GetObjectItem(params, "height");
@@ -270,8 +278,9 @@ void ToolDraw::create_text(cJSON* params)
     this->actionEnd();
 }
 
-void ToolDraw::create_layer(cJSON* params)
+void ToolDraw::create_layer(AiToolCommandData* data)
 {
+	cJSON* params = data->jsonRoot;
     cJSON* nameItem = cJSON_GetObjectItem(params, "name");
     //cJSON* colorItem = cJSON_GetObjectItem(params, "color");
 
@@ -331,8 +340,9 @@ void ToolDraw::create_layer(cJSON* params)
     this->actionEnd();
 }
 
-void ToolDraw::list_layers(cJSON* params)
+void ToolDraw::list_layers(AiToolCommandData* data)
 {
+	// cJSON* params = data->jsonRoot;
     if (this->actionBefore()) return;
 
     AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
@@ -341,9 +351,11 @@ void ToolDraw::list_layers(cJSON* params)
     {
         acutPrintf(_T("[ERROR] list_layers: failed to open Layer Table.\n"));
         this->actionEnd();
+		data->ret = 1;
         return;
     }
 
+    data->resultJson = cJSON_CreateArray();
     AcDbLayerTableIterator* pIter = NULL;
     if (pLayerTable->newIterator(pIter) == Acad::eOk)
     {
@@ -352,10 +364,28 @@ void ToolDraw::list_layers(cJSON* params)
             AcDbLayerTableRecord* pLayerRecord = NULL;
             if (pIter->getRecord(pLayerRecord, AcDb::kForRead) == Acad::eOk)
             {
-                // Use getName to retrieve the layer name
+                 // Use getName to retrieve the layer name
                 const ACHAR* pName = NULL;
                 if (pLayerRecord->getName(pName) == Acad::eOk && pName != NULL)
                 {
+                    // Convert ACHAR* (Unicode) to UTF-8 string for cJSON
+                    // Assuming TCHAR is wchar_t (Unicode)
+#ifdef _UNICODE
+                    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, pName, -1, NULL, 0, NULL, NULL);
+                    if (utf8Len > 0)
+                    {
+                        char* utf8Str = new char[utf8Len];
+                        if (WideCharToMultiByte(CP_UTF8, 0, pName, -1, utf8Str, utf8Len, NULL, NULL) > 0)
+                        {
+                            // Add string to JSON array
+                            cJSON_AddItemToArray(data->resultJson, cJSON_CreateString(utf8Str));
+                        }
+                        delete[] utf8Str;
+                    }
+#else
+                    // For MBCS, assume it's already ANSI/UTF-8 compatible or convert appropriately
+                    cJSON_AddItemToArray(data->resultJson, cJSON_CreateString(pName));
+#endif
                     acutPrintf(_T("[LAYER] %s\n"), pName);
                 }
                 else
@@ -369,6 +399,7 @@ void ToolDraw::list_layers(cJSON* params)
     }
     else
     {
+		data->ret = 1;
         acutPrintf(_T("[ERROR] list_layers: failed to create Layer Table iterator.\n"));
     }
 

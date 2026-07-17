@@ -150,29 +150,122 @@ void HandleAiTool(struct mg_connection* nc,
         return;
     }
 	std::string uri(hm->uri.buf, hm->uri.len);
+    AiApiRequest* apiRequest = (AiApiRequest*)user_data;
+    CWnd* pAcadWnd = apiRequest->getAcadWnd();
 
-    // 2. Check if it matches 'create_line'
-    if (EndsWith(uri, "/create_line") || EndsWith(uri, "create_line")) {
-        // Handle Create Line Logic
-        // Parse 'body' if needed
-		AiApiRequest* apiRequest = (AiApiRequest*) user_data;
-		apiRequest->getAcadWnd()->PostMessage(WM_USER_TOOL, WM_USER_A_CREATELINE, (LPARAM)root);
-
-        response = "{\"status\":\"success\",\"message\":\"Line created\"}";
-        AiApiServer::SendJsonResponse(nc, 200, response);
+    if (!pAcadWnd) {
+        cJSON_Delete(root);
+        response = "{\"status\":\"error\",\"message\":\"AutoCAD Window not available\"}";
+        AiApiServer::SendJsonResponse(nc, 500, response);
+        return;
     }
-    // 3. Check if it matches 'create_circle'
+
+    // 2. Create a manual-reset event, initially non-signaled
+    HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (hEvent == NULL) {
+        cJSON_Delete(root);
+        response = "{\"status\":\"error\",\"message\":\"Failed to create sync event\"}";
+        AiApiServer::SendJsonResponse(nc, 500, response);
+        return;
+    }
+
+    // 3. Package data
+    AiToolCommandData* pData = new AiToolCommandData();
+    pData->jsonRoot = root;
+    pData->hEvent = hEvent;
+
+    // 4. Determine the specific command based on URI
+    UINT nCommandID = 0;
+    if (EndsWith(uri, "/create_line") || EndsWith(uri, "create_line")) {
+        nCommandID = WM_USER_A_CREATELINE;
+    } 
     else if (EndsWith(uri, "/create_circle") || EndsWith(uri, "create_circle")) {
-        // Handle Create Circle Logic
-        
-        response = "{\"status\":\"success\",\"message\":\"Circle created\"}";
-        AiApiServer::SendJsonResponse(nc, 200, response);
+        nCommandID = WM_USER_A_CREATECIRCLE; // Assume you define this
+    }
+	else if (EndsWith(uri, "/create_circle") || EndsWith(uri, "create_circle")) {
+        nCommandID = WM_USER_A_CREATECIRCLE; // Assume you define this
+    }
+	else if (EndsWith(uri, "/create_rectangle") || EndsWith(uri, "create_rectangle")) {
+        nCommandID = WM_USER_A_CREATERECTANGLE; // Assume you define this
+    }
+	else if (EndsWith(uri, "/create_text") || EndsWith(uri, "create_text")) {
+        nCommandID = WM_USER_A_CREATERTEXT; // Assume you define this
+    }
+	else if (EndsWith(uri, "/create_layer") || EndsWith(uri, "create_layer")) {
+        nCommandID = WM_USER_A_CREATELAYER; // Assume you define this
+    }
+	else if (EndsWith(uri, "/list_layers") || EndsWith(uri, "list_layers")) {
+        nCommandID = WM_USER_A_LISTLAYERS; // Assume you define this
     }
     else {
-        // Unknown tool endpoint
+        // Cleanup for unknown command
+        delete pData;
+        CloseHandle(hEvent);
         response = "{\"status\":\"error\",\"message\":\"Unknown tool endpoint: " + uri + "\"}";
         AiApiServer::SendJsonResponse(nc, 404, response);
+        return;
     }
+
+    // 5. Post Message to AutoCAD Main Thread
+    // WPARAM: Command ID, LPARAM: Pointer to our data structure
+    pAcadWnd->PostMessage(WM_USER_TOOL, nCommandID, (LPARAM)pData);
+
+     // 6. Wait for the event to be signaled by the main thread
+    // Timeout after 10 seconds to prevent indefinite hanging
+    DWORD waitResult = WaitForSingleObject(hEvent, 10000); 
+
+    // 7. Construct Response using cJSON
+    if (waitResult == WAIT_OBJECT_0) {
+        // Create the root response object
+        cJSON* responseRoot = cJSON_CreateObject();
+        
+        if (pData->ret == 0) {
+            // Add status
+            cJSON_AddStringToObject(responseRoot, "status", "success");
+            
+            if (pData->resultJson){
+                cJSON_AddItemToObject(responseRoot, "data", pData->resultJson);
+                pData->resultJson = NULL; 
+            }
+            cJSON_AddStringToObject(responseRoot, "message", "Tool executed successfully");
+            
+        } else {
+            // No specific data returned
+            cJSON_AddStringToObject(responseRoot, "status", "error");
+            cJSON_AddStringToObject(responseRoot, "message", "Failed to serialize response");
+        }
+
+        // Serialize the JSON object to a string
+        char* printed = cJSON_PrintUnformatted(responseRoot);
+        if (printed) {
+            response = printed;
+            free(printed);
+        } else {
+            response = "{\"status\":\"error\",\"message\":\"Failed to serialize response\"}";
+        }
+        
+        // Send the response
+        AiApiServer::SendJsonResponse(nc, 200, response);
+        
+        // Clean up the response root object
+        cJSON_Delete(responseRoot);
+    } 
+    else {
+        // Timeout or Error
+        response = "{\"status\":\"error\",\"message\":\"Execution timeout\"}";
+        AiApiServer::SendJsonResponse(nc, 500, response);
+    }
+
+    // 8. Cleanup
+    CloseHandle(hEvent);
+    
+    // Clean up the result JSON if it was NOT attached to the response (e.g. in error cases or if logic changed)
+    if (pData->resultJson) {
+        cJSON_Delete(pData->resultJson);
+    }
+    
+    cJSON_Delete(root); // Clean up input JSON
+    delete pData;       // Clean up the struct
 }
 void AiApiRequest::Start()
 {

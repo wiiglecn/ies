@@ -1,5 +1,5 @@
 #pragma once
-
+#include "declare.h"
 class cJSON;
 
 class ToolDraw
@@ -9,12 +9,12 @@ public:
 	ToolDraw(const ToolDraw&);            
     ToolDraw& operator=(const ToolDraw&); 
 public:
-	void create_line(cJSON* params);
-	void create_circle(cJSON* params);
-	void create_rectangle(cJSON* params);
-	void create_text(cJSON* params);
-	void create_layer(cJSON* params);
-	void list_layers(cJSON* params);
+	void create_line(AiToolCommandData* data);
+	void create_circle(AiToolCommandData* data);
+	void create_rectangle(AiToolCommandData* data);
+	void create_text(AiToolCommandData* data);
+	void create_layer(AiToolCommandData* data);
+	void list_layers(AiToolCommandData* data);
 private:
 	ToolDraw(void);
     ~ToolDraw(void);

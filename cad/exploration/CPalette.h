@@ -40,7 +40,7 @@
 // Custom Palette class
 
 class AiApiRequest;
-
+class AiChat;
 class CDataPalette : public CAdUiPalette 
 { 
 	DECLARE_DYNCREATE(CDataPalette)
@@ -83,6 +83,7 @@ private:
 
 private:
 	AiApiRequest* hServer;
+	AiChat* hChat;
 
 };
 

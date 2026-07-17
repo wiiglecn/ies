@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>昇龙助手</title>
 <style>
     /* General Body Styles */
     html, body {
@@ -239,6 +240,12 @@
             });
         }
     }
+    // Helper function for IE7 compatibility to trim strings
+    function trimString(str) {
+        if (!str) return "";
+        return str.replace(/^\s+|\s+$/g, '');
+    }
+
 
     // Helper function for IE7 compatibility
     function getElementsByClass(searchClass, node, tag) {
@@ -419,29 +426,81 @@
             window.external.OnJsCommand("PreSelectLine", "");
         }
     }
-
+    var chatMessages = []; 
+    var lastMessage = {
+        date: new Date(),
+        text: "AI 思考中.",
+        lastMessageDiv:null
+    }
     function sendChatMessage() {
+        // if (lastMessage.lastMessageDiv){
+        //     alert("请等待上一条消息回复完成！");
+        //     return;
+        // }
         var input = document.getElementById('ai-chat-input');
         var message = input.value;
-        if (!message) return;
+        
+        // Use the IE7-compatible trim function
+        var trimmedMessage = trimString(message);
+        
+        // Check if the trimmed message is empty
+        if (!trimmedMessage) return;
 
         var chatContainer = document.getElementById('ai-chat-container');
         
+        // 1. Add User Message to Array
+        chatMessages.push({
+            role: 'user',
+            content: message
+        });
+
+        
+
+        // 2. Update UI for User Message
         var userMsgDiv = document.createElement('div');
         userMsgDiv.className = 'chat-message user';
         userMsgDiv.innerText = message;
         chatContainer.appendChild(userMsgDiv);
 
+        // Clear input immediately
         input.value = '';
         chatContainer.scrollTop = chatContainer.scrollHeight;
+        
 
-        setTimeout(function() {
-            var aiMsgDiv = document.createElement('div');
-            aiMsgDiv.className = 'chat-message ai';
-            aiMsgDiv.innerText = "昇龙助手: Received \"" + message + "\". Processing...";
-            chatContainer.appendChild(aiMsgDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }, 500);
+        var aiResponseText = "昇龙助手:  \"" + lastMessage.text ;
+        var aiMsgDiv = document.createElement('div');
+        aiMsgDiv.className = 'chat-message ai';
+        aiMsgDiv.innerText = aiResponseText;
+        chatContainer.appendChild(aiMsgDiv);
+        
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        lastMessage.lastMessageDiv=aiMsgDiv;
+        if (window.external){
+            window.external.OnJsCommand("Chat", message);
+        }
+
+        // 3. Simulate AI Response (In a real app, this would be an async call)
+        // setTimeout(function() {
+        //     var aiResponseText = "昇龙助手: Received \"" + message + "\". Processing...";
+            
+        //     // Add AI Message to Array
+        //     chatMessages.push({
+        //         role: 'ai',
+        //         content: aiResponseText
+        //     });
+
+        //     // Update UI for AI Message
+        //     var aiMsgDiv = document.createElement('div');
+        //     aiMsgDiv.className = 'chat-message ai';
+        //     aiMsgDiv.innerText = aiResponseText;
+        //     chatContainer.appendChild(aiMsgDiv);
+            
+        //     chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+        //     // Optional: Log the current state of the message array for debugging/other uses
+        //     console.log("Current Chat History:", JSON.stringify(chatMessages));
+        // }, 500);
     }
 
     function checkEnter(event) {

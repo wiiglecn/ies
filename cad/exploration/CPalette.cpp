@@ -38,6 +38,9 @@
 #include "AiApiRequest.h"
 #include "declare.h"
 #include "ToolDraw.h"
+#include "AiChat.h"
+#include "Logger.h"
+
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -71,7 +74,7 @@ struct JsCmdData {
         CString param;
     };
 
-CDataPalette::CDataPalette()
+CDataPalette::CDataPalette():hChat(NULL)
 {
 	
 
@@ -111,6 +114,10 @@ void CDataPalette::OnSetActive()
 
 int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
+	CLogger& logger = CLogger::GetInstance();
+	logger.SetLevel(LogLevel::LOG_LEVEL_DEBUG);
+	logger.Init(_T("ks_"));
+
 	hServer=new AiApiRequest();
 	hServer->Start();
 	hServer->setAcadWnd(this);
@@ -154,6 +161,8 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 void CDataPalette::OnDestroy()
 {
+	if (hChat) delete hChat;
+
 	hServer->Stop();
 	delete hServer;
 	hServer = NULL;
@@ -327,12 +336,23 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
     {
        this->onPageReady();
     }
-    else if (_tcscmp(szCommand, _T("SwitchItem")) == 0)
+	
+	else if (_tcscmp(szCommand, _T("Chat")) == 0)
+    {
+		if(hChat==NULL){
+			hChat = new AiChat();
+		}
+		CString message_chat(szParam);
+		hChat->Execute(message_chat);
+    }
+
+
+
+    /*else if (_tcscmp(szCommand, _T("SwitchItem")) == 0)
     {
         int nIndex = _ttoi(szParam);
         UpdateHtmlDisplay(); 
-    }
-
+    }*/
     return 0;
 }
 void CDataPalette::UpdateHtmlDisplay()
@@ -448,12 +468,31 @@ void CDataPalette::SetDiameter(CBaseMarker& marker)
 }
 LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
 {
-	cJSON* params=(cJSON*) lParam;
+	AiToolCommandData* params=(AiToolCommandData*) lParam;
 	switch(wParam){
 		case WM_USER_A_CREATELINE:
 			ToolDraw::getInstance().create_line(params);
 			break;
+		case WM_USER_A_CREATECIRCLE:
+			ToolDraw::getInstance().create_circle(params);
+			break;
+		case WM_USER_A_CREATERECTANGLE:
+			ToolDraw::getInstance().create_rectangle(params);
+			break;
+		case WM_USER_A_CREATERTEXT:
+			ToolDraw::getInstance().create_text(params);
+			break;
+		case WM_USER_A_CREATELAYER:
+			ToolDraw::getInstance().create_layer(params);
+			break;
+		case WM_USER_A_LISTLAYERS:
+			ToolDraw::getInstance().list_layers(params);
+			break;
 	}
-	cJSON_Delete(params);
+    acedUpdateDisplay();
+	// Signal the waiting thread
+    SetEvent(params->hEvent);
+    
+
 	return 0;
 }

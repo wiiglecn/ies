@@ -119,7 +119,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /Y /D &quot;$(ProjectDir)PalettePage.html&quot; &quot;$(OutDir)&quot;"
+				CommandLine="xcopy /Y /D &quot;$(ProjectDir)PalettePage.html&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)tools.json&quot; &quot;$(OutDir)&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -244,6 +244,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\AiChat.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\BaseMarker.cpp"
 				>
 			</File>
@@ -272,6 +276,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\HttpClient.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\InspData.cpp"
 				>
 			</File>
@@ -288,6 +296,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Logger.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\MySafeHtmlView.cpp"
 				>
 			</File>
@@ -297,11 +309,6 @@
 			</File>
 			<File
 				RelativePath=".\PaletteCleanup.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\PalettePage.html"
-				DeploymentContent="true"
 				>
 			</File>
 			<File
@@ -338,6 +345,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\AiChat.h"
+				>
+			</File>
+			<File
 				RelativePath=".\BaseMarker.h"
 				>
 			</File>
@@ -362,6 +373,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\HttpClient.h"
+				>
+			</File>
+			<File
 				RelativePath=".\InspData.h"
 				>
 			</File>
@@ -375,6 +390,10 @@
 			</File>
 			<File
 				RelativePath=".\LineJig.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Logger.h"
 				>
 			</File>
 			<File
@@ -445,6 +464,20 @@
 			</File>
 			<File
 				RelativePath=".\ToolDraw.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="static"
+			>
+			<File
+				RelativePath=".\PalettePage.html"
+				DeploymentContent="true"
+				>
+			</File>
+			<File
+				RelativePath=".\tools.json"
+				DeploymentContent="true"
 				>
 			</File>
 		</Filter>
