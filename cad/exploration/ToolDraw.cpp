@@ -4,7 +4,9 @@
 #include "adscodes.h"
 #include "dbents.h"
 #include "dbsymtb.h"
+#include "actrans.h"
 #include "utils.h"
+
 
 ToolDraw::ToolDraw(void):pDoc(NULL),pModelSpace(NULL)
 {
@@ -405,4 +407,22 @@ void ToolDraw::list_layers(AiToolCommandData* data)
 
     pLayerTable->close();
     this->actionEnd();
+}
+
+void ToolDraw::regen()
+{
+	//AcApDocument* doc = curDoc();
+	//doc->regen(ACAD::kActiveViewport);
+	acDocManager->sendStringToExecute(
+    pDoc,
+    _T("_.REGEN "),
+    TRUE,
+    FALSE,
+    FALSE);
+
+	//actrTransactionManager->queueForGraphicsFlush();
+	//actrTransactionManager->flushGraphics();
+
+	//acedRedraw(NULL, 1);
+	//acedUpdateDisplay();
 }

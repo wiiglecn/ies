@@ -105,9 +105,8 @@ void CLogger::Log(LogLevel nLevel, const TCHAR* pszFmt, ...)
                    LevelToString(nLevel),
                    szBuffer);
 
-    // 写入文件（ofstream 需要窄字符串）
-    CStringA strLineA(strLine);
-    m_ofs << strLineA.GetString();
+    // 写入文件（UTF-8 格式）
+	m_ofs << CUtils::CStringToUTF8(strLine);
     m_ofs.flush();
 
     // 同时输出到调试窗口
@@ -309,4 +308,136 @@ void CLogger::EnsureDirectory(const CString& strDir)
         strPart += strPath;
         ::CreateDirectory(strPart, NULL);
     }
+}
+void CLogger::LogUtf8(LogLevel nLevel, const char* szBuffer)
+{
+    if (nLevel < m_nLevel)
+    {
+        return;
+    }
+
+    CSingleLock lock(&m_cs, TRUE);
+    CheckAndRotateFile();
+
+    if (!m_ofs.is_open())
+    {
+        return;
+    }
+
+    // 时间戳和级别直接格式化为 CStringA (ASCII兼容，无需转码)
+    CStringA strTimeA = CT2A(GetCurrentTimeString());
+    CStringA strLevelA = CT2A(LevelToString(nLevel));
+
+    CStringA strLine;
+    strLine.Format("[%s] [%s] %s\n", strTimeA, strLevelA, szBuffer);
+
+    // 直接写入文件，无需二次转换
+    m_ofs << strLine.GetString();
+    m_ofs.flush();
+
+    // 调试窗口输出（需要将 UTF-8 转回系统需要的格式）
+#ifdef _UNICODE
+    int nLen = MultiByteToWideChar(CP_UTF8, 0, strLine, -1, NULL, 0);
+    if (nLen > 0)
+    {
+        wchar_t* pWBuf = new wchar_t[nLen];
+        MultiByteToWideChar(CP_UTF8, 0, strLine, -1, pWBuf, nLen);
+        OutputDebugStringW(pWBuf);
+        delete[] pWBuf;
+    }
+#else
+    // 非 Unicode 模式下转为 ANSI 以便在调试器正确显示
+    int nLenW = MultiByteToWideChar(CP_UTF8, 0, strLine, -1, NULL, 0);
+    if (nLenW > 0)
+    {
+        wchar_t* pWBuf = new wchar_t[nLenW];
+        MultiByteToWideChar(CP_UTF8, 0, strLine, -1, pWBuf, nLenW);
+        
+        int nLenA = WideCharToMultiByte(CP_ACP, 0, pWBuf, -1, NULL, 0, NULL, NULL);
+        if (nLenA > 0)
+        {
+            char* pABuf = new char[nLenA];
+            WideCharToMultiByte(CP_ACP, 0, pWBuf, -1, pABuf, nLenA, NULL, NULL);
+            OutputDebugStringA(pABuf);
+            delete[] pABuf;
+        }
+        delete[] pWBuf;
+    }
+#endif
+}
+
+void CLogger::Log(LogLevel nLevel, const char* pszFmt, ...)
+{
+    if (nLevel < m_nLevel)
+        return;
+
+    char szBuffer[4096] = { 0 };
+    va_list args;
+    va_start(args, pszFmt);
+    vsnprintf_s(szBuffer, 4096, _TRUNCATE, pszFmt, args);
+    va_end(args);
+
+    LogUtf8(nLevel, szBuffer);
+}
+
+void CLogger::Debug(const char* pszFmt, ...)
+{
+    if (LOG_LEVEL_DEBUG < m_nLevel)
+        return;
+
+    char szBuffer[4096] = { 0 };
+    va_list args;
+    va_start(args, pszFmt);
+    _vsnprintf(szBuffer, 4095, pszFmt, args);
+    va_end(args);
+
+    LogUtf8(LOG_LEVEL_DEBUG, szBuffer);
+}
+void CLogger::Debug(const std::string& s)
+{
+    if (LOG_LEVEL_DEBUG < m_nLevel)
+        return;
+
+    LogUtf8(LOG_LEVEL_DEBUG, s.c_str());
+}
+void CLogger::Info(const char* pszFmt, ...)
+{
+    if (LOG_LEVEL_INFO <  m_nLevel)
+        return;
+
+    char szBuffer[4096] = { 0 };
+    va_list args;
+    va_start(args, pszFmt);
+    vsnprintf_s(szBuffer, 4096, _TRUNCATE, pszFmt, args);
+    va_end(args);
+
+    LogUtf8(LOG_LEVEL_INFO, szBuffer);
+}
+
+void CLogger::Warning(const char* pszFmt, ...)
+{
+    if (LOG_LEVEL_WARNING < m_nLevel)
+        return;
+
+    char szBuffer[4096] = { 0 };
+    va_list args;
+    va_start(args, pszFmt);
+    vsnprintf_s(szBuffer, 4096, _TRUNCATE, pszFmt, args);
+    va_end(args);
+
+    LogUtf8(LOG_LEVEL_WARNING, szBuffer);
+}
+
+void CLogger::Error(const char* pszFmt, ...)
+{
+    if (LOG_LEVEL_ERROR < m_nLevel)
+        return;
+
+    char szBuffer[4096] = { 0 };
+    va_list args;
+    va_start(args, pszFmt);
+    vsnprintf_s(szBuffer, 4096, _TRUNCATE, pszFmt, args);
+    va_end(args);
+
+    LogUtf8(LOG_LEVEL_ERROR, szBuffer);
 }

@@ -19,7 +19,7 @@ static std::wstring StringToWString(const std::string& str)
 }
 
 AiApiServer::AiApiServer(void) 
-    : m_nc(NULL), m_sslNc(NULL), m_running(false)
+    : m_nc(NULL), m_sslNc(NULL), m_running(false),m_hThread(NULL)
 {
     // 新版 mg_mgr_init 不需要额外参数
     mg_mgr_init(&m_mgr);
@@ -82,10 +82,17 @@ void AiApiServer::Stop()
     m_running = false;
     // Wait for the thread to finish
     if (m_hThread != NULL) {
-        WaitForSingleObject(m_hThread, 1000); // Wait up to 5 seconds
-        CloseHandle(m_hThread);
+        WaitForSingleObject(m_hThread, 1000);
+
+        // 只关闭一次，关闭后立即置空，防止重复 CloseHandle
+        try {
+            CloseHandle(m_hThread);
+        }
+        catch (...) {
+            //acutPrintf(_T("\n[CAD ERROR] Exception caught while calling CloseHandle."));
+        }
         m_hThread = NULL;
-        acutPrintf(_T("\n[CAD DEBUG] Polling thread stopped."));
+        // acutPrintf(_T("\n[CAD DEBUG] Polling thread stopped."));
     }
     
     // Clean up mongoose resources

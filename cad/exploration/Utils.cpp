@@ -125,3 +125,31 @@ bool CUtils::utf8ToTChar(const char* utf8, TCHAR* outBuf, int bufLen)
     return strcpy_s(outBuf, bufLen, utf8) == 0;
 #endif
 }
+std::string CUtils::CStringToUTF8(const CString& str)
+{
+    if (str.IsEmpty())
+        return std::string();
+
+#ifdef _UNICODE
+    int len = str.GetLength();
+    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, str.GetString(), len, NULL, 0, NULL, NULL);
+    if (utf8Len == 0)
+        return std::string();
+    std::string result(utf8Len, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, str.GetString(), len, &result[0], utf8Len, NULL, NULL);
+    return result;
+#else
+    int len = str.GetLength();
+    int wLen = MultiByteToWideChar(CP_ACP, 0, str.GetString(), len, NULL, 0);
+    if (wLen == 0)
+        return std::string();
+    std::wstring wstr(wLen, L'\0');
+    MultiByteToWideChar(CP_ACP, 0, str.GetString(), len, &wstr[0], wLen);
+    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), wLen, NULL, 0, NULL, NULL);
+    if (utf8Len == 0)
+        return std::string();
+    std::string result(utf8Len, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), wLen, &result[0], utf8Len, NULL, NULL);
+    return result;
+#endif
+}

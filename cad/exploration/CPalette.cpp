@@ -488,8 +488,12 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
 		case WM_USER_A_LISTLAYERS:
 			ToolDraw::getInstance().list_layers(params);
 			break;
+		case WM_USER_A_REGEN:
+			ToolDraw::getInstance().regen();
+			break;
 	}
-    acedUpdateDisplay();
+	
+    //acedUpdateDisplay();
 	// Signal the waiting thread
     SetEvent(params->hEvent);
     

@@ -15,6 +15,9 @@ public:
 	void create_text(AiToolCommandData* data);
 	void create_layer(AiToolCommandData* data);
 	void list_layers(AiToolCommandData* data);
+
+
+	void regen();
 private:
 	ToolDraw(void);
     ~ToolDraw(void);

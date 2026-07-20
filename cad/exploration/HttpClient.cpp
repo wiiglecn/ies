@@ -150,7 +150,7 @@ BOOL CHttpClient::DoRequest(const CString& strUrl,
         pFile->QueryInfoStatusCode(dwStatusCode);
 
         // Read response
-        char szBuffer[4096];
+		char szBuffer[4096]={0};
         UINT nRead = 0;
         do
         {

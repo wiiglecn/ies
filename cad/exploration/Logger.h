@@ -29,12 +29,18 @@ public:
 
     // 写日志
     void Log(LogLevel nLevel, const TCHAR* pszFmt, ...);
+    void Log(LogLevel nLevel, const char* pszFmt, ...); // 新增重载
 
     // 便捷方法
     void Debug(const TCHAR* pszFmt, ...);
+    void Debug(const char* pszFmt, ...); // 新增重载
+	void Debug(const std::string& s);
     void Info(const TCHAR* pszFmt, ...);
+    void Info(const char* pszFmt, ...); // 新增重载
     void Warning(const TCHAR* pszFmt, ...);
+    void Warning(const char* pszFmt, ...); // 新增重载
     void Error(const TCHAR* pszFmt, ...);
+    void Error(const char* pszFmt, ...); // 新增重载
 
 private:
     CLogger(void);
@@ -58,6 +64,8 @@ private:
 
     // 确保目录存在
     void EnsureDirectory(const CString& strDir);
+    // 直接处理已是 UTF-8 的字符串缓冲区的内部方法
+    void LogUtf8(LogLevel nLevel, const char* szBuffer);
 
 private:
     CString     m_strPrefix;     // 文件名前缀

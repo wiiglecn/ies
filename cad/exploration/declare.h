@@ -8,6 +8,12 @@
 #define WM_USER_A_CREATELAYER (WM_USER + 1005)
 #define WM_USER_A_LISTLAYERS (WM_USER + 1006)
 
+
+
+#define WM_USER_A_REGEN (WM_USER + 3000)
+
+
+
 class cJSON;
 // Add this struct definition in AiApiRequest.h or a common header
 // In AiApiRequest.h or where the struct is defined
