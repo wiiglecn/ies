@@ -62,6 +62,7 @@ BEGIN_MESSAGE_MAP(CDataPalette, CAdUiPalette)
 	ON_WM_DESTROY()
 	ON_WM_SIZE()
 	ON_MESSAGE(WM_USER_TOOL, HandleApiCommand)
+    ON_MESSAGE(WM_USER_CHAT, HandleChatReply)
 	//ON_MESSAGE(WM_JS_COMMAND, HandleJsCommandInternal)
 //	ON_CBN_SELCHANGE(ID_COMBO, OnComboChange)
 //	ON_EN_UPDATE(ID_STRING_EDIT, OnStringChange)
@@ -353,6 +354,16 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
         int nIndex = _ttoi(szParam);
         UpdateHtmlDisplay(); 
     }*/
+    return 0;
+}
+LRESULT CDataPalette::HandleChatReply(WPARAM wParam, LPARAM lParam)
+{
+    CString* pReasoning = (CString*)lParam;
+    if (pReasoning && m_pHtmlView)
+    {
+        m_pHtmlView->CallJsFunction(_T("OnReply"), *pReasoning);
+        delete pReasoning;
+    }
     return 0;
 }
 void CDataPalette::UpdateHtmlDisplay()

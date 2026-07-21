@@ -12,6 +12,7 @@
 
 #define WM_USER_A_REGEN (WM_USER + 3000)
 
+#define WM_USER_CHAT (WM_USER + 4000)
 
 
 class cJSON;

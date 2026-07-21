@@ -355,6 +355,29 @@
             }
         }
     }
+    function onReply(dataStr){
+        if (!dataStr) return;
+        
+        var chatContainer = document.getElementById('ai-chat-container');
+        var aiResponseText = "昇龙助手: " + dataStr;
+        
+        if (lastMessage.lastMessageDiv) {
+            // 更新已有消息内容
+            lastMessage.lastMessageDiv.innerText = aiResponseText;
+            // 重置，允许下一条消息
+            lastMessage.lastMessageDiv = null;
+        } else {
+            // 添加新的聊天记录
+            var aiMsgDiv = document.createElement('div');
+            aiMsgDiv.className = 'chat-message ai';
+            aiMsgDiv.innerText = aiResponseText;
+            chatContainer.appendChild(aiMsgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // 记录最新消息文本
+        lastMessage.text = dataStr;
+    }
 
     function toggleGroup(headerElement) {
         var content = headerElement.nextSibling;

@@ -6,7 +6,7 @@
 #include "cJSON.h"
 #include "Utils.h"
 #include "Logger.h"
-
+#include "declare.h"
 //#define WORK_URL _T("https://ws-93xgld532jdyrkjf.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions")
 //#define WORK_URL _T("https://ws-93xgld532jdyrkjf.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions")
 
@@ -94,7 +94,7 @@ static void CallLocalTool(const char* functionName, const std::string& arguments
     }
 }
 
-static void HandleToolCallsResponse(const std::string& strResponse)
+static void HandleToolCallsResponse(const std::string& strResponse,AiChat* pChat)
 {
     cJSON* responseJson = cJSON_Parse(strResponse.c_str());
     if (responseJson == NULL)
@@ -122,6 +122,15 @@ static void HandleToolCallsResponse(const std::string& strResponse)
         if (message == NULL || !cJSON_IsObject(message))
             continue;
 
+		cJSON* reasoning_content = cJSON_GetObjectItem(choice, "reasoning_content");
+		if (reasoning_content && reasoning_content->valuestring){
+			CWnd* pAcadWnd = pChat->getAcadWnd();
+            if (pAcadWnd){
+                CStringW strReasoning(CA2W(reasoning_content->valuestring, CP_UTF8));
+                CString* pReasoning = new CString(strReasoning);
+                pAcadWnd->PostMessage(WM_USER_CHAT, 0, (LPARAM)pReasoning);
+            }
+        }
         cJSON* toolCalls = cJSON_GetObjectItem(message, "tool_calls");
         if (toolCalls == NULL || !cJSON_IsArray(toolCalls))
             continue;
@@ -149,6 +158,9 @@ static void HandleToolCallsResponse(const std::string& strResponse)
 
             CallLocalTool(nameItem->valuestring, argumentsJson);
         }
+        if (toolCallCount > 0){
+            CallLocalTool("regen", "{}");
+        }
     }
 
     cJSON_Delete(responseJson);
@@ -161,12 +173,12 @@ void OnHttpResponse(BOOL bSuccess, const std::string& strResponse,
     if (pCtx  != NULL)
     {
         CHttpClient* pClient = pCtx->pClient;
-
+		
         if (bSuccess)
         {
             CLogger::GetInstance().Debug(_T("HTTP Response OK\n"));
             CLogger::GetInstance().Debug(strResponse);
-            HandleToolCallsResponse(strResponse);
+            HandleToolCallsResponse(strResponse,pCtx->pAiChat);
         }
         else
         {
@@ -178,12 +190,20 @@ void OnHttpResponse(BOOL bSuccess, const std::string& strResponse,
     }
 }
 
-AiChat::AiChat(void)
+AiChat::AiChat(void):pAcadWnd(NULL)
 {
 }
 
 AiChat::~AiChat(void)
 {
+}
+void AiChat::setAcadWnd(CWnd* pWnd)
+{
+	this->pAcadWnd=pWnd;
+}
+CWnd* AiChat::getAcadWnd()
+{
+	return this->pAcadWnd;
 }
 void AiChat::Execute(CString& message)
 {
