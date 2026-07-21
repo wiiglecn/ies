@@ -5,17 +5,28 @@
 #include "cJSON.h"
 #include "declare.h"
 
-AiApiRequest::AiApiRequest(void):m_Server(NULL),pAcadWnd(NULL)
-{
-}
 
-AiApiRequest::~AiApiRequest(void)
-{
-	if (m_Server){
-		delete m_Server;
-	}
-}
+// 定义路由与命令的映射表
+struct ToolRouteInfo {
+    const char* uriPath;
+    const char* uriSuffix;
+    UINT commandID;
+};
 
+// 全局工具路由数组 (请确保 WM_USER_A_REGEN 等宏已在你的头文件中定义)
+static const ToolRouteInfo toolRoutes[] = {
+    { "/ai/tool/create_line", "create_line", WM_USER_A_CREATELINE },
+    { "/ai/tool/create_circle", "create_circle", WM_USER_A_CREATECIRCLE },
+    { "/ai/tool/create_rectangle", "create_rectangle", WM_USER_A_CREATERECTANGLE },
+    { "/ai/tool/create_text", "create_text", WM_USER_A_CREATERTEXT },
+    { "/ai/tool/create_layer", "create_layer", WM_USER_A_CREATELAYER },
+    { "/ai/tool/list_layers", "list_layers", WM_USER_A_LISTLAYERS },
+    { "/ai/tool/regen", "regen", WM_USER_A_REGEN } 
+};
+bool EndsWith(const std::string& str, const std::string& suffix) {
+    if (suffix.size() > str.size()) return false;
+    return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
+}
 // AI 聊天接口
 void HandleAiChat(struct mg_connection* nc, 
 				  struct mg_http_message* hm,
@@ -130,10 +141,7 @@ void HandleAiCommand(struct mg_connection* nc,
 }
 // Helper to check if string ends with suffix
 // Compatible with VC8
-bool EndsWith(const std::string& str, const std::string& suffix) {
-    if (suffix.size() > str.size()) return false;
-    return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
-}
+
 void HandleAiTool(struct mg_connection* nc,
 				  struct mg_http_message* hm,
                   const std::map<std::string, std::string>& params,
@@ -174,30 +182,18 @@ void HandleAiTool(struct mg_connection* nc,
     pData->jsonRoot = root;
     pData->hEvent = hEvent;
 
-    // 4. Determine the specific command based on URI
+    // 4. Determine the specific command based on URI by iterating through the array
     UINT nCommandID = 0;
-    if (EndsWith(uri, "/create_line") || EndsWith(uri, "create_line")) {
-        nCommandID = WM_USER_A_CREATELINE;
-    } 
-    else if (EndsWith(uri, "/create_circle") || EndsWith(uri, "create_circle")) {
-        nCommandID = WM_USER_A_CREATECIRCLE; // Assume you define this
+    size_t routeCount = sizeof(toolRoutes) / sizeof(toolRoutes[0]);
+    for (size_t i = 0; i < routeCount; ++i) {
+        std::string slashSuffix = std::string("/") + toolRoutes[i].uriSuffix;
+        if (uri == toolRoutes[i].uriPath || EndsWith(uri, slashSuffix) || EndsWith(uri, toolRoutes[i].uriSuffix)) {
+            nCommandID = toolRoutes[i].commandID;
+            break;
+        }
     }
-	else if (EndsWith(uri, "/create_circle") || EndsWith(uri, "create_circle")) {
-        nCommandID = WM_USER_A_CREATECIRCLE; // Assume you define this
-    }
-	else if (EndsWith(uri, "/create_rectangle") || EndsWith(uri, "create_rectangle")) {
-        nCommandID = WM_USER_A_CREATERECTANGLE; // Assume you define this
-    }
-	else if (EndsWith(uri, "/create_text") || EndsWith(uri, "create_text")) {
-        nCommandID = WM_USER_A_CREATERTEXT; // Assume you define this
-    }
-	else if (EndsWith(uri, "/create_layer") || EndsWith(uri, "create_layer")) {
-        nCommandID = WM_USER_A_CREATELAYER; // Assume you define this
-    }
-	else if (EndsWith(uri, "/list_layers") || EndsWith(uri, "list_layers")) {
-        nCommandID = WM_USER_A_LISTLAYERS; // Assume you define this
-    }
-    else {
+
+    if (nCommandID == 0) {
         // Cleanup for unknown command
         delete pData;
         CloseHandle(hEvent);
@@ -267,6 +263,16 @@ void HandleAiTool(struct mg_connection* nc,
     cJSON_Delete(root); // Clean up input JSON
     delete pData;       // Clean up the struct
 }
+AiApiRequest::AiApiRequest(void):m_Server(NULL),pAcadWnd(NULL)
+{
+}
+
+AiApiRequest::~AiApiRequest(void)
+{
+	if (m_Server){
+		delete m_Server;
+	}
+}
 void AiApiRequest::Start()
 {
 	m_Server=new AiApiServer();
@@ -276,12 +282,11 @@ void AiApiRequest::Start()
 	m_Server->RegisterRoute("POST", "/ai/command", HandleAiCommand);
 	//tool
 
-	m_Server->RegisterRoute("POST", "/ai/tool/create_line", HandleAiTool, this);
-	m_Server->RegisterRoute("POST", "/ai/tool/create_circle", HandleAiTool, this);
-	m_Server->RegisterRoute("POST", "/ai/tool/create_rectangle", HandleAiTool, this);
-	m_Server->RegisterRoute("POST", "/ai/tool/create_text", HandleAiTool, this);
-	m_Server->RegisterRoute("POST", "/ai/tool/create_layer", HandleAiTool, this);
-	m_Server->RegisterRoute("POST", "/ai/tool/list_layers", HandleAiTool, this);
+	// 遍历数组注册 tool 路由
+    size_t routeCount = sizeof(toolRoutes) / sizeof(toolRoutes[0]);
+    for (size_t i = 0; i <  routeCount; ++i) {
+        m_Server->RegisterRoute("POST", toolRoutes[i].uriPath, HandleAiTool, this);
+    }
 
 	m_Server->StartHttpServer();
 }

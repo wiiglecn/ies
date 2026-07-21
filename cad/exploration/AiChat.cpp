@@ -8,10 +8,10 @@
 #include "Logger.h"
 #include "declare.h"
 //#define WORK_URL _T("https://ws-93xgld532jdyrkjf.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions")
-//#define WORK_URL _T("https://ws-93xgld532jdyrkjf.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions")
+#define WORK_URL _T("https://ws-93xgld532jdyrkjf.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions")
 
 // test
-#define WORK_URL _T("http://localhost:7101/compatible-mode/v1/chat/completions")
+//#define WORK_URL _T("http://localhost:7101/compatible-mode/v1/chat/completions")
 //#define WORK_URL _T("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
 
 #define DASHSCOPE_API_KEY _T("sk-820adfc78edd47608679411d492c0c20")
@@ -122,7 +122,7 @@ static void HandleToolCallsResponse(const std::string& strResponse,AiChat* pChat
         if (message == NULL || !cJSON_IsObject(message))
             continue;
 
-		cJSON* reasoning_content = cJSON_GetObjectItem(choice, "reasoning_content");
+		cJSON* reasoning_content = cJSON_GetObjectItem(message, "reasoning_content");
 		if (reasoning_content && reasoning_content->valuestring){
 			CWnd* pAcadWnd = pChat->getAcadWnd();
             if (pAcadWnd){

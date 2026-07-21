@@ -342,6 +342,7 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
     {
 		if(hChat==NULL){
 			hChat = new AiChat();
+			hChat->setAcadWnd(this);
 		}
 		CString message_chat(szParam);
 		hChat->Execute(message_chat);
@@ -361,7 +362,7 @@ LRESULT CDataPalette::HandleChatReply(WPARAM wParam, LPARAM lParam)
     CString* pReasoning = (CString*)lParam;
     if (pReasoning && m_pHtmlView)
     {
-        m_pHtmlView->CallJsFunction(_T("OnReply"), *pReasoning);
+        m_pHtmlView->CallJsFunction(_T("onReply"), *pReasoning);
         delete pReasoning;
     }
     return 0;

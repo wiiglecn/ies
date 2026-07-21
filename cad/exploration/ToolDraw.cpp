@@ -411,6 +411,7 @@ void ToolDraw::list_layers(AiToolCommandData* data)
 
 void ToolDraw::regen()
 {
+	acutPrintf(_T("regen\n"));
 	//AcApDocument* doc = curDoc();
 	//doc->regen(ACAD::kActiveViewport);
 	acDocManager->sendStringToExecute(
