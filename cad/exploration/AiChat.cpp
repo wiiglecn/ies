@@ -85,7 +85,7 @@ static void CallLocalTool(const char* functionName, const std::string& arguments
     CString toolName(functionName);
     if (bToolSuccess)
     {
-        CLogger::GetInstance().Debug(_T("[AI TOOL] %s status: %d\n"), toolName, toolStatusCode);
+        //CLogger::GetInstance().Debug(_T("[AI TOOL] %s status: %d\n"), toolName, toolStatusCode);
         CLogger::GetInstance().Debug(toolResponse);
     }
     else

@@ -22,8 +22,12 @@ private:
 	ToolDraw(void);
     ~ToolDraw(void);
 
+	
 	int actionBefore();
 	int actionEnd();
+	void appendHandleToResult(AcDbObjectId entityId, AiToolCommandData* data);
+
+	
 	AcApDocument* pDoc;
 	//AcDbDatabase* pDb;
 	AcDbBlockTableRecord* pModelSpace;

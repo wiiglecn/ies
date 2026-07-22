@@ -62,6 +62,33 @@ int ToolDraw::actionEnd()
 	acDocManager->unlockDocument(this->pDoc);
 	return 0;
 }
+
+void ToolDraw::appendHandleToResult(AcDbObjectId entityId, AiToolCommandData* data)
+{
+    // 获取实体的句柄，这是保存在磁盘上的唯一永久标识
+    AcDbHandle dbHandle = entityId.handle();
+    TCHAR handleStr[32] = { 0 };
+	dbHandle.getIntoAsciiBuffer(handleStr);
+
+    // 转换为 UTF-8 以便存入 cJSON
+    char utf8Handle[32] = { 0 };
+#ifdef _UNICODE
+    WideCharToMultiByte(CP_UTF8, 0, handleStr, -1, utf8Handle, sizeof(utf8Handle), NULL, NULL);
+#else
+    strcpy_s(utf8Handle, handleStr);
+#endif
+
+    // 构建 cJSON 返回值
+    if (data->resultJson == NULL) {
+        data->resultJson = cJSON_CreateObject();
+        cJSON_AddStringToObject(data->resultJson, "handle", utf8Handle);
+    } else if (cJSON_IsArray(data->resultJson)) {
+        cJSON_AddItemToArray(data->resultJson, cJSON_CreateString(utf8Handle));
+    }
+    data->ret = 0;
+}
+
+
 void ToolDraw::create_line(AiToolCommandData* data)
 {
 	cJSON* params = data->jsonRoot;
@@ -102,16 +129,20 @@ void ToolDraw::create_line(AiToolCommandData* data)
 
 	AcDbLine* pLine = new AcDbLine(pt_start, pt_end);
 
-	AcDbObjectId circleId;
-    if (pModelSpace->appendAcDbEntity(circleId, pLine) == Acad::eOk)
+	AcDbObjectId lineId;
+    if (pModelSpace->appendAcDbEntity(lineId, pLine) == Acad::eOk)
     {
-        acutPrintf(_T("[INFO] create_line: created successfully.\n"));
+        //acutPrintf(_T("[INFO] create_line: created successfully.\n"));
         pLine->close();
+
+        appendHandleToResult(lineId, data);
+        
     }
     else
     {
         acutPrintf(_T("[ERROR] create_line: Failed to append Model Space.\n"));
         delete pLine;
+        data->ret = 1;
     }
 
 	this->actionEnd();
@@ -164,13 +195,16 @@ void ToolDraw::create_circle(AiToolCommandData* data)
     AcDbObjectId circleId;
     if (pModelSpace->appendAcDbEntity(circleId, pCircle) == Acad::eOk)
     {
-        acutPrintf(_T("[INFO] create_circle: created successfully.\n"));
+        //acutPrintf(_T("[INFO] create_circle: created successfully.\n"));
         pCircle->close();
+
+        appendHandleToResult(circleId, data);
     }
     else
     {
         acutPrintf(_T("[ERROR] create_circle: failed to append to Model Space.\n"));
         delete pCircle;
+		data->ret = 1;
     }
 
     this->actionEnd();
@@ -200,34 +234,36 @@ void ToolDraw::create_rectangle(AiToolCommandData* data)
     if (this->actionBefore()) return;
 
 
-    AcGePoint3d pts[5] =
+    AcGePoint2d pts[4] =
     {
-        AcGePoint3d(x1,y1,0),
-        AcGePoint3d(x1+width,y1,0),
-        AcGePoint3d(x1+width,y1+height,0),
-        AcGePoint3d(x1,y1+height,0),
-		AcGePoint3d(x1,y1,0),
+        AcGePoint2d(x1,y1),
+        AcGePoint2d(x1+width,y1),
+        AcGePoint2d(x1+width,y1+height),
+        AcGePoint2d(x1,y1+height),
     };
 
-    bool ok = true;
-    for (int i = 0; i < 4; i++)
-    {
-        AcDbLine* pLine = new AcDbLine(pts[i], pts[i + 1]);
-        AcDbObjectId lineId;
-        if (pModelSpace->appendAcDbEntity(lineId, pLine) == Acad::eOk)
-        {
-            pLine->close();
-        }
-        else
-        {
-            acutPrintf(_T("[ERROR] create_rectangle: failed to append edge %d.\n"), i + 1);
-            delete pLine;
-            ok = false;
-        }
-    }
+	AcDbPolyline* pPoly = new AcDbPolyline();
 
-    if (ok)
-        acutPrintf(_T("[INFO] create_rectangle: created successfully.\n"));
+	for (int i = 0; i < 4; i++)
+    {
+		pPoly->addVertexAt(i, pts[i]);
+	}
+
+	pPoly->setClosed(Adesk::kTrue);
+
+	
+	AcDbObjectId rectId;
+	if (pModelSpace->appendAcDbEntity(rectId, pPoly) == Acad::eOk)
+    {
+        pPoly->close();
+        appendHandleToResult(rectId, data);
+    }
+    else
+    {
+        acutPrintf(_T("[ERROR] create_rectangle: failed to append poly \n"));
+        delete pPoly;
+        data->ret = 1;
+    }
 
     this->actionEnd();
 }
@@ -268,13 +304,16 @@ void ToolDraw::create_text(AiToolCommandData* data)
     AcDbObjectId textId;
     if (pModelSpace->appendAcDbEntity(textId, pText) == Acad::eOk)
     {
-        acutPrintf(_T("[INFO] create_text: created successfully.\n"));
+        //acutPrintf(_T("[INFO] create_text: created successfully.\n"));
         pText->close();
+
+        appendHandleToResult(textId, data);
     }
     else
     {
         acutPrintf(_T("[ERROR] create_text: failed to append to Model Space.\n"));
         delete pText;
+		data->ret = 1;
     }
 
     this->actionEnd();
@@ -329,13 +368,16 @@ void ToolDraw::create_layer(AiToolCommandData* data)
 
     if (pLayerTable->add(layerId, pLayerRecord) == Acad::eOk)
     {
-        acutPrintf(_T("[INFO] create_layer: created successfully.\n"));
+        //acutPrintf(_T("[INFO] create_layer: created successfully.\n"));
         pLayerRecord->close();
+		data->resultJson = cJSON_CreateObject();
+        cJSON_AddStringToObject(data->resultJson, "name", nameItem->valuestring);
     }
     else
     {
         acutPrintf(_T("[ERROR] create_layer: failed to add layer record.\n"));
         delete pLayerRecord;
+		data->ret = 1;
     }
 
     pLayerTable->close();
