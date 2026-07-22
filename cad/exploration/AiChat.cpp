@@ -67,10 +67,10 @@ static bool GetToolArgumentsJson(cJSON* argumentsItem, std::string& argumentsJso
     return false;
 }
 
-static void CallLocalTool(const char* functionName, const std::string& argumentsJson)
+static std::string CallLocalTool(const char* functionName, const std::string& argumentsJson)
 {
     if (functionName == NULL || functionName[0] == '\0')
-        return;
+        return "{}";
 
     CString toolUrl(LOCAL_TOOL_URL_PREFIX);
     toolUrl += CString(functionName);
@@ -92,78 +92,11 @@ static void CallLocalTool(const char* functionName, const std::string& arguments
     {
         CLogger::GetInstance().Debug(_T("[AI TOOL] %s request failed. Status Code: %d\n"), toolName, toolStatusCode);
     }
-}
-
-static void HandleToolCallsResponse(const std::string& strResponse,AiChat* pChat)
-{
-    cJSON* responseJson = cJSON_Parse(strResponse.c_str());
-    if (responseJson == NULL)
-    {
-        CLogger::GetInstance().Debug(_T("Failed to parse AI response JSON.\n"));
-        return;
+    if (toolResponse.empty()) {
+        toolResponse = "{}";
     }
-
-    cJSON* choices = cJSON_GetObjectItem(responseJson, "choices");
-    if (choices == NULL || !cJSON_IsArray(choices))
-    {
-        CLogger::GetInstance().Debug(_T("AI response missing choices array.\n"));
-        cJSON_Delete(responseJson);
-        return;
-    }
-
-    int choiceCount = cJSON_GetArraySize(choices);
-    for (int i = 0; i < choiceCount; ++i)
-    {
-        cJSON* choice = cJSON_GetArrayItem(choices, i);
-        if (choice == NULL || !IsFinishReasonToolCalls(choice))
-            continue;
-
-        cJSON* message = cJSON_GetObjectItem(choice, "message");
-        if (message == NULL || !cJSON_IsObject(message))
-            continue;
-
-		cJSON* reasoning_content = cJSON_GetObjectItem(message, "reasoning_content");
-		if (reasoning_content && reasoning_content->valuestring){
-			CWnd* pAcadWnd = pChat->getAcadWnd();
-            if (pAcadWnd){
-                CStringW strReasoning(CA2W(reasoning_content->valuestring, CP_UTF8));
-                CString* pReasoning = new CString(strReasoning);
-                pAcadWnd->PostMessage(WM_USER_CHAT, 0, (LPARAM)pReasoning);
-            }
-        }
-        cJSON* toolCalls = cJSON_GetObjectItem(message, "tool_calls");
-        if (toolCalls == NULL || !cJSON_IsArray(toolCalls))
-            continue;
-
-        int toolCallCount = cJSON_GetArraySize(toolCalls);
-        for (int j = 0; j < toolCallCount; ++j)
-        {
-            cJSON* toolCall = cJSON_GetArrayItem(toolCalls, j);
-            cJSON* functionItem = cJSON_GetObjectItem(toolCall, "function");
-            if (functionItem == NULL || !cJSON_IsObject(functionItem))
-                continue;
-
-            cJSON* nameItem = cJSON_GetObjectItem(functionItem, "name");
-            cJSON* argumentsItem = cJSON_GetObjectItem(functionItem, "arguments");
-            if (nameItem == NULL || !cJSON_IsString(nameItem))
-                continue;
-
-            std::string argumentsJson;
-            if (!GetToolArgumentsJson(argumentsItem, argumentsJson))
-            {
-                CString toolName(nameItem->valuestring);
-                CLogger::GetInstance().Debug(_T("[AI TOOL] %s arguments invalid.\n"), toolName);
-                continue;
-            }
-
-            CallLocalTool(nameItem->valuestring, argumentsJson);
-        }
-        if (toolCallCount > 0){
-            CallLocalTool("regen", "{}");
-        }
-    }
-
-    cJSON_Delete(responseJson);
+    
+    return toolResponse;
 }
 
 void OnHttpResponse(BOOL bSuccess, const std::string& strResponse,
@@ -178,11 +111,12 @@ void OnHttpResponse(BOOL bSuccess, const std::string& strResponse,
         {
             CLogger::GetInstance().Debug(_T("HTTP Response OK\n"));
             CLogger::GetInstance().Debug(strResponse);
-            HandleToolCallsResponse(strResponse,pCtx->pAiChat);
+            pCtx->pAiChat->ProcessToolResponse(strResponse);
         }
         else
         {
             CLogger::GetInstance().Debug(_T("HTTP Request failed. Status Code: %d\n"), dwStatusCode);
+			pCtx->pAiChat->SendError();
         }
 
         delete pClient;
@@ -190,12 +124,18 @@ void OnHttpResponse(BOOL bSuccess, const std::string& strResponse,
     }
 }
 
-AiChat::AiChat(void):pAcadWnd(NULL)
+AiChat::AiChat(void):pAcadWnd(NULL),m_root(NULL), m_messages(NULL)
 {
 }
 
 AiChat::~AiChat(void)
 {
+    if (m_root != NULL)
+    {
+        cJSON_Delete(m_root);
+        m_root = NULL;
+        m_messages = NULL;
+    }
 }
 void AiChat::setAcadWnd(CWnd* pWnd)
 {
@@ -205,72 +145,8 @@ CWnd* AiChat::getAcadWnd()
 {
 	return this->pAcadWnd;
 }
-void AiChat::Execute(CString& message)
+void AiChat::SendChatRequest(const std::string& jsonBody)
 {
-
-    cJSON* root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "model", "qwen3.5-plus");
-
-    cJSON* messages = cJSON_CreateArray();
-    
-    cJSON* msgSystem = cJSON_CreateObject();
-    cJSON_AddStringToObject(msgSystem, "role", "system");
-    cJSON_AddStringToObject(msgSystem, "content", "You are a autocad2007 assistant.");
-    cJSON_AddItemToArray(messages, msgSystem);
-
-    cJSON* msgUser = cJSON_CreateObject();
-    cJSON_AddStringToObject(msgUser, "role", "user");
-    std::string userContent = CUtils::CStringToUTF8(message);
-    cJSON_AddStringToObject(msgUser, "content", userContent.c_str());
-    cJSON_AddItemToArray(messages, msgUser);
-
-    cJSON_AddItemToObject(root, "messages", messages);
-
-    CString strFilePath = CUtils::GetArxFolder();
-    strFilePath.Replace(_T("\\"), _T("/"));
-    CString strUrl = strFilePath + _T("tools.json");
-
-    std::string filePathStr = std::string(CStringA(strUrl));
-    
-    std::ifstream file(filePathStr.c_str());
-    std::string fileContent;
-    if (file.is_open())
-    {
-        file.seekg(0, std::ios::end);
-        std::streampos fileSize = file.tellg();
-        file.seekg(0, std::ios::beg);
-
-        fileContent.reserve(static_cast<size_t>(fileSize));
-        fileContent.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        file.close();
-    }
-    else
-    {
-        CLogger::GetInstance().Debug(_T("Failed to open tool.json: %s\n"), strUrl);
-    }
-
-    if (!fileContent.empty())
-    {
-        cJSON* toolsJson = cJSON_Parse(fileContent.c_str());
-        if (toolsJson != NULL)
-        {
-            cJSON_AddItemToObject(root, "tools", toolsJson);
-        }
-        else
-        {
-            CLogger::GetInstance().Debug(_T("Failed to parse tool.json\n"));
-        }
-    }
-    else
-    {
-        CLogger::GetInstance().Debug(_T("Failed to read tool.json or file is empty\n"));
-    }
-
-    char* jsonStr = cJSON_PrintUnformatted(root);
-    std::string jsonBody(jsonStr);
-    free(jsonStr);
-    cJSON_Delete(root);
-
     CLogger::GetInstance().Debug(jsonBody.c_str());
 
     CString authorization;
@@ -288,4 +164,233 @@ void AiChat::Execute(CString& message)
         jsonBody,
         OnHttpResponse,
         (LPVOID)pCtx);
+}
+void AiChat::Execute(CString& message)
+{
+    // 首次调用时初始化 root 结构
+    if (m_root == NULL)
+    {
+        m_root = cJSON_CreateObject();
+        cJSON_AddStringToObject(m_root, "model", "qwen3.5-plus");
+
+        m_messages = cJSON_CreateArray();
+
+        cJSON* msgSystem = cJSON_CreateObject();
+        cJSON_AddStringToObject(msgSystem, "role", "system");
+        cJSON_AddStringToObject(msgSystem, "content", "You are a autocad2007 assistant.");
+        cJSON_AddItemToArray(m_messages, msgSystem);
+
+        cJSON_AddItemToObject(m_root, "messages", m_messages);
+
+        // 加载 tools.json（只需一次）
+        CString strFilePath = CUtils::GetArxFolder();
+        strFilePath.Replace(_T("\\"), _T("/"));
+        CString strUrl = strFilePath + _T("tools.json");
+
+        std::string filePathStr = std::string(CStringA(strUrl));
+
+        std::ifstream file(filePathStr.c_str());
+        std::string fileContent;
+        if (file.is_open())
+        {
+            file.seekg(0, std::ios::end);
+            std::streampos fileSize = file.tellg();
+            file.seekg(0, std::ios::beg);
+
+            fileContent.reserve(static_cast<size_t>(fileSize));
+            fileContent.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            file.close();
+        }
+        else
+        {
+            CLogger::GetInstance().Debug(_T("Failed to open tool.json: %s\n"), strUrl);
+        }
+
+        if (!fileContent.empty())
+        {
+            cJSON* toolsJson = cJSON_Parse(fileContent.c_str());
+            if (toolsJson != NULL)
+            {
+                cJSON_AddItemToObject(m_root, "tools", toolsJson);
+                // m_bToolsLoaded = true;
+            }
+            else
+            {
+                CLogger::GetInstance().Debug(_T("Failed to parse tool.json\n"));
+            }
+        }
+        else
+        {
+            CLogger::GetInstance().Debug(_T("Failed to read tool.json or file is empty\n"));
+        }
+    }
+
+    // 每次调用只追加一条 user message
+    cJSON* msgUser = cJSON_CreateObject();
+    cJSON_AddStringToObject(msgUser, "role", "user");
+    std::string userContent = CUtils::CStringToUTF8(message);
+    cJSON_AddStringToObject(msgUser, "content", userContent.c_str());
+    cJSON_AddItemToArray(m_messages, msgUser);
+
+    char* jsonStr = cJSON_PrintUnformatted(m_root);
+    std::string jsonBody(jsonStr);
+    free(jsonStr);
+
+    SendChatRequest(jsonBody);
+}
+void AiChat::ProcessToolResponse(const std::string& strResponse)
+{
+    cJSON* responseJson = cJSON_Parse(strResponse.c_str());
+    if (responseJson == NULL)
+    {
+        CLogger::GetInstance().Debug(_T("Failed to parse AI response JSON.\n"));
+        return;
+    }
+
+    cJSON* choices = cJSON_GetObjectItem(responseJson, "choices");
+    if (choices == NULL || !cJSON_IsArray(choices))
+    {
+        CLogger::GetInstance().Debug(_T("AI response missing choices array.\n"));
+        cJSON_Delete(responseJson);
+        return;
+    }
+
+    int choiceCount = cJSON_GetArraySize(choices);
+    if (choiceCount > 0)
+    {
+        cJSON* choice = cJSON_GetArrayItem(choices, choiceCount - 1);
+        if (choice != NULL)
+        {
+            // 选中这行对应的 message
+            cJSON* message = cJSON_GetObjectItem(choice, "message");
+            if (message != NULL && cJSON_IsObject(message))
+            {
+                bool isFinishReason = IsFinishReasonToolCalls(choice);
+                // 处理 reasoning_content
+                cJSON* reasoning_content = cJSON_GetObjectItem(message, "reasoning_content");
+                if (reasoning_content && reasoning_content->valuestring)
+                {
+                    CWnd* pAcadWnd = getAcadWnd();
+                    if (pAcadWnd)
+                    {
+                        CStringW strReasoning(CA2W(reasoning_content->valuestring, CP_UTF8));
+                        CString* pReasoning = new CString(strReasoning);
+                        pAcadWnd->PostMessage(WM_USER_CHAT, isFinishReason ? 0 : 1, (LPARAM)pReasoning);
+                    }
+                }
+                // 将 message 复制并追加到 m_messages 中
+                cJSON* msgCopy = cJSON_Duplicate(message, 1);
+                cJSON_AddItemToArray(m_messages, msgCopy);
+
+                // 处理 tool_calls，将结果也追加到 m_messages
+                cJSON* toolCalls = cJSON_GetObjectItem(message, "tool_calls");
+                if (toolCalls != NULL && cJSON_IsArray(toolCalls))
+                {
+                    int toolCallCount = cJSON_GetArraySize(toolCalls);
+                    time_t rawtime;
+                    struct tm timeinfo;
+                    time(&rawtime);
+                    localtime_s(&timeinfo, &rawtime);
+                    
+                    char timeBuffer[15];
+                    strftime(timeBuffer, sizeof(timeBuffer), "%Y%m%d%H%M%S", &timeinfo);
+
+                    for (int j = 0; j < toolCallCount; ++j)
+                    {
+                        cJSON* toolCall = cJSON_GetArrayItem(toolCalls, j);
+                        cJSON* functionItem = cJSON_GetObjectItem(toolCall, "function");
+                        if (functionItem == NULL || !cJSON_IsObject(functionItem))
+                            continue;
+
+                        cJSON* nameItem = cJSON_GetObjectItem(functionItem, "name");
+                        cJSON* argumentsItem = cJSON_GetObjectItem(functionItem, "arguments");
+                        if (nameItem == NULL || !cJSON_IsString(nameItem))
+                            continue;
+
+                        std::string argumentsJson;
+                        if (!GetToolArgumentsJson(argumentsItem, argumentsJson))
+                        {
+                            CString toolName(nameItem->valuestring);
+                            CLogger::GetInstance().Debug(_T("[AI TOOL] %s arguments invalid.\n"), toolName);
+                            continue;
+                        }
+
+                        std::string result = CallLocalTool(nameItem->valuestring, argumentsJson);
+
+                        // 优先使用响应中的 id，否则生成
+                        const char* toolCallId = NULL;
+                        cJSON* idItem = cJSON_GetObjectItem(toolCall, "id");
+                        if (idItem != NULL && cJSON_IsString(idItem))
+                        {
+                            toolCallId = idItem->valuestring;
+                        }
+
+                        cJSON* toolMsg = cJSON_CreateObject();
+                        cJSON_AddStringToObject(toolMsg, "role", "tool");
+                        if (toolCallId != NULL)
+                        {
+                            cJSON_AddStringToObject(toolMsg, "tool_call_id", toolCallId);
+                        }
+                        else
+                        {
+                            char szToolCallId[32];
+                            sprintf_s(szToolCallId, sizeof(szToolCallId), "call_%s_%03d", timeBuffer, j + 1);
+                            cJSON_AddStringToObject(toolMsg, "tool_call_id", szToolCallId);
+                        }
+
+                        cJSON* contentJson = cJSON_Parse(result.c_str());
+                        if (contentJson != NULL)
+                        {
+                            char* contentStr = cJSON_PrintUnformatted(contentJson);
+                            cJSON_Delete(contentJson);
+                            if (contentStr != NULL)
+                            {
+                                cJSON_AddStringToObject(toolMsg, "content", contentStr);
+                                free(contentStr);
+                            }
+                            else
+                            {
+                                cJSON_AddStringToObject(toolMsg, "content", result.c_str());
+                            }
+                        }
+                        else
+                        {
+                            cJSON_AddStringToObject(toolMsg, "content", result.c_str());
+                        }
+
+                        // 将 tool 结果直接追加到 m_messages
+                        cJSON_AddItemToArray(m_messages, toolMsg);
+                    }
+
+                    if (toolCallCount > 0)
+                    {
+                        CallLocalTool("regen", "{}");
+                    }
+
+                    
+                }
+            }
+        }
+    }
+
+    cJSON_Delete(responseJson);
+}
+void AiChat::ContinueChat()
+{
+    if (m_root == NULL)
+        return;
+
+    char* jsonStr = cJSON_PrintUnformatted(m_root);
+    if (jsonStr != NULL)
+    {
+        std::string jsonBody(jsonStr);
+        free(jsonStr);
+        SendChatRequest(jsonBody);
+    }
+}
+void AiChat::SendError()
+{
+	if (pAcadWnd){
+		pAcadWnd->PostMessage(WM_USER_CHAT_SEND_ERROR,  0,  0);
+	}
 }

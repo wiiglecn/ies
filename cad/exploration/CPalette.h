@@ -70,8 +70,7 @@ public:
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	// 新增：处理来自 HTML 视图的命令
     LRESULT HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam);
-	afx_msg LRESULT HandleApiCommand(WPARAM wParam, LPARAM lParam);
-	afx_msg LRESULT HandleChatReply(WPARAM wParam, LPARAM lParam);
+	
 	// 新增：供视图调用，更新 HTML 显示
     void UpdateHtmlDisplay();
 private:
@@ -81,6 +80,10 @@ private:
 
 	void onPageReady();
 	void SetDiameter(CBaseMarker& marker);
+
+	afx_msg LRESULT HandleApiCommand(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT HandleChatReply(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT HandleChatError(WPARAM wParam, LPARAM lParam);
 
 private:
 	AiApiRequest* hServer;

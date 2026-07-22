@@ -81,7 +81,7 @@ void ToolDraw::appendHandleToResult(AcDbObjectId entityId, AiToolCommandData* da
     // 构建 cJSON 返回值
     if (data->resultJson == NULL) {
         data->resultJson = cJSON_CreateObject();
-        cJSON_AddStringToObject(data->resultJson, "handle", utf8Handle);
+        cJSON_AddStringToObject(data->resultJson, "entityID", utf8Handle);
     } else if (cJSON_IsArray(data->resultJson)) {
         cJSON_AddItemToArray(data->resultJson, cJSON_CreateString(utf8Handle));
     }

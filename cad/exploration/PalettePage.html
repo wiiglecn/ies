@@ -177,6 +177,21 @@
         position: relative;
         /* Height will be set by JS */
     }
+    .textarea-owner:focus {
+        border-color: #666;
+        background-color: #fafafa;
+    }
+
+    /* Blinking cursor for thinking state */
+    .thinking-cursor {
+        display: inline-block;
+        width: 2px;
+        height: 12px;
+        background-color: #333;
+        margin-left: 3px;
+        vertical-align: middle;
+        overflow: hidden;
+    }
 </style>
 
 <script>
@@ -355,30 +370,102 @@
             }
         }
     }
-    function onReply(dataStr){
+    function onReplyContinue(dataStr){
+        onReply(dataStr,true)
+    }
+    function onReplyStop(dataStr){
+        onReply(dataStr,false)
+    }
+    function onReply(dataStr,isContinue){
         if (!dataStr) return;
+
+        // 如果正在打字，先停止之前的打字效果
+        if (typingInterval) {
+            clearInterval(typingInterval);
+            typingInterval = null;
+        }
+
+        stopCursorBlink(); // 停止思考时的闪烁
         
         var chatContainer = document.getElementById('ai-chat-container');
         var aiResponseText = "昇龙助手: " + dataStr;
         
+        var targetDiv;
         if (lastMessage.lastMessageDiv) {
             // 更新已有消息内容
-            lastMessage.lastMessageDiv.innerText = aiResponseText;
-            // 重置，允许下一条消息
-            lastMessage.lastMessageDiv = null;
+            targetDiv = lastMessage.lastMessageDiv;
         } else {
             // 添加新的聊天记录
-            var aiMsgDiv = document.createElement('div');
-            aiMsgDiv.className = 'chat-message ai';
-            aiMsgDiv.innerText = aiResponseText;
-            chatContainer.appendChild(aiMsgDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            targetDiv = document.createElement('div');
+            targetDiv.className = 'chat-message ai';
+            chatContainer.appendChild(targetDiv);
         }
-        
-        // 记录最新消息文本
-        lastMessage.text = dataStr;
-    }
 
+        // 清空原来的占位内容和光标
+        targetDiv.innerHTML = '';
+
+        // 创建一个 span 用于存放文字，以便光标跟在文字后面
+        var textSpan = document.createElement('span');
+        targetDiv.appendChild(textSpan);
+
+        // 重新添加一个光标
+        var cursor = document.createElement('span');
+        cursor.className = 'thinking-cursor';
+        targetDiv.appendChild(cursor);
+        startCursorBlink(cursor); // 打字时也保持光标闪烁
+
+        var charIndex = 0;
+        // 每 30ms 输出一个字符
+        typingInterval = setInterval(function() {
+            if (charIndex < aiResponseText.length) {
+                textSpan.innerText = aiResponseText.substring(0, charIndex + 1);
+                charIndex++;
+                // 自动滚动到底部，保持最新输出可见
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            } else {
+                // 输出完毕
+                clearInterval(typingInterval);
+                typingInterval = null;
+                stopCursorBlink();
+                cursor.style.visibility = 'hidden'; // 隐藏光标
+                // 重置，允许下一条消息
+                lastMessage.lastMessageDiv = null;
+                if (isContinue){
+                    if (window.external){
+                        window.external.OnJsCommand("ReplyContinue", "");
+                    }
+                }
+            }
+        }, 30); 
+    }
+    function onChatError(){
+        // 如果正在打字，先停止之前的打字效果
+        if (typingInterval) {
+            clearInterval(typingInterval);
+            typingInterval = null;
+        }
+
+        stopCursorBlink(); // 停止思考时的闪烁
+        
+        var dataStr = "会话失败，请重试！";
+        var chatContainer = document.getElementById('ai-chat-container');
+        var aiResponseText = "昇龙助手: " + dataStr;
+        
+        var targetDiv;
+        if (lastMessage.lastMessageDiv) {
+            // 更新已有消息内容
+            targetDiv = lastMessage.lastMessageDiv;
+        } else {
+            // 添加新的聊天记录
+            targetDiv = document.createElement('div');
+            targetDiv.className = 'chat-message ai';
+            chatContainer.appendChild(targetDiv);
+        }
+
+        // 清空原来的占位内容和光标
+        targetDiv.innerHTML = aiResponseText;
+        lastMessage.lastMessageDiv = null;
+    }
     function toggleGroup(headerElement) {
         var content = headerElement.nextSibling;
         while (content && content.nodeType !== 1) {
@@ -455,11 +542,28 @@
         text: "AI 思考中.",
         lastMessageDiv:null
     }
+    var blinkInterval = null;
+    var typingInterval = null; // 新增：打字机效果的定时器
+    function startCursorBlink(cursorEl) {
+        stopCursorBlink();
+        var isVisible = true;
+        blinkInterval = setInterval(function() {
+            isVisible = !isVisible;
+            cursorEl.style.visibility = isVisible ? 'visible' : 'hidden';
+        }, 500); // 500ms toggle
+    }
+
+    function stopCursorBlink() {
+        if (blinkInterval) {
+            clearInterval(blinkInterval);
+            blinkInterval = null;
+        }
+    }
     function sendChatMessage() {
-        // if (lastMessage.lastMessageDiv){
-        //     alert("请等待上一条消息回复完成！");
-        //     return;
-        // }
+        if (lastMessage.lastMessageDiv){
+            alert("请等待上一条消息回复完成！");
+            return;
+        }
         var input = document.getElementById('ai-chat-input');
         var message = input.value;
         
@@ -476,7 +580,6 @@
             role: 'user',
             content: message
         });
-
         
 
         // 2. Update UI for User Message
@@ -494,6 +597,14 @@
         var aiMsgDiv = document.createElement('div');
         aiMsgDiv.className = 'chat-message ai';
         aiMsgDiv.innerText = aiResponseText;
+
+        // Add blinking cursor to indicate thinking state
+        var cursor = document.createElement('span');
+        cursor.className = 'thinking-cursor';
+        aiMsgDiv.appendChild(cursor);
+        startCursorBlink(cursor); // Start JS-based blinking
+        
+
         chatContainer.appendChild(aiMsgDiv);
         
         chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -501,6 +612,15 @@
         lastMessage.lastMessageDiv=aiMsgDiv;
         if (window.external){
             window.external.OnJsCommand("Chat", message);
+        }else{
+            setTimeout(function(){
+                onReply("图像API接口的通用问题汇总，包含接口调试、模型计费与限流、接口高频报错等。\n" +
+" 本文涉及的图像模型有：文生图V1和V2、涂鸦作画、图像局部重绘、Cosplay动漫人物生成、人像风格重绘、虚拟模特、鞋靴模特、图像画面扩展、人物实例分割、图像擦除补全、创意海报生成、图像背景生成、图配文。\n" +
+"本地调试接口\n" +
+"图像API均支持HTTP调用。下面以文生图API为例展示本地调试HTTP接口的流程。\n" +
+"需要开通模型服务并获取API Key，再配置API Key到环境变量。\n" +
+"在图像API文档中找到curl命令。")
+            },2000);
         }
 
         // 3. Simulate AI Response (In a real app, this would be an async call)

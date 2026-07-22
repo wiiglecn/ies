@@ -223,7 +223,7 @@ void HandleAiTool(struct mg_connection* nc,
                 cJSON_AddItemToObject(responseRoot, "data", pData->resultJson);
                 pData->resultJson = NULL; 
             }
-            cJSON_AddStringToObject(responseRoot, "message", "Tool executed successfully");
+            //cJSON_AddStringToObject(responseRoot, "message", "Tool executed successfully");
             
         } else {
             // No specific data returned
@@ -242,6 +242,7 @@ void HandleAiTool(struct mg_connection* nc,
         
         // Send the response
         AiApiServer::SendJsonResponse(nc, 200, response);
+
         
         // Clean up the response root object
         cJSON_Delete(responseRoot);

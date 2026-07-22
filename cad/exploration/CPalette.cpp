@@ -63,6 +63,8 @@ BEGIN_MESSAGE_MAP(CDataPalette, CAdUiPalette)
 	ON_WM_SIZE()
 	ON_MESSAGE(WM_USER_TOOL, HandleApiCommand)
     ON_MESSAGE(WM_USER_CHAT, HandleChatReply)
+	ON_MESSAGE(WM_USER_CHAT_SEND_ERROR, HandleChatError)
+	
 	//ON_MESSAGE(WM_JS_COMMAND, HandleJsCommandInternal)
 //	ON_CBN_SELCHANGE(ID_COMBO, OnComboChange)
 //	ON_EN_UPDATE(ID_STRING_EDIT, OnStringChange)
@@ -348,7 +350,14 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 		hChat->Execute(message_chat);
     }
 
-
+	else if (_tcscmp(szCommand, _T("ReplyContinue")) == 0)
+    {
+		if(hChat==NULL){
+			acutPrintf(_T("\nWarning: 调用异常，chat 服务还没有开始.\n"));
+			return 0;
+		}
+		hChat->ContinueChat();
+    }
 
     /*else if (_tcscmp(szCommand, _T("SwitchItem")) == 0)
     {
@@ -362,7 +371,18 @@ LRESULT CDataPalette::HandleChatReply(WPARAM wParam, LPARAM lParam)
     CString* pReasoning = (CString*)lParam;
     if (pReasoning && m_pHtmlView)
     {
-        m_pHtmlView->CallJsFunction(_T("onReply"), *pReasoning);
+        switch (wParam)
+        {
+        case 0:
+            m_pHtmlView->CallJsFunction(_T("onReplyContinue"), *pReasoning);
+            break;
+        case 1:
+            m_pHtmlView->CallJsFunction(_T("onReplyStop"), *pReasoning);
+            break;
+        default:
+            m_pHtmlView->CallJsFunction(_T("onReply"), *pReasoning);
+            break;
+        }
         delete pReasoning;
     }
     return 0;
@@ -504,11 +524,17 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
 			ToolDraw::getInstance().regen();
 			break;
 	}
-	
     //acedUpdateDisplay();
 	// Signal the waiting thread
     SetEvent(params->hEvent);
     
 
+	return 0;
+}
+LRESULT CDataPalette::HandleChatError(WPARAM wParam, LPARAM lParam)
+{
+	if (m_pHtmlView){
+		m_pHtmlView->CallJsFunction(_T("onChatError"), _T(""));
+	}
 	return 0;
 }
