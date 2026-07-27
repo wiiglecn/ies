@@ -40,7 +40,7 @@
 #include "ToolDraw.h"
 #include "AiChat.h"
 #include "Logger.h"
-
+#include "CircleFilter.h"
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -335,6 +335,12 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
         SetDiameter(marker);
         marker.Execute();
     }
+	else if (_tcscmp(szCommand, _T("PreSelectCircle")) == 0)
+    {
+		// 实现只保留当前图层上的 Circle 过滤功能
+        CCircleFilter circleFilter;
+        circleFilter.Execute();
+    }
 	else if (_tcscmp(szCommand, _T("Init")) == 0)
     {
        this->onPageReady();
@@ -527,7 +533,6 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
     //acedUpdateDisplay();
 	// Signal the waiting thread
     SetEvent(params->hEvent);
-    
 
 	return 0;
 }

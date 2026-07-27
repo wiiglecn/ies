@@ -70,7 +70,7 @@ void CHtmlPaletteView::OnDocumentComplete(LPCTSTR lpszURL)
     CHtmlView::OnDocumentComplete(lpszURL);
 
     // 调试用：在控制台输出，确认 OnDocumentComplete 被触发
-    acutPrintf(_T("\n[HtmlView] Document Complete: %s\n"), lpszURL);
+    acutPrintf(_T("\n[昇龙] Document Complete: %s\n"), lpszURL);
 }
 // C++ 函数实现：被 JS 调用
 void CHtmlPaletteView::OnJsCallCpp(LPCTSTR szMessage)
@@ -80,7 +80,7 @@ void CHtmlPaletteView::OnJsCallCpp(LPCTSTR szMessage)
 
 void CHtmlPaletteView::OnJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 {
-    acutPrintf(_T("\n[HtmlView] OnJsCommand Received: %s, %s\n"), szCommand, szParam);
+    acutPrintf(_T("\n[昇龙] OnJsCommand Received: %s, %s\n"), szCommand, szParam);
     if (m_pParentPalette)
     {
         // trans command
@@ -141,7 +141,7 @@ void CHtmlPaletteView::InitializeBrowser()
     strUrl.Format(_T("file:///%sPalettePage.html"), strFilePath);
 
     // 6. Navigate
-    acutPrintf(_T("\n[HtmlView] Loading from: %s\n"), strUrl);
+    acutPrintf(_T("\n[昇龙] Loading from: %s\n"), strUrl);
     Navigate2(strUrl);
 
 

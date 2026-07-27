@@ -107,7 +107,7 @@ void paletteShow()
 
 	//-------------Palette1-----------------------------------------
 	pPalette1->Create(WS_CHILD | WS_VISIBLE,
-		_T("Palette 1"),
+		_T("Palette SL"),
 		pPaletteSet,
 		PS_EDIT_NAME);
 
@@ -128,19 +128,30 @@ void paletteShow()
 		pPaletteSet->SetOpacity(100);
 
 	// Change the title of the paletteset
-	pPaletteSet->SetName(_T("Custom Palette"));
+	pPaletteSet->SetName(_T("昇龙 工具条"));
 }
-
+void paletteHide()
+{
+    if(pPaletteSet)
+    {
+        CMDIFrameWnd* pAcadFrame = acedGetAcadFrame();
+        pAcadFrame->ShowControlBar(pPaletteSet, FALSE, FALSE);
+    }
+}
 // Init this application. Register your
 // commands, reactors...
 void InitApplication()
 {
 	// Add a command to show the paletteset
-	AddCommand(_T("ASDK"), _T("KSSHOW"), _T("KSSHOW"), ACRX_CMD_MODAL, paletteShow);
+	AddCommand(_T("ASDK"), _T("SLSHOW"), _T("SLSHOW"), ACRX_CMD_MODAL, paletteShow);
+	AddCommand(_T("ASDK"), _T("SLHIDE"), _T("SLHIDE"), ACRX_CMD_MODAL, paletteHide);
 
 	// Register the COM Server upon loading
 	if ( FAILED(::DllRegisterServer ()) )
 		acutPrintf (_T("Failed to register COM server.\n")) ;
+
+	// 自动显示工具条
+    paletteShow();
 }
 
 // Unload this application. Unregister all objects

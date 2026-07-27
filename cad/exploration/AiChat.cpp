@@ -147,7 +147,7 @@ CWnd* AiChat::getAcadWnd()
 }
 void AiChat::SendChatRequest(const std::string& jsonBody)
 {
-    CLogger::GetInstance().Debug(jsonBody.c_str());
+    CLogger::GetInstance().Debug(jsonBody);
 
     CString authorization;
     authorization.Format(_T("Bearer %s"), DASHSCOPE_API_KEY);
