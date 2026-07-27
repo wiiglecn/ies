@@ -130,6 +130,12 @@ void paletteShow()
 	// Change the title of the paletteset
 	pPaletteSet->SetName(_T("昇龙 工具条"));
 }
+// 定时器回调函数，用于延迟执行 paletteShow
+VOID CALLBACK PaletteShowTimerProc(HWND hWnd, UINT nMsg, UINT_PTR nTimerid, DWORD dwTime)
+{
+    KillTimer(NULL, nTimerid); // 停止定时器，确保只执行一次
+    paletteShow();
+}
 void paletteHide()
 {
     if(pPaletteSet)
@@ -148,16 +154,19 @@ void InitApplication()
 
 	// Register the COM Server upon loading
 	if ( FAILED(::DllRegisterServer ()) )
-		acutPrintf (_T("Failed to register COM server.\n")) ;
+		acutPrintf (_T("Failed to register COM server.\n"));
 
+	// 延迟 2000 毫秒（2秒）自动显示工具条，确保 AutoCAD 环境准备完毕
+    SetTimer(NULL, 1, 2000, PaletteShowTimerProc);
 	// 自动显示工具条
-    paletteShow();
+    //paletteShow();
 }
 
 // Unload this application. Unregister all objects
 // registered in InitApplication.
 void UnloadApplication()
 {
+
 	// CUtils::FocusAcadDrawing();
 	// Unregister commands
 	acedRegCmds->removeGroup(_T("ASDK"));

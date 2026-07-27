@@ -104,11 +104,10 @@ function resizeLayout() {
     
     resizeTimeout = setTimeout(function() {
         var bodyHeight = document.body.clientHeight;
+        if (bodyHeight < 600) return;
         var groupProbe = document.getElementById('group-probe');
         
         if (!groupProbe || !groupAi) return;
-
-        
 
         // Calculate height of the first group including margins
         var probeHeight = groupProbe.offsetHeight; 
@@ -136,7 +135,7 @@ function resizeLayout() {
         chatContainer.style.height = aiChatHeight + "px";
         
         resizeTimeout = null;
-    }, 50); // 50ms delay
+    }, 100); // 50ms delay
 }
 
 function init() {
@@ -147,13 +146,14 @@ function init() {
             console.error("Error calling external: " + e.message);
         }
     }
+    // Attach resize event
+    
     
     // Initial resize
-    resizeLayout();
+    
 }
 
-// Attach resize event
-window.onresize = resizeLayout;
+
 
 // C++ calls this when document is loaded
 function onReady(dataStr) {
@@ -171,7 +171,9 @@ function onReady(dataStr) {
         } catch (e) {
             console.error("Error processing data from C++: " + e.message);
         }
+        window.onresize = resizeLayout;
     }
+    resizeLayout();
 }
 function onReplyContinue(dataStr){
     onReply(dataStr,true)
