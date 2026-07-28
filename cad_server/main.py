@@ -3,14 +3,23 @@ from flask import Flask, request, Response
 
 WORK_URL = "https://ws-93xgld532jdyrkjf.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions"
 API_KEY = "sk-820adfc78edd47608679411d492c0c20"  # 建议从环境变量或配置文件中读取
+CHECK_KEY = "sl-123456"
 
 app = Flask(__name__)
 
-@app.route("/", defaults={"path": ""}, methods=["GET", "POST"])
-@app.route("/<path:path>", methods=["GET", "POST"])
+@app.route("/", defaults={"path": ""}, methods=["POST"])
+@app.route("/<path:path>", methods=["POST"])
 def proxy(path):
+
+
+    # 2. 校验客户端提交的 Authorization
+    client_auth = request.headers.get("Authorization", "")
+    if client_auth != f"Bearer {CHECK_KEY}":
+        return Response("Unauthorized: Invalid or missing Authorization header.", status=401)
+
     # 临时返回测试字符串
     # return "This is a temporary test response."
+
     # Build target URL
     target_url = WORK_URL
 
@@ -57,4 +66,5 @@ if __name__ == "__main__":
     # HTTPS using a self-signed certificate
     # Generate certs with:
     #   openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 -subj "/CN=localhost"
-    app.run(host="0.0.0.0", port=7101, ssl_context=("cert.pem", "key.pem"))
+    # app.run(host="0.0.0.0", port=7101, ssl_context=("cert.pem", "key.pem"))
+    app.run(host="0.0.0.0", port=7101, ssl_context=("kskjai.com.pem", "kskjai.com.key"))

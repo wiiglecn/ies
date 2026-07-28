@@ -11,8 +11,8 @@
 //#define WORK_URL _T("https://ws-93xgld532jdyrkjf.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions")
 
 // test
-#define WORK_URL _T("https://127.0.0.1:7101/chat")
-//#define WORK_URL _T("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
+//#define WORK_URL _T("https://127.0.0.1:7101/chat")
+#define WORK_URL _T("https://cad.kskjai.com:7101/chat")
 
 #define DASHSCOPE_API_KEY _T("sl-123456")
 #define LOCAL_TOOL_URL_PREFIX _T("http://localhost:7100/ai/tool/")
