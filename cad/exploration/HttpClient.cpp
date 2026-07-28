@@ -127,6 +127,24 @@ BOOL CHttpClient::DoRequest(const CString& strUrl,
             return FALSE;
         }
 
+        // 强制忽略证书错误（适用于测试环境）
+        if (bHttps)
+        {
+            DWORD dwSecurityFlags = 0;
+            DWORD dwBuffLen = sizeof(dwSecurityFlags);
+            
+            // 获取现有的安全标志
+            pFile->QueryOption(INTERNET_OPTION_SECURITY_FLAGS, &dwSecurityFlags, &dwBuffLen);
+            
+            // 追加忽略未知CA、证书日期无效、证书CN不匹配等标志
+            dwSecurityFlags |= SECURITY_FLAG_IGNORE_UNKNOWN_CA |
+                               SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
+                               SECURITY_FLAG_IGNORE_CERT_CN_INVALID ;
+            
+            // 设置强制覆盖的安全标志
+            pFile->SetOption(INTERNET_OPTION_SECURITY_FLAGS, &dwSecurityFlags, sizeof(dwSecurityFlags));
+        }
+
         // Add custom headers
         std::map<CString, CString>::const_iterator it;
         for (it = headers.begin(); it != headers.end(); ++it)

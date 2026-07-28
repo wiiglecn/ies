@@ -8,13 +8,13 @@
 #include "Logger.h"
 #include "declare.h"
 //#define WORK_URL _T("https://ws-93xgld532jdyrkjf.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions")
-#define WORK_URL _T("https://ws-93xgld532jdyrkjf.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions")
+//#define WORK_URL _T("https://ws-93xgld532jdyrkjf.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions")
 
 // test
-//#define WORK_URL _T("http://localhost:7101/compatible-mode/v1/chat/completions")
+#define WORK_URL _T("https://127.0.0.1:7101/chat")
 //#define WORK_URL _T("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
 
-#define DASHSCOPE_API_KEY _T("sk-820adfc78edd47608679411d492c0c20")
+#define DASHSCOPE_API_KEY _T("sl-123456")
 #define LOCAL_TOOL_URL_PREFIX _T("http://localhost:7100/ai/tool/")
 
 struct AsyncContext {
@@ -244,6 +244,7 @@ void AiChat::ProcessToolResponse(const std::string& strResponse)
     if (responseJson == NULL)
     {
         CLogger::GetInstance().Debug(_T("Failed to parse AI response JSON.\n"));
+		SendError();
         return;
     }
 
@@ -252,6 +253,7 @@ void AiChat::ProcessToolResponse(const std::string& strResponse)
     {
         CLogger::GetInstance().Debug(_T("AI response missing choices array.\n"));
         cJSON_Delete(responseJson);
+		SendError();
         return;
     }
 
@@ -270,10 +272,19 @@ void AiChat::ProcessToolResponse(const std::string& strResponse)
                 cJSON* reasoning_content = cJSON_GetObjectItem(message, "reasoning_content");
                 if (reasoning_content && reasoning_content->valuestring)
                 {
+                    cJSON* content = cJSON_GetObjectItem(message, "content");
+
                     CWnd* pAcadWnd = getAcadWnd();
                     if (pAcadWnd)
                     {
                         CStringW strReasoning(CA2W(reasoning_content->valuestring, CP_UTF8));
+                        
+                        // 如果content的值不为空，则将reasoning_content的值加上"\n"再与content的值合并
+                        if (content && content->valuestring && content->valuestring[0] != '\0')
+                        {
+                            CStringW strContent(CA2W(content->valuestring, CP_UTF8));
+                            strReasoning += _T("\n") + strContent;
+                        }
                         CString* pReasoning = new CString(strReasoning);
                         pAcadWnd->PostMessage(WM_USER_CHAT, isFinishReason ? 0 : 1, (LPARAM)pReasoning);
                     }
