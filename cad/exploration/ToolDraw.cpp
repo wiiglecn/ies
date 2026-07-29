@@ -201,6 +201,7 @@ void ToolDraw::create_circle(AiToolCommandData* data)
         //acutPrintf(_T("[INFO] create_circle: created successfully.\n"));
         pCircle->close();
 
+
         appendHandleToResult(circleId, data);
     }
     else

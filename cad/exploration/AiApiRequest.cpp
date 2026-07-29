@@ -21,6 +21,9 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/create_text", "create_text", WM_USER_A_CREATERTEXT },
     { "/ai/tool/create_layer", "create_layer", WM_USER_A_CREATELAYER },
     { "/ai/tool/list_layers", "list_layers", WM_USER_A_LISTLAYERS },
+    { "/ai/tool/create_polyline", "create_polyline", WM_USER_A_CREATEPOLYLINE },
+    { "/ai/tool/create_ellipse", "create_ellipse", WM_USER_A_CREATEELLIPSE },
+    { "/ai/tool/create_spline", "create_spline", WM_USER_A_CREATESPLINE },
     { "/ai/tool/regen", "regen", WM_USER_A_REGEN } 
 };
 bool EndsWith(const std::string& str, const std::string& suffix) {

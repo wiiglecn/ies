@@ -133,8 +133,12 @@ void paletteShow()
 // 定时器回调函数，用于延迟执行 paletteShow
 VOID CALLBACK PaletteShowTimerProc(HWND hWnd, UINT nMsg, UINT_PTR nTimerid, DWORD dwTime)
 {
-    KillTimer(NULL, nTimerid); // 停止定时器，确保只执行一次
-    paletteShow();
+	if (acDocManager->curDocument() != NULL)
+	{
+		KillTimer(NULL, nTimerid); // 停止定时器，确保只执行一次
+		paletteShow();
+	}
+    
 }
 void paletteHide()
 {
