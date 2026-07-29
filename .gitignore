@@ -6,6 +6,7 @@ Release
 .vs
 bak
 /cad/library_src
-.suo
+*.suo
+*.suo
 *_i.c
 *_i.p

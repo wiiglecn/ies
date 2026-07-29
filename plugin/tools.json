@@ -1,0 +1,277 @@
+[
+    {
+        "type": "function",
+        "function": {
+            "name": "create_line",
+            "description": "Draws a line in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x1": {
+                        "type": "number",
+                        "description": "Start point X coordinate"
+                    },
+                    "y1": {
+                        "type": "number",
+                        "description": "Start point Y coordinate"
+                    },
+                    "x2": {
+                        "type": "number",
+                        "description": "End point X coordinate"
+                    },
+                    "y2": {
+                        "type": "number",
+                        "description": "End point Y coordinate"
+                    }
+                },
+                "required": [
+                    "x1",
+                    "y1",
+                    "x2",
+                    "y2"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_circle",
+            "description": "Draws a circle in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "Center point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Center point Y coordinate"
+                    },
+                    "radius": {
+                        "type": "number",
+                        "description": "Radius of the circle (must be positive)"
+                    }
+                },
+                "required": [
+                    "x",
+                    "y",
+                    "radius"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_rectangle",
+            "description": "Draws a rectangle in AutoCAD Model Space using four lines.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x1": {
+                        "type": "number",
+                        "description": "Bottom-left corner X coordinate"
+                    },
+                    "y1": {
+                        "type": "number",
+                        "description": "Bottom-left corner Y coordinate"
+                    },
+                    "width": {
+                        "type": "number",
+                        "description": "Width of the rectangle"
+                    },
+                    "height": {
+                        "type": "number",
+                        "description": "Height of the rectangle"
+                    }
+                },
+                "required": [
+                    "x1",
+                    "y1",
+                    "width",
+                    "height"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_text",
+            "description": "Creates a text entity in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "Insertion point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Insertion point Y coordinate"
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "The text content to display"
+                    },
+                    "height": {
+                        "type": "number",
+                        "description": "Height of the text (optional, defaults to 1.0 if not provided)"
+                    }
+                },
+                "required": [
+                    "x",
+                    "y",
+                    "text"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_layer",
+            "description": "Creates a new layer in the AutoCAD database if it does not already exist.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the new layer"
+                    }
+                },
+                "required": [
+                    "name"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_layers",
+            "description": "Lists all existing layers in the current AutoCAD drawing. Returns a JSON array of layer names.",
+            "parameters": {
+            "type": "object",
+            "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_polyline",
+            "description": "Draws a polyline in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "points": {
+                        "type": "array",
+                        "description": "Array of points for the polyline vertices (minimum 2 points).",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "x": {
+                                    "type": "number",
+                                    "description": "Point X coordinate"
+                                },
+                                "y": {
+                                    "type": "number",
+                                    "description": "Point Y coordinate"
+                                }
+                            },
+                            "required": [
+                                "x",
+                                "y"
+                            ]
+                        }
+                    },
+                    "closed": {
+                        "type": "boolean",
+                        "description": "Whether the polyline is closed (optional, defaults to false)."
+                    }
+                },
+                "required": [
+                    "points"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_ellipse",
+            "description": "Draws an ellipse in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "Center point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Center point Y coordinate"
+                    },
+                    "major_x": {
+                        "type": "number",
+                        "description": "Major axis vector X component (length defines the radius)."
+                    },
+                    "major_y": {
+                        "type": "number",
+                        "description": "Major axis vector Y component (length defines the radius)."
+                    },
+                    "ratio": {
+                        "type": "number",
+                        "description": "Ratio of minor axis to major axis (must be > 0 and <= 1)."
+                    }
+                },
+                "required": [
+                    "x",
+                    "y",
+                    "major_x",
+                    "major_y",
+                    "ratio"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_spline",
+            "description": "Draws a spline curve in AutoCAD Model Space using fit points.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "points": {
+                        "type": "array",
+                        "description": "Array of fit points for the spline (minimum 3 points).",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "x": {
+                                    "type": "number",
+                                    "description": "Point X coordinate"
+                                },
+                                "y": {
+                                    "type": "number",
+                                    "description": "Point Y coordinate"
+                                }
+                            },
+                            "required": [
+                                "x",
+                                "y"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "points"
+                ]
+            }
+        }
+    }
+]
