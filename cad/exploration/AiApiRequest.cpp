@@ -24,6 +24,7 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/create_polyline", "create_polyline", WM_USER_A_CREATEPOLYLINE },
     { "/ai/tool/create_ellipse", "create_ellipse", WM_USER_A_CREATEELLIPSE },
     { "/ai/tool/create_spline", "create_spline", WM_USER_A_CREATESPLINE },
+    { "/ai/tool/delete_entities", "delete_entities", WM_USER_A_DELETEENTITIES },
     { "/ai/tool/regen", "regen", WM_USER_A_REGEN } 
 };
 bool EndsWith(const std::string& str, const std::string& suffix) {

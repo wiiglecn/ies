@@ -188,10 +188,11 @@ void CDataPalette::OnDestroy()
  //   }
 
 	//	//m_pHtmlView->Detach(); 
-       if (::IsWindow(m_pHtmlView->GetSafeHwnd()))
-           m_pHtmlView->DestroyWindow();
- //       // 那么这里 delete
-        delete m_pHtmlView;
+		if (::IsWindow(m_pHtmlView->GetSafeHwnd())){
+			m_pHtmlView->DestroyWindow();
+			delete m_pHtmlView;
+		}
+        
         m_pHtmlView = NULL;
     }
 	// Save Palette's persistent data
@@ -506,35 +507,47 @@ void CDataPalette::SetDiameter(CBaseMarker& marker)
 }
 LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
 {
-	AiToolCommandData* params=(AiToolCommandData*) lParam;
-	switch(wParam){
-		case WM_USER_A_CREATELINE:
-			ToolDraw::getInstance().create_line(params);
-			break;
-		case WM_USER_A_CREATECIRCLE:
-			ToolDraw::getInstance().create_circle(params);
-			break;
-		case WM_USER_A_CREATERECTANGLE:
-			ToolDraw::getInstance().create_rectangle(params);
-			break;
-		case WM_USER_A_CREATERTEXT:
-			ToolDraw::getInstance().create_text(params);
-			break;
-		case WM_USER_A_CREATELAYER:
-			ToolDraw::getInstance().create_layer(params);
-			break;
-		case WM_USER_A_LISTLAYERS:
-			ToolDraw::getInstance().list_layers(params);
-			break;
-		case WM_USER_A_REGEN:
-			ToolDraw::getInstance().regen();
-			break;
-	}
+    AiToolCommandData* params=(AiToolCommandData*) lParam;
+    switch(wParam){
+        case WM_USER_A_CREATELINE:
+            ToolDraw::getInstance().create_line(params);
+            break;
+        case WM_USER_A_CREATECIRCLE:
+            ToolDraw::getInstance().create_circle(params);
+            break;
+        case WM_USER_A_CREATERECTANGLE:
+            ToolDraw::getInstance().create_rectangle(params);
+            break;
+        case WM_USER_A_CREATERTEXT:
+            ToolDraw::getInstance().create_text(params);
+            break;
+        case WM_USER_A_CREATELAYER:
+            ToolDraw::getInstance().create_layer(params);
+            break;
+        case WM_USER_A_LISTLAYERS:
+            ToolDraw::getInstance().list_layers(params);
+            break;
+        case WM_USER_A_CREATEPOLYLINE:
+            ToolDraw::getInstance().create_polyline(params);
+            break;
+        case WM_USER_A_CREATEELLIPSE:
+            ToolDraw::getInstance().create_ellipse(params);
+            break;
+        case WM_USER_A_CREATESPLINE:
+            ToolDraw::getInstance().create_spline(params);
+            break;
+        case WM_USER_A_DELETEENTITIES:
+            ToolDraw::getInstance().delete_entities(params);
+            break;
+        case WM_USER_A_REGEN:
+            ToolDraw::getInstance().regen();
+            break;
+    }
     //acedUpdateDisplay();
-	// Signal the waiting thread
+    // Signal the waiting thread
     SetEvent(params->hEvent);
 
-	return 0;
+    return 0;
 }
 LRESULT CDataPalette::HandleChatError(WPARAM wParam, LPARAM lParam)
 {

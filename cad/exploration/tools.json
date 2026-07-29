@@ -273,5 +273,28 @@
                 ]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_entities",
+            "description": "Deletes entities from the AutoCAD database using their handles.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handles": {
+                        "type": "array",
+                        "description": "Array of entity handles (hexadecimal strings) to delete.",
+                        "items": {
+                            "type": "string",
+                            "description": "Entity handle (e.g., '1F2')"
+                        }
+                    }
+                },
+                "required": [
+                    "handles"
+                ]
+            }
+        }
     }
 ]

@@ -19,7 +19,8 @@ public:
 	void create_layer(AiToolCommandData* data);
 	void list_layers(AiToolCommandData* data);
 
-
+	void delete_entities(AiToolCommandData* data);
+	
 	void regen();
 private:
 	ToolDraw(void);

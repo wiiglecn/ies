@@ -636,3 +636,55 @@ void ToolDraw::create_spline(AiToolCommandData* data)
 
     this->actionEnd();
 }
+
+void ToolDraw::delete_entities(AiToolCommandData* data) {
+    if (actionBefore() != 0) {
+        return;
+    }
+
+    // Assuming data->root is a cJSON object representing the request payload
+    // The payload is expected to have an array of strings named "handles"
+    cJSON* handlesArray = cJSON_GetObjectItem(data->jsonRoot, "handles");
+    if (!handlesArray || !cJSON_IsArray(handlesArray)) {
+        // Handle error: invalid input
+        actionEnd();
+		data->ret = 1;
+        return;
+    }
+
+    AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
+    
+    cJSON* handleItem = NULL;
+    cJSON_ArrayForEach(handleItem, handlesArray) {
+        if (!cJSON_IsString(handleItem) || !handleItem->valuestring) {
+            continue;
+        }
+
+        // 将 cJSON 的 char* 转换为 AutoCAD 需要的 TCHAR* (ACHAR*)
+        TCHAR handleStr[32] = { 0 };
+        if (!CUtils::utf8ToTChar(handleItem->valuestring, handleStr, ARRAYSIZE(handleStr))) {
+            continue;
+        }
+
+        AcDbHandle dbHandle(handleStr);
+        // Convert hexadecimal handle string to AcDbHandle
+        /*if (dbHandle.setFromAsciiHandle(handleItem->valuestring) != eOk) {
+            continue;
+        }*/
+
+        AcDbObjectId objId;
+        // 使用 AcDbDatabase 的方法将句柄转换为 ObjectId
+        if (pDb->getAcDbObjectId(objId, Adesk::kFalse, dbHandle) != Acad::eOk) {
+            continue;
+        }
+
+        AcDbObject* pObj = NULL;
+        // Open the object for write to erase it
+        if (acdbOpenAcDbObject(pObj, objId, AcDb::kForWrite) ==  Acad::eOk) {
+            pObj->erase();
+            pObj->close();
+        }
+    }
+
+    actionEnd();
+}
