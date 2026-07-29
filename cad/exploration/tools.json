@@ -158,5 +158,120 @@
             "properties": {}
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_polyline",
+            "description": "Draws a polyline in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "points": {
+                        "type": "array",
+                        "description": "Array of points for the polyline vertices (minimum 2 points).",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "x": {
+                                    "type": "number",
+                                    "description": "Point X coordinate"
+                                },
+                                "y": {
+                                    "type": "number",
+                                    "description": "Point Y coordinate"
+                                }
+                            },
+                            "required": [
+                                "x",
+                                "y"
+                            ]
+                        }
+                    },
+                    "closed": {
+                        "type": "boolean",
+                        "description": "Whether the polyline is closed (optional, defaults to false)."
+                    }
+                },
+                "required": [
+                    "points"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_ellipse",
+            "description": "Draws an ellipse in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "Center point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Center point Y coordinate"
+                    },
+                    "major_x": {
+                        "type": "number",
+                        "description": "Major axis vector X component (length defines the radius)."
+                    },
+                    "major_y": {
+                        "type": "number",
+                        "description": "Major axis vector Y component (length defines the radius)."
+                    },
+                    "ratio": {
+                        "type": "number",
+                        "description": "Ratio of minor axis to major axis (must be > 0 and <= 1)."
+                    }
+                },
+                "required": [
+                    "x",
+                    "y",
+                    "major_x",
+                    "major_y",
+                    "ratio"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_spline",
+            "description": "Draws a spline curve in AutoCAD Model Space using fit points.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "points": {
+                        "type": "array",
+                        "description": "Array of fit points for the spline (minimum 3 points).",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "x": {
+                                    "type": "number",
+                                    "description": "Point X coordinate"
+                                },
+                                "y": {
+                                    "type": "number",
+                                    "description": "Point Y coordinate"
+                                }
+                            },
+                            "required": [
+                                "x",
+                                "y"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "points"
+                ]
+            }
+        }
     }
 ]

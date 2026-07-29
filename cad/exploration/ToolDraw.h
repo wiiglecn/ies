@@ -10,6 +10,9 @@ public:
     ToolDraw& operator=(const ToolDraw&); 
 public:
 	void create_line(AiToolCommandData* data);
+	void create_polyline(AiToolCommandData* data);
+	void create_ellipse(AiToolCommandData* data);
+	void create_spline(AiToolCommandData* data);
 	void create_circle(AiToolCommandData* data);
 	void create_rectangle(AiToolCommandData* data);
 	void create_text(AiToolCommandData* data);

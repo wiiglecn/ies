@@ -1,3 +1,13 @@
+var chatMessages = []; 
+var lastMessage = {
+    date: new Date(),
+    text: "AI 思考中.",
+    lastMessageDiv:null
+}
+var blinkInterval = null;
+var typingInterval = null; // 新增：打字机效果的定时器
+var waitingForReply = false;
+
 if (!window.console) {
     window.console = {
         log: function() {},
@@ -239,6 +249,8 @@ function onReply(dataStr,isContinue){
                 if (window.external){
                     window.external.OnJsCommand("ReplyContinue", "");
                 }
+            }else{
+                waitingForReply = false;
             }
         }
     }, 30); 
@@ -270,6 +282,7 @@ function onChatError(){
     // 清空原来的占位内容和光标
     targetDiv.innerHTML = aiResponseText;
     lastMessage.lastMessageDiv = null;
+    waitingForReply = false;
 }
 function toggleGroup(headerElement) {
     var content = headerElement.nextSibling;
@@ -347,14 +360,7 @@ function onSelectCircle(){
     }
 }
 
-var chatMessages = []; 
-var lastMessage = {
-    date: new Date(),
-    text: "AI 思考中.",
-    lastMessageDiv:null
-}
-var blinkInterval = null;
-var typingInterval = null; // 新增：打字机效果的定时器
+
 function startCursorBlink(cursorEl) {
     stopCursorBlink();
     var isVisible = true;
@@ -371,7 +377,7 @@ function stopCursorBlink() {
     }
 }
 function sendChatMessage() {
-    if (lastMessage.lastMessageDiv){
+    if (lastMessage.lastMessageDiv || waitingForReply){
         alert("请等待上一条消息回复完成！");
         return;
     }
@@ -423,6 +429,7 @@ function sendChatMessage() {
     lastMessage.lastMessageDiv=aiMsgDiv;
     if (window.external){
         window.external.OnJsCommand("Chat", message);
+        waitingForReply = true;
     }else{
         setTimeout(function(){
             onReply("图像API接口的通用问题汇总，包含接口调试、模型计费与限流、接口高频报错等。\n" +

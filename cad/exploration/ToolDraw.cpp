@@ -2,9 +2,12 @@
 #include "ToolDraw.h"
 #include "cJSON.h"
 #include "adscodes.h"
+#include "actrans.h"
 #include "dbents.h"
 #include "dbsymtb.h"
-#include "actrans.h"
+#include "dbelipse.h"
+#include "dbspline.h"
+
 #include "utils.h"
 
 
@@ -468,4 +471,167 @@ void ToolDraw::regen()
 
 	//acedRedraw(NULL, 1);
 	//acedUpdateDisplay();
+}
+void ToolDraw::create_polyline(AiToolCommandData* data)
+{
+    cJSON* params = data->jsonRoot;
+    cJSON* pointsItem = cJSON_GetObjectItem(params, "points");
+
+    if (!pointsItem || !cJSON_IsArray(pointsItem)) {
+        acutPrintf(_T("[ERROR] create_polyline: invalid or missing 'points' array.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    int numPoints = cJSON_GetArraySize(pointsItem);
+    if (numPoints < 2) {
+        acutPrintf(_T("[ERROR] create_polyline: at least 2 points are required.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcDbPolyline* pPoly = new AcDbPolyline();
+    bool valid = true;
+
+    for (int i = 0; i < numPoints; ++i) {
+        cJSON* pt = cJSON_GetArrayItem(pointsItem, i);
+        cJSON* xItem = cJSON_GetObjectItem(pt, "x");
+        cJSON* yItem = cJSON_GetObjectItem(pt, "y");
+
+        if (xItem && cJSON_IsNumber(xItem) && yItem && cJSON_IsNumber(yItem)) {
+            pPoly->addVertexAt(i, AcGePoint2d(xItem->valuedouble, yItem->valuedouble));
+        } else {
+            acutPrintf(_T("[ERROR] create_polyline: invalid point data at index %d.\n"), i);
+            valid = false;
+            break;
+        }
+    }
+
+    cJSON* closedItem = cJSON_GetObjectItem(params, "closed");
+    if (closedItem && cJSON_IsTrue(closedItem)) {
+        pPoly->setClosed(Adesk::kTrue);
+    }
+
+    AcDbObjectId polyId;
+    if (valid && pModelSpace->appendAcDbEntity(polyId, pPoly) == Acad::eOk) {
+        pPoly->close();
+        appendHandleToResult(polyId, data);
+    } else {
+        delete pPoly;
+        data->ret = 1;
+    }
+
+    this->actionEnd();
+}
+
+void ToolDraw::create_ellipse(AiToolCommandData* data)
+{
+    cJSON* params = data->jsonRoot;
+
+    cJSON* xItem = cJSON_GetObjectItem(params, "x");
+    cJSON* yItem = cJSON_GetObjectItem(params, "y");
+    cJSON* majorXItem = cJSON_GetObjectItem(params, "major_x");
+    cJSON* majorYItem = cJSON_GetObjectItem(params, "major_y");
+    cJSON* ratioItem = cJSON_GetObjectItem(params, "ratio");
+
+    if (!xItem || !yItem || !majorXItem || !majorYItem || !ratioItem ||
+        !cJSON_IsNumber(xItem) || !cJSON_IsNumber(yItem) ||
+        !cJSON_IsNumber(majorXItem) || !cJSON_IsNumber(majorYItem) ||
+        !cJSON_IsNumber(ratioItem)) 
+    {
+        acutPrintf(_T("[ERROR] create_ellipse: invalid parameters.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    double ratio = ratioItem->valuedouble;
+    if (ratio <= 0.0 || ratio > 1.0) {
+        acutPrintf(_T("[ERROR] create_ellipse: radius ratio must be > 0 and <= 1.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcGePoint3d center(xItem->valuedouble, yItem->valuedouble, 0.0);
+    // majorAxis 向量的长度代表了椭圆长轴的半径
+    AcGeVector3d majorAxis(majorXItem->valuedouble, majorYItem->valuedouble, 0.0);
+
+    if (majorAxis.length() <= 0.0) {
+        acutPrintf(_T("[ERROR] create_ellipse: major axis length must be > 0.\n"));
+        this->actionEnd();
+        data->ret = 1;
+        return;
+    }
+
+    AcDbEllipse* pEllipse = new AcDbEllipse(center, AcGeVector3d::kZAxis, majorAxis, ratio);
+
+    AcDbObjectId ellipseId;
+    if (pModelSpace->appendAcDbEntity(ellipseId, pEllipse) == Acad::eOk) {
+        pEllipse->close();
+        appendHandleToResult(ellipseId, data);
+    } else {
+        delete pEllipse;
+        data->ret = 1;
+    }
+
+    this->actionEnd();
+}
+
+void ToolDraw::create_spline(AiToolCommandData* data)
+{
+    cJSON* params = data->jsonRoot;
+    cJSON* pointsItem = cJSON_GetObjectItem(params, "points");
+
+    if (!pointsItem || !cJSON_IsArray(pointsItem)) {
+        acutPrintf(_T("[ERROR] create_spline: invalid or missing 'points' array.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    int numPoints = cJSON_GetArraySize(pointsItem);
+    if (numPoints < 3) {
+        acutPrintf(_T("[ERROR] create_spline: at least 3 points are required for a spline.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcGePoint3dArray fitPoints;
+    bool valid = true;
+
+    for (int i = 0; i < numPoints; ++i) {
+        cJSON* pt = cJSON_GetArrayItem(pointsItem, i);
+        cJSON* xItem = cJSON_GetObjectItem(pt, "x");
+        cJSON* yItem = cJSON_GetObjectItem(pt, "y");
+
+        if (xItem && cJSON_IsNumber(xItem) && yItem && cJSON_IsNumber(yItem)) {
+            fitPoints.append(AcGePoint3d(xItem->valuedouble, yItem->valuedouble, 0.0));
+        } else {
+            acutPrintf(_T("[ERROR] create_spline: invalid point data at index %d.\n"), i);
+            valid = false;
+            break;
+        }
+    }
+
+    AcDbObjectId splineId;
+    if (valid) {
+        // 使用 AcGePoint3dArray 拟合点构造函数，兼容 AutoCAD 2007
+        AcDbSpline* pSpline = new AcDbSpline(fitPoints);
+
+        if (pModelSpace->appendAcDbEntity(splineId, pSpline) == Acad::eOk) {
+            pSpline->close();
+            appendHandleToResult(splineId, data);
+        } else {
+            delete pSpline;
+            data->ret = 1;
+        }
+    } else {
+        data->ret = 1;
+    }
+
+    this->actionEnd();
 }

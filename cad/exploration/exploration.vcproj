@@ -160,7 +160,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
-				AdditionalIncludeDirectories="..\..\..\inc"
+				AdditionalIncludeDirectories="..\include;..\inc"
 				AdditionalUsingDirectories=""
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG;CUSTPALETTE_MODULE;UNICODE;_UNICODE;_AFXEXT;_ACRXAPP;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
@@ -190,12 +190,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rxapi.lib acdb17.lib acge17.lib acgiapi.lib achapi17.lib acISMobj17.lib acad.lib acedapi.lib adui17.lib acui17.lib axdb.lib"
-				OutputFile="$(outdir)/AsdkCustPalette.arx"
+				AdditionalDependencies="rxapi.lib acdb17.lib acge17.lib acgiapi.lib achapi17.lib acISMobj17.lib acad.lib acedapi.lib adui17.lib acui17.lib axdb.lib Oleacc.lib mongoose.lib"
+				OutputFile="$(outdir)/KsExploration.arx"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\..\..\lib"
+				AdditionalLibraryDirectories="..\lib"
 				LinkDLL="true"
-				ModuleDefinitionFile="..\..\..\inc\AcRxDefault.def"
+				ModuleDefinitionFile="..\inc\AcRxDefault.def"
 				GenerateDebugInformation="false"
 				ProgramDatabaseFile=""
 				SubSystem="2"
@@ -225,6 +225,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="xcopy /Y /D &quot;$(ProjectDir)PalettePage.html&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)PalettePage.css&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)PalettePage.js&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)tools.json&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
