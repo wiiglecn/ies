@@ -16,4 +16,5 @@ public:
 	static std::wstring StringToWString(const std::string& str);
 	static bool utf8ToTChar(const char* utf8, TCHAR* outBuf, int bufLen);
 	static std::string CStringToUTF8(const CString& str);
+	static void TCharToUtf8(const TCHAR* tStr, char* utf8Str, int utf8Size);
 };

@@ -38,6 +38,8 @@
 CMyPaletteSet  *pPaletteSet ;
 
 HINSTANCE _hdllInstance =NULL ;
+// Forward declaration of DllMain
+extern BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved);
 
 // Callback for the command "PALETTESHOW"
 void paletteShow();
@@ -61,6 +63,7 @@ acrxEntryPoint(AcRx::AppMsgCode msg, void* pkt)
 {
 	switch (msg) {
 	case AcRx::kInitAppMsg:
+		DllMain(_hdllInstance, DLL_PROCESS_ATTACH, NULL);
 		// Comment out the following line if your
 		// application should be locked into memory
 		acrxDynamicLinker->unlockApplication(pkt);
@@ -68,6 +71,7 @@ acrxEntryPoint(AcRx::AppMsgCode msg, void* pkt)
 		InitApplication();
 		break;
 	case AcRx::kUnloadAppMsg:
+		DllMain(_hdllInstance, DLL_PROCESS_DETACH, NULL);
 		UnloadApplication();
 		break;
 	}

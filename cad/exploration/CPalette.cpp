@@ -58,6 +58,7 @@ IMPLEMENT_DYNCREATE(CDataPalette, CAdUiPalette)
 //-----------------------------------------------------------------------------
 BEGIN_MESSAGE_MAP(CDataPalette, CAdUiPalette)
 //	ON_MESSAGE(WM_CTLCOLORSTATIC, OnCtlColorStatic)
+	ON_MESSAGE( WM_ACAD_KEEPFOCUS, onAcadKeepFocus )
 	ON_WM_CREATE()
 	ON_WM_DESTROY()
 	ON_WM_SIZE()
@@ -76,6 +77,12 @@ struct JsCmdData {
         CString cmd;
         CString param;
     };
+
+LRESULT CDataPalette::onAcadKeepFocus( WPARAM wParam, LPARAM lParam )
+{
+    return 0;
+}
+
 
 CDataPalette::CDataPalette():hChat(NULL)
 {
@@ -142,7 +149,7 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
                              rectClient, this, AFX_IDW_PANE_FIRST))
     {
 		// 3. create CHtmlPaletteView failed
-        acutPrintf(_T("\nError: Failed to create CHtmlPaletteView.\n"));
+        acutPrintf(_T("Error: Failed to create CHtmlPaletteView.\n"));
         
         delete m_pHtmlView;
         m_pHtmlView = NULL;
@@ -170,7 +177,7 @@ void CDataPalette::OnDestroy()
 	delete hServer;
 	hServer = NULL;
 
-	acutPrintf(_T("\nCDataPalette::OnDestroy.\n"));
+	acutPrintf(_T("CDataPalette::OnDestroy.\n"));
 
 	//CPaletteCleanup::SafeCleanupHtmlView(m_pHtmlView);
 
@@ -190,6 +197,8 @@ void CDataPalette::OnDestroy()
 	//	//m_pHtmlView->Detach(); 
 		if (::IsWindow(m_pHtmlView->GetSafeHwnd())){
 			m_pHtmlView->DestroyWindow();
+			
+		}else{
 			delete m_pHtmlView;
 		}
         
@@ -257,7 +266,7 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
     if (_tcscmp(szCommand, _T("SetProfile")) == 0)
     {
         // Output szParam to AutoCAD console
-        acutPrintf(_T("\nDebug: SetProfile Param = %s\n"), szParam);
+        acutPrintf(_T("Debug: SetProfile Param = %s\n"), szParam);
 
         // szParam is a JSON string
         /*if (szParam.IsEmpty()) {
@@ -271,7 +280,7 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
         cJSON* pIncomingJson = cJSON_Parse(utf8Param.GetString());
         if (!pIncomingJson) {
             // Invalid JSON in szParam
-            acutPrintf(_T("\nError: Failed to parse JSON.\n"));
+            acutPrintf(_T("Error: Failed to parse JSON.\n"));
             return 0;
         }
 
@@ -279,7 +288,7 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
         cJSON* pRootConfig = CMyPaletteSet::GetJsonConfig();
         if (!pRootConfig) {
             // If config is null, we can't save. 
-            acutPrintf(_T("\nWarning: JSON Config is NULL. Cannot save profile.\n"));
+            acutPrintf(_T("Warning: JSON Config is NULL. Cannot save profile.\n"));
             cJSON_Delete(pIncomingJson);
             return 0;
         }
@@ -403,7 +412,7 @@ void CDataPalette::UpdateHtmlDisplay()
     CString sBgColor;
     sBgColor.Format(_T("#%02X%02X%02X"), GetRValue(bgColor), GetGValue(bgColor), GetBValue(bgColor));
 
-	acutPrintf(_T("\nsetBackgroundColor: %s"), sBgColor);
+	acutPrintf(_T("setBackgroundColor: %s \n"), sBgColor);
     // 3. Call the JavaScript function to update the background
     m_pHtmlView->CallJsFunction(_T("setBackgroundColor"), sBgColor);
 }
@@ -431,7 +440,7 @@ void CDataPalette::onPageReady()
     
     
     cJSON* pRootConfig = CMyPaletteSet::GetJsonConfig();
-    acutPrintf(_T("[DEBUG] GetJsonConfig returned: %p\n"), pRootConfig);
+    acutPrintf(_T("\n[DEBUG] GetJsonConfig returned: %p"), pRootConfig);
 
     if (pRootConfig) {
         acutPrintf(_T("[DEBUG] Checking for 'profile' attribute...\n"));
@@ -470,6 +479,7 @@ void CDataPalette::onPageReady()
     } else {
         acutPrintf(_T("[DEBUG] ERROR: pRootConfig is NULL.\n"));
     }
+    acedPostCommandPrompt();
 }
 void CDataPalette::SetDiameter(CBaseMarker& marker)
 {
@@ -538,6 +548,9 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
             break;
         case WM_USER_A_DELETEENTITIES:
             ToolDraw::getInstance().delete_entities(params);
+            break;
+        case WM_USER_A_LISTENTITIES:
+            ToolDraw::getInstance().list_entities(params);
             break;
         case WM_USER_A_REGEN:
             ToolDraw::getInstance().regen();

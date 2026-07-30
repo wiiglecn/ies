@@ -25,6 +25,7 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/create_ellipse", "create_ellipse", WM_USER_A_CREATEELLIPSE },
     { "/ai/tool/create_spline", "create_spline", WM_USER_A_CREATESPLINE },
     { "/ai/tool/delete_entities", "delete_entities", WM_USER_A_DELETEENTITIES },
+    { "/ai/tool/list_entities", "list_entities", WM_USER_A_LISTENTITIES },
     { "/ai/tool/regen", "regen", WM_USER_A_REGEN } 
 };
 bool EndsWith(const std::string& str, const std::string& suffix) {
@@ -232,7 +233,7 @@ void HandleAiTool(struct mg_connection* nc,
         } else {
             // No specific data returned
             cJSON_AddStringToObject(responseRoot, "status", "error");
-            cJSON_AddStringToObject(responseRoot, "message", "Failed to serialize response");
+            cJSON_AddStringToObject(responseRoot, "message", "Failed to execute");
         }
 
         // Serialize the JSON object to a string

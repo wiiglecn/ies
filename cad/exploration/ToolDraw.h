@@ -20,6 +20,7 @@ public:
 	void list_layers(AiToolCommandData* data);
 
 	void delete_entities(AiToolCommandData* data);
+	void list_entities(AiToolCommandData* data);
 	
 	void regen();
 private:

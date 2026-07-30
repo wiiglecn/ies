@@ -4,6 +4,7 @@
 #include "CPalette.h" 
 #include "PaletteSet.h"
 #include "Utils.h"
+#include "Logger.h"
 //#include  "Winuser.h"
  //#ifndef WM_GETOBJECT
  //#define WM_GETOBJECT 0x003D
@@ -22,6 +23,7 @@ CHtmlPaletteView::~CHtmlPaletteView()
 }
 
 BEGIN_MESSAGE_MAP(CHtmlPaletteView, CHtmlView)
+	ON_MESSAGE( WM_ACAD_KEEPFOCUS, onAcadKeepFocus )
 //ON_WM_ERASEBKGND()
  //ON_WM_DESTROY()
  //ON_MESSAGE(WM_GETOBJECT, OnGetObject)
@@ -36,6 +38,12 @@ BEGIN_DISPATCH_MAP(CHtmlPaletteView, CHtmlView)
 	DISP_FUNCTION(CHtmlPaletteView, "OnJsCommand", OnJsCommand, VT_EMPTY, VTS_BSTR  VTS_BSTR)
     //DISP_FUNCTION_ID(CHtmlPaletteView, "OnJsCommand", 1, OnJsCommand, VT_EMPTY, VTS_BSTR VTS_BSTR)
 END_DISPATCH_MAP()
+
+LRESULT CHtmlPaletteView::onAcadKeepFocus( WPARAM wParam, LPARAM lParam )
+{
+    return 0;
+}
+
 
 void CHtmlPaletteView::SetParentPalette(CDataPalette* pParent)
 {
@@ -70,7 +78,7 @@ void CHtmlPaletteView::OnDocumentComplete(LPCTSTR lpszURL)
     CHtmlView::OnDocumentComplete(lpszURL);
 
     // 调试用：在控制台输出，确认 OnDocumentComplete 被触发
-    acutPrintf(_T("\n[昇龙] Document Complete: %s\n"), lpszURL);
+    acutPrintf(_T("[昇龙] Document Complete: %s \n"), lpszURL);
 }
 // C++ 函数实现：被 JS 调用
 void CHtmlPaletteView::OnJsCallCpp(LPCTSTR szMessage)
@@ -80,12 +88,13 @@ void CHtmlPaletteView::OnJsCallCpp(LPCTSTR szMessage)
 
 void CHtmlPaletteView::OnJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 {
-    acutPrintf(_T("\n[昇龙] OnJsCommand Received: %s, %s\n"), szCommand, szParam);
+    CLogger::GetInstance().Debug(_T("[昇龙] OnJsCommand Received: %s, %s \n"), szCommand, szParam);
     if (m_pParentPalette)
     {
         // trans command
         m_pParentPalette->HandleJsCommand(szCommand, szParam);
     }
+	
 }
 
 void CHtmlPaletteView::CallJsFunction(LPCTSTR szFuncName, LPCTSTR szArg)
@@ -141,7 +150,7 @@ void CHtmlPaletteView::InitializeBrowser()
     strUrl.Format(_T("file:///%sPalettePage.html"), strFilePath);
 
     // 6. Navigate
-    acutPrintf(_T("\n[昇龙] Loading from: %s\n"), strUrl);
+    acutPrintf(_T("[昇龙] Loading from: %s\n"), strUrl);
     Navigate2(strUrl);
 
 
@@ -149,7 +158,7 @@ void CHtmlPaletteView::InitializeBrowser()
 }
 void CHtmlPaletteView::OnDestroy()
 {
-    acutPrintf(_T("\CHtmlPaletteView::OnDestroy.\n"));
+    acutPrintf(_T("CHtmlPaletteView::OnDestroy.\n"));
 
     // 1. 确保焦点不在内部子窗口上
    /* if (GetFocus() != NULL && (this == GetFocus() || IsChild(GetFocus())))

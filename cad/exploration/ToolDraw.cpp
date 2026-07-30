@@ -688,3 +688,74 @@ void ToolDraw::delete_entities(AiToolCommandData* data) {
 
     actionEnd();
 }
+void ToolDraw::list_entities(AiToolCommandData* data)
+{
+	if (actionBefore() != 0){
+		data->ret = 1;
+        return;
+	}
+
+
+
+    AcDbBlockTableRecordIterator *pIter;
+    if (pModelSpace->newIterator(pIter) == Acad::eOk)
+    {
+        cJSON* pJsonArray = cJSON_CreateArray();
+        
+        for (; !pIter->done(); pIter->step())
+        {
+            AcDbEntity* pEnt = NULL;
+            if (pIter->getEntity(pEnt, AcDb::kForRead) == Acad::eOk)
+            {
+                // 1. 获取 Handle
+                AcDbHandle handle = pEnt->objectId().handle();
+                TCHAR handleStr[20] = {0};
+                handle.getIntoAsciiBuffer(handleStr);
+
+                char utf8Handle[32] = { 0 };
+                CUtils::TCharToUtf8(handleStr, utf8Handle, sizeof(utf8Handle));
+
+                // 2. 获取实体类型
+                const ACHAR* pName = pEnt->isA()->name();
+                char utf8Name[128] = { 0 };
+                CUtils::TCharToUtf8(pName, utf8Name, sizeof(utf8Name));
+
+                // 3. 获取实体颜色索引
+                Adesk::UInt16 colorIndex = pEnt->colorIndex();
+
+                // 4. 获取实体所在图层
+                AcDbObjectId layerId = pEnt->layerId();
+                TCHAR layerName[256] = { 0 };
+                AcDbLayerTableRecord* pLayerRec = NULL;
+                if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForRead) == Acad::eOk)
+                {
+                    const ACHAR* pLayerName = NULL;
+                    if (pLayerRec->getName(pLayerName) == Acad::eOk && pLayerName != NULL)
+                    {
+                        _tcsncpy(layerName, pLayerName, 255);
+                    }
+                    pLayerRec->close();
+                }
+
+                char utf8Layer[256] = { 0 };
+                CUtils::TCharToUtf8(layerName, utf8Layer, sizeof(utf8Layer));
+
+                // 5. 构建 JSON 对象
+                cJSON* pJsonItem = cJSON_CreateObject();
+                cJSON_AddStringToObject(pJsonItem, "handle", utf8Handle);
+                cJSON_AddStringToObject(pJsonItem, "type", utf8Name);
+                cJSON_AddNumberToObject(pJsonItem, "color", colorIndex);
+                cJSON_AddStringToObject(pJsonItem, "layer", utf8Layer);
+                
+                cJSON_AddItemToArray(pJsonArray, pJsonItem);
+                
+                pEnt->close();
+            }
+        }
+        delete pIter;
+        
+        data->resultJson = pJsonArray;
+    }
+
+    actionEnd();
+}

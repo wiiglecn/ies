@@ -24,12 +24,12 @@ void CPolylineMarker::DrawRedCircle(const AcGePoint3d& center)
         // acutPrintf(_T("\n[SKIP] DrawRedCircle: Circle already exists at (%.3f, %.3f, %.3f)"), center.x, center.y, center.z);
         return;
     }
-    acutPrintf(_T("\n[DEBUG] DrawRedCircle: Center(%.3f, %.3f, %.3f)"), center.x, center.y, center.z);
+    acutPrintf(_T("[DEBUG] DrawRedCircle: Center(%.3f, %.3f, %.3f) \n"), center.x, center.y, center.z);
 
     AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
     if (!pDb) 
     {
-        acutPrintf(_T("\n[ERROR] DrawRedCircle: Failed to get working database."));
+        acutPrintf(_T("[ERROR] DrawRedCircle: Failed to get working database. \n"));
         return;
     }
 
@@ -39,13 +39,13 @@ void CPolylineMarker::DrawRedCircle(const AcGePoint3d& center)
     // Open Model Space for write
     if (pDb->getBlockTable(pBlockTable, AcDb::kForRead) != Acad::eOk)
     {
-        acutPrintf(_T("\n[ERROR] DrawRedCircle: Failed to open Block Table."));
+        acutPrintf(_T("[ERROR] DrawRedCircle: Failed to open Block Table. \n"));
         return;
     }
     
     if (pBlockTable->getAt(ACDB_MODEL_SPACE, pModelSpace, AcDb::kForWrite) != Acad::eOk)
     {
-        acutPrintf(_T("\n[ERROR] DrawRedCircle: Failed to open Model Space for write."));
+        acutPrintf(_T("[ERROR] DrawRedCircle: Failed to open Model Space for write. \n"));
         pBlockTable->close();
         return;
     }
@@ -61,12 +61,12 @@ void CPolylineMarker::DrawRedCircle(const AcGePoint3d& center)
     AcDbObjectId circleId;
     if (pModelSpace->appendAcDbEntity(circleId, pCircle) == Acad::eOk)
     {
-        acutPrintf(_T("\n[INFO] DrawRedCircle: Circle created successfully."));
+        acutPrintf(_T("[INFO] DrawRedCircle: Circle created successfully. \n"));
         pCircle->close();
     }
     else
     {
-        acutPrintf(_T("\n[ERROR] DrawRedCircle: Failed to append circle to Model Space."));
+        acutPrintf(_T("[ERROR] DrawRedCircle: Failed to append circle to Model Space. \n"));
         delete pCircle;
     }
     pModelSpace->close();
@@ -76,12 +76,12 @@ void CPolylineMarker::ProcessPolylineVertices(AcDbPolyline* pPline, const AcGeMa
 {
     if (!pPline) 
     {
-        acutPrintf(_T("\n[WARNING] ProcessPolylineVertices: Invalid polyline pointer."));
+        acutPrintf(_T("[WARNING] ProcessPolylineVertices: Invalid polyline pointer. \n"));
         return;
     }
 
     int numVerts = pPline->numVerts();
-    acutPrintf(_T("\n[INFO] ProcessPolylineVertices: Processing polyline with %d vertices."), numVerts);
+    acutPrintf(_T("[INFO] ProcessPolylineVertices: Processing polyline with %d vertices. \n"), numVerts);
 
     for (int i = 0; i < numVerts; i++)
     {
@@ -92,21 +92,21 @@ void CPolylineMarker::ProcessPolylineVertices(AcDbPolyline* pPline, const AcGeMa
             // Apply transformation if provided (for block references)
             pt3d.transformBy(xform);
             
-            acutPrintf(_T("\n[DEBUG] Vertex %d: Original(%.3f, %.3f) -> Transformed(%.3f, %.3f, %.3f)"), 
+            acutPrintf(_T("[DEBUG] Vertex %d: Original(%.3f, %.3f) -> Transformed(%.3f, %.3f, %.3f) \n"), 
                        i, pt2d.x, pt2d.y, pt3d.x, pt3d.y, pt3d.z);
             
             DrawRedCircle(pt3d);
         }
         else
         {
-            acutPrintf(_T("\n[ERROR] ProcessPolylineVertices: Failed to get point at index %d."), i);
+            acutPrintf(_T("[ERROR] ProcessPolylineVertices: Failed to get point at index %d. \n"), i);
         }
     }
 }
 
 void CPolylineMarker::ExecuteSelectionAndMark()
 {
-	acutPrintf(_T("\n[INFO] 昇龙助手: 开始选择参照物，选择块或者多段线...\n  绘制直径：%.3f"), this->m_Diameter);
+	acutPrintf(_T("[INFO] 昇龙助手: 开始选择参照物，选择块或者多段线...\n  绘制直径：%.3f \n"), this->m_Diameter);
 
     ads_name ssName;
     // Allow user to select objects. 
@@ -127,7 +127,7 @@ void CPolylineMarker::ExecuteSelectionAndMark()
 
 	Acad::ErrorStatus es = acDocManager->lockDocument(pDoc);
     if (es != Acad::eOk) {
-        acedAlert(_T("Failed to lock the document..."));
+        acedAlert(_T("Failed to lock the document... \n"));
         return;
     }
 
@@ -138,30 +138,30 @@ void CPolylineMarker::ExecuteSelectionAndMark()
         
         if (acedSSName(ssName, i, entName) != RTNORM)
         {
-            acutPrintf(_T("\n[WARNING] ExecuteSelectionAndMark: Failed to get entity name at index %ld."), i);
+            acutPrintf(_T("[WARNING] ExecuteSelectionAndMark: Failed to get entity name at index %ld. \n"), i);
             continue;
         }
 
         if (acdbGetObjectId(objId, entName) != Acad::eOk)
         {
-            acutPrintf(_T("\n[WARNING] ExecuteSelectionAndMark: Failed to get Object ID at index %ld."), i);
+            acutPrintf(_T("[WARNING] ExecuteSelectionAndMark: Failed to get Object ID at index %ld. \n"), i);
             continue;
         }
 
         AcDbEntity* pEnt = NULL;
         if (acdbOpenObject(pEnt, objId, AcDb::kForRead) != Acad::eOk)
         {
-            acutPrintf(_T("\n[WARNING] ExecuteSelectionAndMark: Failed to open entity at index %ld."), i);
+            acutPrintf(_T("[WARNING] ExecuteSelectionAndMark: Failed to open entity at index %ld. \n"), i);
             continue;
         }
 
-        acutPrintf(_T("\n[DEBUG] Processing Entity Index %ld, Object ID: %ld"), i, objId.asOldId());
+        acutPrintf(_T("[DEBUG] Processing Entity Index %ld, Object ID: %ld \n"), i, objId.asOldId());
 
         // Case 1: Direct Polyline
         AcDbPolyline* pPline = AcDbPolyline::cast(pEnt);
         if (pPline)
         {
-            acutPrintf(_T("\n[INFO] Entity is a Polyline."));
+            acutPrintf(_T("[INFO] Entity is a Polyline. \n"));
             ProcessPolylineVertices(pPline);
             pEnt->close();
             continue;
@@ -171,7 +171,7 @@ void CPolylineMarker::ExecuteSelectionAndMark()
         AcDbBlockReference* pBlockRef = AcDbBlockReference::cast(pEnt);
         if (pBlockRef)
         {
-            acutPrintf(_T("\n[INFO] Entity is a Block Reference."));
+            acutPrintf(_T("[INFO] Entity is a Block Reference. \n"));
             AcDbObjectId blockDefId = pBlockRef->blockTableRecord();
             
             // Get transformation matrix before closing reference
@@ -182,7 +182,7 @@ void CPolylineMarker::ExecuteSelectionAndMark()
             AcDbBlockTableRecord* pBlockDef = NULL;
             if (acdbOpenObject(pBlockDef, blockDefId, AcDb::kForRead) == Acad::eOk)
             {
-                acutPrintf(_T("\n[DEBUG] Opening Block Definition for iteration."));
+                acutPrintf(_T("[DEBUG] Opening Block Definition for iteration. \n"));
                 AcDbBlockTableRecordIterator* pIter = NULL;
                 if (pBlockDef->newIterator(pIter) == Acad::eOk)
                 {
@@ -196,7 +196,7 @@ void CPolylineMarker::ExecuteSelectionAndMark()
                             AcDbPolyline* pSubPline = AcDbPolyline::cast(pSubEnt);
                             if (pSubPline)
                             {
-                                acutPrintf(_T("\n[INFO] Found Polyline inside Block."));
+                                acutPrintf(_T("[INFO] Found Polyline inside Block. \n"));
                                 // Draw circles at vertices, transformed by block's position/scale/rotation
                                 ProcessPolylineVertices(pSubPline, xform);
                                 subEntCount++;
@@ -204,23 +204,23 @@ void CPolylineMarker::ExecuteSelectionAndMark()
                             pSubEnt->close();
                         }
                     }
-                    acutPrintf(_T("\n[DEBUG] Processed %d sub-entities in block."), subEntCount);
+                    acutPrintf(_T("[DEBUG] Processed %d sub-entities in block. \n"), subEntCount);
                     delete pIter;
                 }
                 else
                 {
-                    acutPrintf(_T("\n[ERROR] Failed to create iterator for block definition."));
+                    acutPrintf(_T("[ERROR] Failed to create iterator for block definition. \n"));
                 }
                 pBlockDef->close();
             }
             else
             {
-                acutPrintf(_T("\n[ERROR] Failed to open block definition."));
+                acutPrintf(_T("[ERROR] Failed to open block definition.\n"));
             }
         }
         else
         {
-            acutPrintf(_T("\n[DEBUG] Entity is neither Polyline nor Block Reference. Skipping."));
+            acutPrintf(_T("[DEBUG] Entity is neither Polyline nor Block Reference. Skipping.\n"));
             pEnt->close();
         }
     }
@@ -229,4 +229,6 @@ void CPolylineMarker::ExecuteSelectionAndMark()
     acutPrintf(_T("\n[INFO] ExecuteSelectionAndMark: Processing complete. Red circles drawn at polyline vertices.\n"));
 
 	acDocManager->unlockDocument(pDoc);
+
+	acedPostCommandPrompt(); // 立即刷新提示符
 }

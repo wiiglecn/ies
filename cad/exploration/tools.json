@@ -296,5 +296,16 @@
                 ]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_entities",
+            "description": "Lists all first-level entities (objects) in the current AutoCAD Model Space. Returns a JSON array of objects containing their handle, type, color, and layer.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
     }
 ]

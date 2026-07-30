@@ -84,7 +84,7 @@ private:
 	afx_msg LRESULT HandleApiCommand(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT HandleChatReply(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT HandleChatError(WPARAM wParam, LPARAM lParam);
-
+	afx_msg LRESULT onAcadKeepFocus(WPARAM wParam, LPARAM lParam);
 private:
 	AiApiRequest* hServer;
 	AiChat* hChat;

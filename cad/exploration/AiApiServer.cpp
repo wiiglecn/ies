@@ -36,15 +36,15 @@ bool AiApiServer::StartHttpServer(const std::string& port)
     std::string bindAddr = "http://0.0.0.0:" + port;
     std::wstring wBindAddr = StringToWString(bindAddr);
 
-    acutPrintf(_T("\n[CAD DEBUG] StartHttpServer: %s"), wBindAddr.c_str());
+    acutPrintf(_T("[CAD DEBUG] StartHttpServer: %s\n"), wBindAddr.c_str());
     
     m_nc = mg_http_listen(&m_mgr, bindAddr.c_str(), EventHandler, this);
     if (m_nc == NULL) {
-        acutPrintf(_T("\n[CAD ERROR] Failed to listen on port %s"), wBindAddr.c_str());
+        acutPrintf(_T("[CAD ERROR] Failed to listen on port %s\n"), wBindAddr.c_str());
         return false;
     }
     
-    acutPrintf(_T("\n[CAD DEBUG] Listening started. Starting polling thread..."));
+    acutPrintf(_T("[CAD DEBUG] Listening started. Starting polling thread...\n"));
     
     // Start the background polling loop
     StartPolling();
@@ -140,7 +140,7 @@ void AiApiServer::HandleHttpRequest(struct mg_connection* nc, struct mg_http_mes
     std::wstring wUri = StringToWString(uri);
 
     // Debug: Print incoming request details
-    acutPrintf(_T("\n[CAD DEBUG] Incoming Request: %s %s"), 
+    acutPrintf(_T("[CAD DEBUG] Incoming Request: %s %s \n"), 
                wMethod.c_str(), 
                wUri.c_str());
     
@@ -157,20 +157,20 @@ void AiApiServer::HandleHttpRequest(struct mg_connection* nc, struct mg_http_mes
         if (len > 0) {
             params["query"] = std::string(query, len);
             std::wstring wQuery = StringToWString(std::string(query, len));
-            acutPrintf(_T("\n[CAD DEBUG] Parsed Param 'query': %s"), wQuery.c_str());
+            acutPrintf(_T("[CAD DEBUG] Parsed Param 'query': %s \n"), wQuery.c_str());
         }
         
-        acutPrintf(_T("\n[CAD DEBUG] Executing handler for: %s"), wUri.c_str());
+        acutPrintf(_T("[CAD DEBUG] Executing handler for: %s \n"), wUri.c_str());
 
 		
 		it->second(nc, hm, params, body, it->first.user_data);
         
         // Debug: Handler finished
-        acutPrintf(_T("\n[CAD DEBUG] Handler completed."));
+        acutPrintf(_T("[CAD DEBUG] Handler completed. \n"));
 
     } else {
         // Debug: 404 Not Found
-        acutPrintf(_T("\n[CAD DEBUG] No route found for: %s %s"), 
+        acutPrintf(_T("[CAD DEBUG] No route found for: %s %s \n"), 
                    wMethod.c_str(), 
                    wUri.c_str());
 
@@ -201,7 +201,7 @@ void AiApiServer::SendJsonResponse(struct mg_connection* nc,
 DWORD WINAPI AiApiServer::PollThreadFunc(LPVOID lpParam)
 {
     AiApiServer* server = (AiApiServer*)lpParam;
-    acutPrintf(_T("\n[CAD DEBUG] Polling thread started."));
+    acutPrintf(_T("[CAD DEBUG] Polling thread started. \n"));
     
     // The polling loop
     while (server->m_running) {
@@ -210,7 +210,7 @@ DWORD WINAPI AiApiServer::PollThreadFunc(LPVOID lpParam)
         mg_mgr_poll(&server->m_mgr, 1000);
     }
     
-    acutPrintf(_T("\n[CAD DEBUG] Polling thread exited."));
+    acutPrintf(_T("[CAD DEBUG] Polling thread exited. \n"));
     return 0;
 }
 
@@ -223,9 +223,9 @@ void AiApiServer::StartPolling()
     m_hThread = CreateThread(NULL, 0, PollThreadFunc, this, 0, NULL);
     
     if (m_hThread == NULL) {
-        acutPrintf(_T("\n[CAD ERROR] Failed to create polling thread."));
+        acutPrintf(_T("[CAD ERROR] Failed to create polling thread. \n"));
         m_running = false;
     } else {
-        acutPrintf(_T("\n[CAD DEBUG] Polling thread created successfully."));
+        acutPrintf(_T("[CAD DEBUG] Polling thread created successfully. \n"));
     }
 }

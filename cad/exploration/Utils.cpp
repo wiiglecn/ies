@@ -153,3 +153,15 @@ std::string CUtils::CStringToUTF8(const CString& str)
     return result;
 #endif
 }
+void CUtils::TCharToUtf8(const TCHAR* tStr, char* utf8Str, int utf8Size)
+{
+    if (!tStr || !utf8Str || utf8Size <= 0) {
+        if (utf8Str && utf8Size > 0) utf8Str[0] = '\0';
+        return;
+    }
+#ifdef _UNICODE
+    WideCharToMultiByte(CP_UTF8, 0, tStr, -1, utf8Str, utf8Size, NULL, NULL);
+#else
+    strcpy_s(utf8Str, utf8Size, tStr);
+#endif
+}

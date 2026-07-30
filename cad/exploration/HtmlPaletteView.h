@@ -49,6 +49,8 @@ public:
 	afx_msg void OnDestroy();
     // 新增：拦截辅助功能查询
     afx_msg LRESULT OnGetObject(WPARAM, LPARAM);
+private:
+	LRESULT onAcadKeepFocus(WPARAM wParam, LPARAM lParam);
     
     //DECLARE_EVENTSINK_MAP() 
     // Auxiliary function: calling JS from C++

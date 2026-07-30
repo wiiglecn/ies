@@ -376,8 +376,8 @@ void AiChat::ProcessToolResponse(const std::string& strResponse)
                     if (toolCallCount > 0)
                     {
                         CallLocalTool("regen", "{}");
+						acedPostCommandPrompt();
                     }
-
                     
                 }
             }
