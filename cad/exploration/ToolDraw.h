@@ -18,9 +18,15 @@ public:
 	void create_text(AiToolCommandData* data);
 	void create_layer(AiToolCommandData* data);
 	void list_layers(AiToolCommandData* data);
+	void query_all_layers(AiToolCommandData* data);
 
 	void delete_entities(AiToolCommandData* data);
 	void list_entities(AiToolCommandData* data);
+
+	void query_layer(AiToolCommandData* data);
+    void get_current_layer(AiToolCommandData* data);
+    void set_current_layer(AiToolCommandData* data);
+    void get_current_layer_color(AiToolCommandData* data);
 	
 	void regen();
 private:
@@ -36,4 +42,5 @@ private:
 	AcApDocument* pDoc;
 	//AcDbDatabase* pDb;
 	AcDbBlockTableRecord* pModelSpace;
+	AcDbDatabase* pDb;
 };

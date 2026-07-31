@@ -552,6 +552,21 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
         case WM_USER_A_LISTENTITIES:
             ToolDraw::getInstance().list_entities(params);
             break;
+        case WM_USER_A_QUERYLAYER:
+            ToolDraw::getInstance().query_layer(params);
+            break;
+        case WM_USER_A_GETCURRENTLAYER:
+            ToolDraw::getInstance().get_current_layer(params);
+            break;
+        case WM_USER_A_SETCURRENTLAYER:
+            ToolDraw::getInstance().set_current_layer(params);
+            break;
+        case WM_USER_A_GETCURRENTLAYERCOLOR:
+            ToolDraw::getInstance().get_current_layer_color(params);
+            break;
+        case WM_USER_A_QUERYALLLAYERS:
+            ToolDraw::getInstance().query_all_layers(params);
+            break;
         case WM_USER_A_REGEN:
             ToolDraw::getInstance().regen();
             break;

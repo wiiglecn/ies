@@ -11,7 +11,7 @@
 #include "utils.h"
 
 
-ToolDraw::ToolDraw(void):pDoc(NULL),pModelSpace(NULL)
+ToolDraw::ToolDraw(void):pDoc(NULL),pModelSpace(NULL),pDb(NULL)
 {
 }
 
@@ -32,15 +32,15 @@ int ToolDraw::actionBefore()
         acutPrintf(_T("Failed to lock the document...\n"));
         return 1;
     }
-	AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
-    if (!pDb) 
+	this->pDb = acdbHostApplicationServices()->workingDatabase();
+    if (!this->pDb) 
     {
         acutPrintf(_T("[ERROR] DrawRedCircle: Failed to get working database.\n"));
         return 2;
     }
 
 	AcDbBlockTable* pBlockTable = NULL;
-    this->pModelSpace = NULL;
+    //this->pModelSpace = NULL;
 
     // Open Model Space for write
     if (pDb->getBlockTable(pBlockTable, AcDb::kForRead) != Acad::eOk)
@@ -348,9 +348,8 @@ void ToolDraw::create_layer(AiToolCommandData* data)
 
     if (this->actionBefore()) return;
 
-    AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
     AcDbLayerTable* pLayerTable = NULL;
-    if (pDb->getLayerTable(pLayerTable, AcDb::kForWrite) != Acad::eOk)
+    if (this->pDb->getLayerTable(pLayerTable, AcDb::kForWrite) != Acad::eOk)
     {
         acutPrintf(_T("[ERROR] create_layer: failed to open Layer Table.\n"));
         this->actionEnd();
@@ -391,11 +390,14 @@ void ToolDraw::create_layer(AiToolCommandData* data)
 void ToolDraw::list_layers(AiToolCommandData* data)
 {
 	// cJSON* params = data->jsonRoot;
-    if (this->actionBefore()) return;
+    if (this->actionBefore())
+	{
+		data->ret=1;
+		return;
+	}
 
-    AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
     AcDbLayerTable* pLayerTable = NULL;
-    if (pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk)
+    if (this->pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk)
     {
         acutPrintf(_T("[ERROR] list_layers: failed to open Layer Table.\n"));
         this->actionEnd();
@@ -652,7 +654,6 @@ void ToolDraw::delete_entities(AiToolCommandData* data) {
         return;
     }
 
-    AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
     
     cJSON* handleItem = NULL;
     cJSON_ArrayForEach(handleItem, handlesArray) {
@@ -758,4 +759,253 @@ void ToolDraw::list_entities(AiToolCommandData* data)
     }
 
     actionEnd();
+}
+void ToolDraw::query_layer(AiToolCommandData* data) {
+    cJSON* params = data->jsonRoot;
+    cJSON* nameItem = cJSON_GetObjectItem(params, "name");
+
+    if (!nameItem || !cJSON_IsString(nameItem)) {
+        acutPrintf(_T("[ERROR] query_layer: invalid parameters.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    TCHAR layerName[256] = { 0 };
+    if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
+        acutPrintf(_T("[ERROR] query_layer: failed to convert layer name.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    if (this->actionBefore()) {
+        data->ret = 1;
+        return;
+    }
+
+    AcDbLayerTable* pLayerTable = NULL;
+    if (pDb->getLayerTable(pLayerTable, AcDb::kForRead) == Acad::eOk) {
+        AcDbObjectId layerId;
+        if (pLayerTable->getAt(layerName, layerId) == Acad::eOk) {
+            AcDbLayerTableRecord* pLayerRec = NULL;
+            if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForRead) == Acad::eOk) {
+                data->resultJson = cJSON_CreateObject();
+                
+                char utf8Name[256] = { 0 };
+                CUtils::TCharToUtf8(layerName, utf8Name, sizeof(utf8Name));
+                cJSON_AddStringToObject(data->resultJson, "name", utf8Name);
+                
+                AcCmColor color = pLayerRec->color();
+                Adesk::UInt16 colorIndex = color.colorIndex();
+				Adesk::UInt8 r = color.red();
+				Adesk::UInt8 g = color.green();
+				Adesk::UInt8 b = color.blue();
+				char hexColor[8];
+				sprintf_s(hexColor, "#%02X%02X%02X", r, g, b);
+
+                cJSON_AddNumberToObject(data->resultJson, "color", colorIndex);
+				cJSON_AddStringToObject(data->resultJson, "hex", hexColor);
+
+                pLayerRec->close();
+            } else {
+                data->ret = 1;
+            }
+        } else {
+            acutPrintf(_T("[ERROR] query_layer: layer not found.\n"));
+            data->ret = 1;
+        }
+        pLayerTable->close();
+    } else {
+        acutPrintf(_T("[ERROR] query_layer: failed to open Layer Table.\n"));
+        data->ret = 1;
+    }
+
+    this->actionEnd();
+}
+
+void ToolDraw::get_current_layer(AiToolCommandData* data) {
+    if (this->actionBefore()) return;
+    
+    AcDbObjectId layerId = pDb->clayer();
+    
+    AcDbLayerTableRecord* pLayerRec = NULL;
+    if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForRead) == Acad::eOk) {
+        const ACHAR* pName = NULL;
+        if (pLayerRec->getName(pName) == Acad::eOk && pName != NULL) {
+            data->resultJson = cJSON_CreateObject();
+            
+            char utf8Name[256] = { 0 };
+            CUtils::TCharToUtf8(pName, utf8Name, sizeof(utf8Name));
+            cJSON_AddStringToObject(data->resultJson, "name", utf8Name);
+        }
+        pLayerRec->close();
+    } else {
+        acutPrintf(_T("[ERROR] get_current_layer: failed to get current layer.\n"));
+        data->ret = 1;
+    }
+    
+    this->actionEnd();
+}
+
+void ToolDraw::set_current_layer(AiToolCommandData* data) {
+    cJSON* params = data->jsonRoot;
+    cJSON* nameItem = cJSON_GetObjectItem(params, "name");
+
+    if (!nameItem || !cJSON_IsString(nameItem)) {
+        acutPrintf(_T("[ERROR] set_current_layer: invalid parameters.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    TCHAR layerName[256] = { 0 };
+    if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
+        acutPrintf(_T("[ERROR] set_current_layer: failed to convert layer name.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcDbLayerTable* pLayerTable = NULL;
+    AcDbObjectId layerId;
+    Acad::ErrorStatus es = Acad::eInvalidInput;
+
+    // Open the layer table to find the ObjectId of the layer
+    if (pDb->getLayerTable(pLayerTable, AcDb::kForRead) == Acad::eOk) {
+        if (pLayerTable->getAt(layerName, layerId) == Acad::eOk) {
+            // Set the current layer using the retrieved ObjectId
+            es = pDb->setClayer(layerId);
+        }
+        pLayerTable->close();
+    }
+
+    if (es == Acad::eOk) {
+        data->resultJson = cJSON_CreateObject();
+        cJSON_AddStringToObject(data->resultJson, "name", nameItem->valuestring);
+    } else {
+        acutPrintf(_T("[ERROR] set_current_layer: failed to set layer.\n"));
+        data->ret = 1;
+    }
+
+    this->actionEnd();
+}
+
+void ToolDraw::get_current_layer_color(AiToolCommandData* data) {
+	if (this->actionBefore()) {
+		data->ret = 1;
+		return;
+	}
+    
+    AcDbObjectId layerId = pDb->clayer();
+    
+    AcDbLayerTableRecord* pLayerRec = NULL;
+    if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForRead) == Acad::eOk) {
+        AcCmColor color = pLayerRec->color();
+        Adesk::UInt16 colorIndex = color.colorIndex();
+
+        // 获取 RGB 值并格式化为16进制字符串
+        Adesk::UInt8 r = color.red();
+        Adesk::UInt8 g = color.green();
+        Adesk::UInt8 b = color.blue();
+        char hexColor[8];
+        sprintf_s(hexColor, "#%02X%02X%02X", r, g, b);
+
+        data->resultJson = cJSON_CreateObject();
+        cJSON_AddNumberToObject(data->resultJson, "color", colorIndex);
+        cJSON_AddStringToObject(data->resultJson, "hex", hexColor);
+        pLayerRec->close();
+    } else {
+        acutPrintf(_T("[ERROR] get_current_layer_color: failed to get layer color.\n"));
+        data->ret = 1;
+    }
+    
+    this->actionEnd();
+}
+
+void ToolDraw::query_all_layers(AiToolCommandData* data)
+{
+    if (this->actionBefore())
+    {
+        data->ret = 1;
+        return;
+    }
+
+    AcDbLayerTable* pLayerTable = NULL;
+    if (this->pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk)
+    {
+        acutPrintf(_T("[ERROR] query_all_layers: failed to open Layer Table.\n"));
+        this->actionEnd();
+        data->ret = 1;
+        return;
+    }
+
+    cJSON* pJsonArray = cJSON_CreateArray();
+
+    AcDbLayerTableIterator* pIter = NULL;
+    if (pLayerTable->newIterator(pIter) == Acad::eOk)
+    {
+        for (; !pIter->done(); pIter->step())
+        {
+            AcDbLayerTableRecord* pLayerRecord = NULL;
+            if (pIter->getRecord(pLayerRecord, AcDb::kForRead) == Acad::eOk)
+            {
+                const ACHAR* pName = NULL;
+                if (pLayerRecord->getName(pName) == Acad::eOk && pName != NULL)
+                {
+                    cJSON* pJsonItem = cJSON_CreateObject();
+
+
+                    // 1. layer name
+                    char utf8Name[256] = { 0 };
+                    CUtils::TCharToUtf8(pName, utf8Name, sizeof(utf8Name));
+                    cJSON_AddStringToObject(pJsonItem, "name", utf8Name);
+
+                    // 2. color index
+                    AcCmColor color = pLayerRecord->color();
+                    Adesk::UInt16 colorIndex = color.colorIndex();
+
+					// 获取 RGB 值并格式化为16进制字符串
+					Adesk::UInt8 r = color.red();
+					Adesk::UInt8 g = color.green();
+					Adesk::UInt8 b = color.blue();
+					char hexColor[8];
+					sprintf_s(hexColor, "#%02X%02X%02X", r, g, b);
+
+                    cJSON_AddNumberToObject(pJsonItem, "color", colorIndex);
+					cJSON_AddStringToObject(pJsonItem, "hex", hexColor);
+
+                    // 3. is off (hidden)
+                    Adesk::Boolean isOff = pLayerRecord->isOff();
+                    cJSON_AddBoolToObject(pJsonItem, "isOff", isOff ? 1 : 0);
+
+                    // 4. is frozen
+                    Adesk::Boolean isFrozen = pLayerRecord->isFrozen();
+                    cJSON_AddBoolToObject(pJsonItem, "isFrozen", isFrozen ? 1 : 0);
+
+                    // 5. is locked
+                    Adesk::Boolean isLocked = pLayerRecord->isLocked();
+                    cJSON_AddBoolToObject(pJsonItem, "isLocked", isLocked ? 1 : 0);
+
+                    cJSON_AddItemToArray(pJsonArray, pJsonItem);
+                }
+                pLayerRecord->close();
+            }
+        }
+        delete pIter;
+    }
+    else
+    {
+        acutPrintf(_T("[ERROR] query_all_layers: failed to create Layer Table iterator.\n"));
+        cJSON_Delete(pJsonArray);
+        pLayerTable->close();
+        this->actionEnd();
+        data->ret = 1;
+        return;
+    }
+
+    pLayerTable->close();
+
+    data->resultJson = pJsonArray;
+    data->ret = 0;
+
+    this->actionEnd();
 }

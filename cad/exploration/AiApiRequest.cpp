@@ -26,6 +26,11 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/create_spline", "create_spline", WM_USER_A_CREATESPLINE },
     { "/ai/tool/delete_entities", "delete_entities", WM_USER_A_DELETEENTITIES },
     { "/ai/tool/list_entities", "list_entities", WM_USER_A_LISTENTITIES },
+    { "/ai/tool/query_layer", "query_layer", WM_USER_A_QUERYLAYER },
+    { "/ai/tool/get_current_layer", "get_current_layer", WM_USER_A_GETCURRENTLAYER },
+    { "/ai/tool/set_current_layer", "set_current_layer", WM_USER_A_SETCURRENTLAYER },
+    { "/ai/tool/get_current_layer_color", "get_current_layer_color", WM_USER_A_GETCURRENTLAYERCOLOR },
+    { "/ai/tool/query_all_layers", "query_all_layers", WM_USER_A_QUERYALLLAYERS },
     { "/ai/tool/regen", "regen", WM_USER_A_REGEN } 
 };
 bool EndsWith(const std::string& str, const std::string& suffix) {
