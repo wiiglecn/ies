@@ -135,5 +135,5 @@ extern HINSTANCE _hdllInstance ;
 #include "acpi.h"
 #include <atlctl.h>
 ///////////////////////////
-#import "msxml.dll" named_guids
+#import "../msxml.dll" named_guids
 using namespace MSXML;

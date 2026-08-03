@@ -359,7 +359,11 @@ function onSelectCircle(){
         window.external.OnJsCommand("PreSelectCircle", "");
     }
 }
-
+function onScale(){
+    if (window.external){
+        window.external.OnJsCommand("PreSelectScale", "");
+    }
+}
 
 function startCursorBlink(cursorEl) {
     stopCursorBlink();

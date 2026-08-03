@@ -37,7 +37,7 @@
 #include "PaletteCleanup.h"
 #include "AiApiRequest.h"
 #include "declare.h"
-#include "ToolDraw.h"
+#include "../tools/ToolDraw.h"
 #include "AiChat.h"
 #include "Logger.h"
 #include "CircleFilter.h"
@@ -351,6 +351,10 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
         CCircleFilter circleFilter;
         circleFilter.Execute();
     }
+    else if (_tcscmp(szCommand, _T("PreSelectScale")) == 0)
+    {
+		
+    }
 	else if (_tcscmp(szCommand, _T("Init")) == 0)
     {
        this->onPageReady();
@@ -365,6 +369,8 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 		CString message_chat(szParam);
 		hChat->Execute(message_chat);
     }
+
+    
 
 	else if (_tcscmp(szCommand, _T("ReplyContinue")) == 0)
     {

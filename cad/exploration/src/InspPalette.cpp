@@ -41,8 +41,9 @@
 
 //////////////////////////////////////////////////////////////////////////////
 // import the MSXML functionality
-#import "msxml.dll" named_guids
+#import "../msxml.dll" named_guids
 using namespace MSXML;
+
 
 
 CComObject<CInspData> *InspPaletteDataManager::pData = NULL;

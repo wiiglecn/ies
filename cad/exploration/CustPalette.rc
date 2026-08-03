@@ -1,7 +1,7 @@
 // Microsoft Visual C++ generated resource script.
 //
 // (C) Copyright 2005-2006 by Autodesk, Inc.
-#include "resource.h"
+#include "./include/resource.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -73,7 +73,7 @@ BEGIN
             VALUE "FileDescription", "CustPalette ObjectARX application"
             VALUE "FileVersion", "1, 0, 0, 1"
             VALUE "InternalName", "CustPalette"
-            VALUE "LegalCopyright", "Copyright © 2002"
+            VALUE "LegalCopyright", "Copyright ?2002"
             VALUE "OriginalFilename", "AsdkCustPalette.arx"
             VALUE "ProductName", "CustPalette Application"
             VALUE "ProductVersion", "1, 0, 0, 1"

@@ -30,9 +30,9 @@
 
 #include "resource.h"
 #include <initguid.h>
-#include "CustPalette.h"
+#include "../CustPalette.h"
 #include <afxdllx.h>
-#include "CustPalette_i.c"
+#include "../CustPalette_i.c"
 
 
 
