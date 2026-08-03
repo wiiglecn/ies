@@ -10,6 +10,9 @@ static CString processScaleTextImpl(const CString& text, double scaleFactor)
     // 查找冒号 ':' 以确定是否为比例格式
     int colonPos = text.Find(_T(':'));
     if (colonPos == -1) {
+        colonPos = text.Find(_T('：'));
+    }
+    if (colonPos == -1) {
         return text;
     }
 
