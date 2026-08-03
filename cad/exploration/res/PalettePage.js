@@ -364,7 +364,11 @@ function onScale(){
         window.external.OnJsCommand("PreSelectScale", "");
     }
 }
-
+function onScaleEntireModel(){
+    if (window.external){
+        window.external.OnJsCommand("PreSelectScaleWhole", "");
+    }
+}
 function startCursorBlink(cursorEl) {
     stopCursorBlink();
     var isVisible = true;

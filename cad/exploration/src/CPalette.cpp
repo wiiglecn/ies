@@ -41,6 +41,8 @@
 #include "AiChat.h"
 #include "Logger.h"
 #include "CircleFilter.h"
+#include "PreSelectScale.h"
+
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -255,6 +257,7 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
         return 0;
     }
 
+
     CString szCommand = pData->cmd;
     CString szParam = pData->param;
 
@@ -353,8 +356,22 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
     }
     else if (_tcscmp(szCommand, _T("PreSelectScale")) == 0)
     {
-		
+		CUtils::FocusAcadDrawing();
+		CPreSelectScale scaleObj;
+		scaleObj.Execute();
+		acedPostCommandPrompt(); 
+
     }
+	else if (_tcscmp(szCommand, _T("PreSelectScaleWhole")) == 0)
+    {
+		CUtils::FocusAcadDrawing();
+		CPreSelectScale scaleObj;
+		scaleObj.ExecuteModelScale();
+		acedPostCommandPrompt(); 
+
+    }
+
+	
 	else if (_tcscmp(szCommand, _T("Init")) == 0)
     {
        this->onPageReady();
