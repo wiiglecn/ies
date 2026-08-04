@@ -7,7 +7,10 @@
 #include "dbsymtb.h"
 #include "dbelipse.h"
 #include "dbspline.h"
-
+#include "dbmtext.h"
+#include "dbhatch.h"
+#include "gelnsg3d.h"
+#include "dbhatch.h"
 #include "utils.h"
 
 
@@ -414,6 +417,193 @@ void ToolDraw::create_spline(AiToolCommandData* data)
         }
     } else {
         data->ret = 1;
+    }
+
+    this->actionEnd();
+}
+
+void ToolDraw::create_arc(AiToolCommandData* data)
+{
+	cJSON* params = data->jsonRoot;
+
+    cJSON* xItem = cJSON_GetObjectItem(params, "x");
+    cJSON* yItem = cJSON_GetObjectItem(params, "y");
+    cJSON* radiusItem = cJSON_GetObjectItem(params, "radius");
+    cJSON* startAngleItem = cJSON_GetObjectItem(params, "start_angle");
+    cJSON* endAngleItem = cJSON_GetObjectItem(params, "end_angle");
+
+    if (!xItem || !yItem || !radiusItem || !startAngleItem || !endAngleItem ||
+        !cJSON_IsNumber(xItem) || !cJSON_IsNumber(yItem) || !cJSON_IsNumber(radiusItem) ||
+        !cJSON_IsNumber(startAngleItem) || !cJSON_IsNumber(endAngleItem))
+    {
+        acutPrintf(_T("[ERROR] create_arc: invalid parameters.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    double x = xItem->valuedouble;
+    double y = yItem->valuedouble;
+    double radius = radiusItem->valuedouble;
+    double startAngle = startAngleItem->valuedouble;
+    double endAngle = endAngleItem->valuedouble;
+
+    if (radius <= 0.0) {
+        acutPrintf(_T("[ERROR] create_arc: radius must be positive.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcGePoint3d center(x, y, 0.0);
+    AcDbArc* pArc = new AcDbArc(center, AcGeVector3d::kZAxis, radius, startAngle, endAngle);
+
+    AcDbObjectId arcId;
+    if (pModelSpace->appendAcDbEntity(arcId, pArc) == Acad::eOk) {
+        pArc->close();
+        appendHandleToResult(arcId, data);
+    } else {
+        delete pArc;
+        data->ret = 1;
+    }
+
+    this->actionEnd();
+}
+
+void ToolDraw::create_mtext(AiToolCommandData* data)
+{
+	cJSON* params = data->jsonRoot;
+
+    cJSON* xItem = cJSON_GetObjectItem(params, "x");
+    cJSON* yItem = cJSON_GetObjectItem(params, "y");
+    cJSON* textItem = cJSON_GetObjectItem(params, "text");
+    cJSON* heightItem = cJSON_GetObjectItem(params, "height");
+    cJSON* widthItem = cJSON_GetObjectItem(params, "width");
+
+    if (!xItem || !yItem || !textItem ||
+        !cJSON_IsNumber(xItem) || !cJSON_IsNumber(yItem) || !cJSON_IsString(textItem))
+    {
+        acutPrintf(_T("[ERROR] create_mtext: invalid parameters.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    double x = xItem->valuedouble;
+    double y = yItem->valuedouble;
+    double height = 1.0;
+    double width = 100.0; // Default width
+
+    if (heightItem && cJSON_IsNumber(heightItem)) height = heightItem->valuedouble;
+    if (widthItem && cJSON_IsNumber(widthItem)) width = widthItem->valuedouble;
+
+    TCHAR textStr[1024] = {0};
+    if (!CUtils::utf8ToTChar(textItem->valuestring, textStr, ARRAYSIZE(textStr))) {
+        acutPrintf(_T("[ERROR] create_mtext: failed to convert text string.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcDbMText* pMText = new AcDbMText();
+    pMText->setLocation(AcGePoint3d(x, y, 0.0));
+    pMText->setTextHeight(height);
+    pMText->setWidth(width);
+    pMText->setContents(textStr);
+
+    AcDbObjectId mtextId;
+    if (pModelSpace->appendAcDbEntity(mtextId, pMText) == Acad::eOk) {
+        pMText->close();
+        appendHandleToResult(mtextId, data);
+    } else {
+        delete pMText;
+        data->ret = 1;
+    }
+
+    this->actionEnd();
+}
+
+void ToolDraw::create_hatch(AiToolCommandData* data)
+{
+	cJSON* params = data->jsonRoot;
+    cJSON* pointsItem = cJSON_GetObjectItem(params, "points");
+    cJSON* patternItem = cJSON_GetObjectItem(params, "pattern");
+    cJSON* scaleItem = cJSON_GetObjectItem(params, "scale");
+
+    if (!pointsItem || !cJSON_IsArray(pointsItem)) {
+        acutPrintf(_T("[ERROR] create_hatch: invalid or missing 'points' array.\n"));
+        data->ret = 1;
+        return;
+    }
+
+    int numPoints = cJSON_GetArraySize(pointsItem);
+    if (numPoints < 2) {
+        acutPrintf(_T("[ERROR] create_hatch: at least 2 points are required.\n"));
+        data->ret = 1;
+        return;
+    }
+
+	if (this->actionBefore()) {
+		data->ret = 1;
+		return;
+	}
+
+    AcGeVoidPointerArray edgeArray;
+    AcGeIntArray edgeTypes; // Added edge types array
+    for (int i = 0; i < numPoints; ++i) {
+        cJSON* pt1 = cJSON_GetArrayItem(pointsItem, i);
+        cJSON* pt2 = cJSON_GetArrayItem(pointsItem, (i + 1) % numPoints);
+        
+        cJSON* x1Item = cJSON_GetObjectItem(pt1, "x");
+        cJSON* y1Item = cJSON_GetObjectItem(pt1, "y");
+        cJSON* x2Item = cJSON_GetObjectItem(pt2, "x");
+        cJSON* y2Item = cJSON_GetObjectItem(pt2, "y");
+
+        if(x1Item && y1Item && x2Item && y2Item && 
+           cJSON_IsNumber(x1Item) && cJSON_IsNumber(y1Item) && 
+           cJSON_IsNumber(x2Item) && cJSON_IsNumber(y2Item)) {
+            AcGePoint3d p1(x1Item->valuedouble, y1Item->valuedouble, 0.0);
+            AcGePoint3d p2(x2Item->valuedouble, y2Item->valuedouble, 0.0);
+            AcGeLineSeg3d* seg = new AcGeLineSeg3d(p1, p2);
+            edgeArray.append(seg);
+            edgeTypes.append(AcDbHatch::kLine); // Append line edge type
+        }
+    }
+
+    AcDbHatch* pHatch = new AcDbHatch();
+    pHatch->setNormal(AcGeVector3d::kZAxis);
+    pHatch->setElevation(0.0);
+    pHatch->setAssociative(Adesk::kFalse);
+    
+    TCHAR patternStr[256] = {0};
+    if (patternItem && cJSON_IsString(patternItem)) {
+        CUtils::utf8ToTChar(patternItem->valuestring, patternStr, ARRAYSIZE(patternStr));
+    } else {
+        _tcscpy_s(patternStr, _T("SOLID"));
+    }
+    pHatch->setPattern(AcDbHatch::kPreDefined, patternStr);
+    
+    double scale = 1.0;
+    if (scaleItem && cJSON_IsNumber(scaleItem)) {
+        scale = scaleItem->valuedouble;
+    }
+    pHatch->setPatternScale(scale);
+
+    pHatch->appendLoop(AcDbHatch::kDefault, edgeArray, edgeTypes); // Passed edge types
+    pHatch->evaluateHatch();
+
+    AcDbObjectId hatchId;
+    if (pModelSpace->appendAcDbEntity(hatchId, pHatch) == Acad::eOk) {
+        pHatch->close();
+        appendHandleToResult(hatchId, data);
+    } else {
+        delete pHatch;
+        data->ret = 1;
+    }
+
+    // Cleanup edges
+    for(int i = 0; i < edgeArray.length(); i++) {
+        delete (AcGeLineSeg3d*)edgeArray[i];
     }
 
     this->actionEnd();

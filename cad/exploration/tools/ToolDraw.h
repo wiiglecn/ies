@@ -14,6 +14,9 @@ public:
 	void create_polyline(AiToolCommandData* data);
 	void create_ellipse(AiToolCommandData* data);
 	void create_spline(AiToolCommandData* data);
+	void create_arc(AiToolCommandData* data);
+	void create_hatch(AiToolCommandData* data);
+	void create_mtext(AiToolCommandData* data);
 	void create_circle(AiToolCommandData* data);
 	void create_rectangle(AiToolCommandData* data);
 	void create_text(AiToolCommandData* data);

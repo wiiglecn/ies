@@ -378,5 +378,125 @@
                 "properties": {}
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_arc",
+            "description": "Draws an arc in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "Center point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Center point Y coordinate"
+                    },
+                    "radius": {
+                        "type": "number",
+                        "description": "Radius of the arc (must be positive)"
+                    },
+                    "start_angle": {
+                        "type": "number",
+                        "description": "Start angle in radians"
+                    },
+                    "end_angle": {
+                        "type": "number",
+                        "description": "End angle in radians"
+                    }
+                },
+                "required": [
+                    "x",
+                    "y",
+                    "radius",
+                    "start_angle",
+                    "end_angle"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_mtext",
+            "description": "Creates a multiline text (MText) entity in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "Insertion point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Insertion point Y coordinate"
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "The text content to display"
+                    },
+                    "height": {
+                        "type": "number",
+                        "description": "Height of the text (optional, defaults to 1.0)"
+                    },
+                    "width": {
+                        "type": "number",
+                        "description": "Width of the bounding box for word wrap (optional, defaults to 100.0)"
+                    }
+                },
+                "required": [
+                    "x",
+                    "y",
+                    "text"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_hatch",
+            "description": "Creates a hatch (fill pattern) bounded by an array of points forming a closed polygon in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "points": {
+                        "type": "array",
+                        "description": "Array of points defining the hatch boundary (minimum 2 points).",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "x": {
+                                    "type": "number",
+                                    "description": "Point X coordinate"
+                                },
+                                "y": {
+                                    "type": "number",
+                                    "description": "Point Y coordinate"
+                                }
+                            },
+                            "required": [
+                                "x",
+                                "y"
+                            ]
+                        }
+                    },
+                    "pattern": {
+                        "type": "string",
+                        "description": "Name of the hatch pattern (e.g., 'SOLID', 'ANSI31'). Optional, defaults to 'SOLID'."
+                    },
+                    "scale": {
+                        "type": "number",
+                        "description": "Scale factor for the hatch pattern. Optional, defaults to 1.0."
+                    }
+                },
+                "required": [
+                    "points"
+                ]
+            }
+        }
     }
 ]

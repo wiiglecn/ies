@@ -557,7 +557,6 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
         case WM_USER_A_CREATERTEXT:
             ToolDraw::getInstance().create_text(params);
             break;
-        
         case WM_USER_A_CREATEPOLYLINE:
             ToolDraw::getInstance().create_polyline(params);
             break;
@@ -566,6 +565,15 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
             break;
         case WM_USER_A_CREATESPLINE:
             ToolDraw::getInstance().create_spline(params);
+            break;
+        case WM_USER_A_CREATEARC:
+            ToolDraw::getInstance().create_arc(params);
+            break;
+        case WM_USER_A_CREATEMTEXT:
+            ToolDraw::getInstance().create_mtext(params);
+            break;
+        case WM_USER_A_CREATEHATCH:
+            ToolDraw::getInstance().create_hatch(params);
             break;
 
 		//entity
