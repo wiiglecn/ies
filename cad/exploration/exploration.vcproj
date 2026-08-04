@@ -483,6 +483,30 @@
 				RelativePath=".\tools\ToolDraw.h"
 				>
 			</File>
+			<File
+				RelativePath=".\tools\ToolDrawBase.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolDrawBase.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolEntity.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolEntity.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolLayer.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolLayer.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="static"

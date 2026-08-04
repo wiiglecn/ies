@@ -37,12 +37,15 @@
 #include "PaletteCleanup.h"
 #include "AiApiRequest.h"
 #include "declare.h"
-#include "../tools/ToolDraw.h"
+
 #include "AiChat.h"
 #include "Logger.h"
 #include "CircleFilter.h"
 #include "PreSelectScale.h"
 
+#include "../tools/ToolDraw.h"
+#include "../tools/ToolLayer.h"
+#include "../tools/ToolEntity.h"
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -554,12 +557,7 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
         case WM_USER_A_CREATERTEXT:
             ToolDraw::getInstance().create_text(params);
             break;
-        case WM_USER_A_CREATELAYER:
-            ToolDraw::getInstance().create_layer(params);
-            break;
-        case WM_USER_A_LISTLAYERS:
-            ToolDraw::getInstance().list_layers(params);
-            break;
+        
         case WM_USER_A_CREATEPOLYLINE:
             ToolDraw::getInstance().create_polyline(params);
             break;
@@ -569,27 +567,39 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
         case WM_USER_A_CREATESPLINE:
             ToolDraw::getInstance().create_spline(params);
             break;
+
+		//entity
+
         case WM_USER_A_DELETEENTITIES:
-            ToolDraw::getInstance().delete_entities(params);
+            ToolEntity::getInstance().delete_entities(params);
             break;
         case WM_USER_A_LISTENTITIES:
-            ToolDraw::getInstance().list_entities(params);
+            ToolEntity::getInstance().list_entities(params);
+            break;
+
+		//layer
+		case WM_USER_A_CREATELAYER:
+            ToolLayer::getInstance().create_layer(params);
+            break;
+        case WM_USER_A_LISTLAYERS:
+            ToolLayer::getInstance().list_layers(params);
             break;
         case WM_USER_A_QUERYLAYER:
-            ToolDraw::getInstance().query_layer(params);
+            ToolLayer::getInstance().query_layer(params);
             break;
         case WM_USER_A_GETCURRENTLAYER:
-            ToolDraw::getInstance().get_current_layer(params);
+            ToolLayer::getInstance().get_current_layer(params);
             break;
         case WM_USER_A_SETCURRENTLAYER:
-            ToolDraw::getInstance().set_current_layer(params);
+            ToolLayer::getInstance().set_current_layer(params);
             break;
         case WM_USER_A_GETCURRENTLAYERCOLOR:
-            ToolDraw::getInstance().get_current_layer_color(params);
+            ToolLayer::getInstance().get_current_layer_color(params);
             break;
         case WM_USER_A_QUERYALLLAYERS:
-            ToolDraw::getInstance().query_all_layers(params);
+            ToolLayer::getInstance().query_all_layers(params);
             break;
+
         case WM_USER_A_REGEN:
             ToolDraw::getInstance().regen();
             break;
