@@ -73,12 +73,13 @@ void ToolLayer::create_layer(AiToolCommandData* data)
         pLayerRecord->close();
 		data->resultJson = cJSON_CreateObject();
         cJSON_AddStringToObject(data->resultJson, "name", nameItem->valuestring);
+        
+		data->ret = 0;
     }
     else
     {
         acutPrintf(_T("[ERROR] create_layer: failed to add layer record.\n"));
         delete pLayerRecord;
-		data->ret = 1;
     }
 
     pLayerTable->close();
@@ -90,7 +91,6 @@ void ToolLayer::list_layers(AiToolCommandData* data)
 	// cJSON* params = data->jsonRoot;
     if (this->actionBefore())
 	{
-		data->ret=1;
 		return;
 	}
 
@@ -99,7 +99,6 @@ void ToolLayer::list_layers(AiToolCommandData* data)
     {
         acutPrintf(_T("[ERROR] list_layers: failed to open Layer Table.\n"));
         this->actionEnd();
-		data->ret = 1;
         return;
     }
 
@@ -144,10 +143,11 @@ void ToolLayer::list_layers(AiToolCommandData* data)
             }
         }
         delete pIter;
+        
+		data->ret = 0;
     }
     else
     {
-		data->ret = 1;
         acutPrintf(_T("[ERROR] list_layers: failed to create Layer Table iterator.\n"));
     }
 
@@ -159,7 +159,6 @@ void ToolLayer::query_all_layers(AiToolCommandData* data)
 {
     if (this->actionBefore())
     {
-        data->ret = 1;
         return;
     }
 
@@ -168,7 +167,6 @@ void ToolLayer::query_all_layers(AiToolCommandData* data)
     {
         acutPrintf(_T("[ERROR] query_all_layers: failed to open Layer Table.\n"));
         this->actionEnd();
-        data->ret = 1;
         return;
     }
 
@@ -225,6 +223,7 @@ void ToolLayer::query_all_layers(AiToolCommandData* data)
             }
         }
         delete pIter;
+        
     }
     else
     {
@@ -232,7 +231,6 @@ void ToolLayer::query_all_layers(AiToolCommandData* data)
         cJSON_Delete(pJsonArray);
         pLayerTable->close();
         this->actionEnd();
-        data->ret = 1;
         return;
     }
 
@@ -250,19 +248,16 @@ void ToolLayer::query_layer(AiToolCommandData* data) {
 
     if (!nameItem || !cJSON_IsString(nameItem)) {
         acutPrintf(_T("[ERROR] query_layer: invalid parameters.\n"));
-        data->ret = 1;
         return;
     }
 
     TCHAR layerName[256] = { 0 };
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
         acutPrintf(_T("[ERROR] query_layer: failed to convert layer name.\n"));
-        data->ret = 1;
         return;
     }
 
     if (this->actionBefore()) {
-        data->ret = 1;
         return;
     }
 
@@ -290,17 +285,15 @@ void ToolLayer::query_layer(AiToolCommandData* data) {
 				cJSON_AddStringToObject(data->resultJson, "hex", hexColor);
 
                 pLayerRec->close();
-            } else {
-                data->ret = 1;
-            }
+                
+                data->ret = 0;
+            } 
         } else {
             acutPrintf(_T("[ERROR] query_layer: layer not found.\n"));
-            data->ret = 1;
         }
         pLayerTable->close();
     } else {
         acutPrintf(_T("[ERROR] query_layer: failed to open Layer Table.\n"));
-        data->ret = 1;
     }
 
     this->actionEnd();
@@ -322,9 +315,10 @@ void ToolLayer::get_current_layer(AiToolCommandData* data) {
             cJSON_AddStringToObject(data->resultJson, "name", utf8Name);
         }
         pLayerRec->close();
+        data->ret = 0;
     } else {
         acutPrintf(_T("[ERROR] get_current_layer: failed to get current layer.\n"));
-        data->ret = 1;
+        
     }
     
     this->actionEnd();
@@ -336,14 +330,12 @@ void ToolLayer::set_current_layer(AiToolCommandData* data) {
 
     if (!nameItem || !cJSON_IsString(nameItem)) {
         acutPrintf(_T("[ERROR] set_current_layer: invalid parameters.\n"));
-        data->ret = 1;
         return;
     }
 
     TCHAR layerName[256] = { 0 };
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
         acutPrintf(_T("[ERROR] set_current_layer: failed to convert layer name.\n"));
-        data->ret = 1;
         return;
     }
 
@@ -365,9 +357,10 @@ void ToolLayer::set_current_layer(AiToolCommandData* data) {
     if (es == Acad::eOk) {
         data->resultJson = cJSON_CreateObject();
         cJSON_AddStringToObject(data->resultJson, "name", nameItem->valuestring);
+        
+        data->ret = 0;
     } else {
         acutPrintf(_T("[ERROR] set_current_layer: failed to set layer.\n"));
-        data->ret = 1;
     }
 
     this->actionEnd();
@@ -375,7 +368,6 @@ void ToolLayer::set_current_layer(AiToolCommandData* data) {
 
 void ToolLayer::get_current_layer_color(AiToolCommandData* data) {
 	if (this->actionBefore()) {
-		data->ret = 1;
 		return;
 	}
     
@@ -397,9 +389,10 @@ void ToolLayer::get_current_layer_color(AiToolCommandData* data) {
         cJSON_AddNumberToObject(data->resultJson, "color", colorIndex);
         cJSON_AddStringToObject(data->resultJson, "hex", hexColor);
         pLayerRec->close();
+        
+		data->ret = 0;
     } else {
         acutPrintf(_T("[ERROR] get_current_layer_color: failed to get layer color.\n"));
-        data->ret = 1;
     }
     
     this->actionEnd();

@@ -35,7 +35,6 @@ void ToolEntity::delete_entities(AiToolCommandData* data) {
     if (!handlesArray || !cJSON_IsArray(handlesArray)) {
         // Handle error: invalid input
         actionEnd();
-		data->ret = 1;
         return;
     }
 
@@ -72,12 +71,12 @@ void ToolEntity::delete_entities(AiToolCommandData* data) {
         }
     }
 
+    data->ret = 0;
     actionEnd();
 }
 void ToolEntity::list_entities(AiToolCommandData* data)
 {
 	if (actionBefore() != 0){
-		data->ret = 1;
         return;
 	}
 
@@ -143,5 +142,6 @@ void ToolEntity::list_entities(AiToolCommandData* data)
         data->resultJson = pJsonArray;
     }
 
+    data->ret = 0;
     actionEnd();
 }

@@ -44,5 +44,5 @@ struct AiToolCommandData {
     cJSON* resultJson;    // Output JSON result from CAD (can be NULL)
     
     // Constructor to initialize members
-    AiToolCommandData() : jsonRoot(NULL), hEvent(NULL), ret(0), resultJson(NULL) {}
+    AiToolCommandData() : jsonRoot(NULL), hEvent(NULL), ret(1), resultJson(NULL) {}
 };

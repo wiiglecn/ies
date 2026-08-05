@@ -75,12 +75,12 @@ void ToolDraw::create_line(AiToolCommandData* data)
 
         appendHandleToResult(lineId, data);
         
+        data->ret = 0;
     }
     else
     {
         acutPrintf(_T("[ERROR] create_line: Failed to append Model Space.\n"));
         delete pLine;
-        data->ret = 1;
     }
 
 	this->actionEnd();
@@ -138,12 +138,13 @@ void ToolDraw::create_circle(AiToolCommandData* data)
 
 
         appendHandleToResult(circleId, data);
+        
+        data->ret = 0;
     }
     else
     {
         acutPrintf(_T("[ERROR] create_circle: failed to append to Model Space.\n"));
         delete pCircle;
-		data->ret = 1;
     }
 
     this->actionEnd();
@@ -196,12 +197,13 @@ void ToolDraw::create_rectangle(AiToolCommandData* data)
     {
         pPoly->close();
         appendHandleToResult(rectId, data);
+        
+		data->ret = 0;
     }
     else
     {
         acutPrintf(_T("[ERROR] create_rectangle: failed to append poly \n"));
         delete pPoly;
-        data->ret = 1;
     }
 
     this->actionEnd();
@@ -247,12 +249,13 @@ void ToolDraw::create_text(AiToolCommandData* data)
         pText->close();
 
         appendHandleToResult(textId, data);
+        
+        data->ret = 0;
     }
     else
     {
         acutPrintf(_T("[ERROR] create_text: failed to append to Model Space.\n"));
         delete pText;
-		data->ret = 1;
     }
 
     this->actionEnd();
@@ -265,14 +268,12 @@ void ToolDraw::create_polyline(AiToolCommandData* data)
 
     if (!pointsItem || !cJSON_IsArray(pointsItem)) {
         acutPrintf(_T("[ERROR] create_polyline: invalid or missing 'points' array.\n"));
-        data->ret = 1;
         return;
     }
 
     int numPoints = cJSON_GetArraySize(pointsItem);
     if (numPoints < 2) {
         acutPrintf(_T("[ERROR] create_polyline: at least 2 points are required.\n"));
-        data->ret = 1;
         return;
     }
 
@@ -304,9 +305,10 @@ void ToolDraw::create_polyline(AiToolCommandData* data)
     if (valid && pModelSpace->appendAcDbEntity(polyId, pPoly) == Acad::eOk) {
         pPoly->close();
         appendHandleToResult(polyId, data);
+        
+        data->ret = 0;
     } else {
         delete pPoly;
-        data->ret = 1;
     }
 
     this->actionEnd();
@@ -328,14 +330,12 @@ void ToolDraw::create_ellipse(AiToolCommandData* data)
         !cJSON_IsNumber(ratioItem)) 
     {
         acutPrintf(_T("[ERROR] create_ellipse: invalid parameters.\n"));
-        data->ret = 1;
         return;
     }
 
     double ratio = ratioItem->valuedouble;
     if (ratio <= 0.0 || ratio > 1.0) {
         acutPrintf(_T("[ERROR] create_ellipse: radius ratio must be > 0 and <= 1.\n"));
-        data->ret = 1;
         return;
     }
 
@@ -348,7 +348,6 @@ void ToolDraw::create_ellipse(AiToolCommandData* data)
     if (majorAxis.length() <= 0.0) {
         acutPrintf(_T("[ERROR] create_ellipse: major axis length must be > 0.\n"));
         this->actionEnd();
-        data->ret = 1;
         return;
     }
 
@@ -358,9 +357,9 @@ void ToolDraw::create_ellipse(AiToolCommandData* data)
     if (pModelSpace->appendAcDbEntity(ellipseId, pEllipse) == Acad::eOk) {
         pEllipse->close();
         appendHandleToResult(ellipseId, data);
+        data->ret = 0;
     } else {
         delete pEllipse;
-        data->ret = 1;
     }
 
     this->actionEnd();
@@ -373,14 +372,12 @@ void ToolDraw::create_spline(AiToolCommandData* data)
 
     if (!pointsItem || !cJSON_IsArray(pointsItem)) {
         acutPrintf(_T("[ERROR] create_spline: invalid or missing 'points' array.\n"));
-        data->ret = 1;
         return;
     }
 
     int numPoints = cJSON_GetArraySize(pointsItem);
     if (numPoints < 3) {
         acutPrintf(_T("[ERROR] create_spline: at least 3 points are required for a spline.\n"));
-        data->ret = 1;
         return;
     }
 
@@ -411,12 +408,10 @@ void ToolDraw::create_spline(AiToolCommandData* data)
         if (pModelSpace->appendAcDbEntity(splineId, pSpline) == Acad::eOk) {
             pSpline->close();
             appendHandleToResult(splineId, data);
+            data->ret = 0;
         } else {
             delete pSpline;
-            data->ret = 1;
         }
-    } else {
-        data->ret = 1;
     }
 
     this->actionEnd();
@@ -437,7 +432,6 @@ void ToolDraw::create_arc(AiToolCommandData* data)
         !cJSON_IsNumber(startAngleItem) || !cJSON_IsNumber(endAngleItem))
     {
         acutPrintf(_T("[ERROR] create_arc: invalid parameters.\n"));
-        data->ret = 1;
         return;
     }
 
@@ -449,7 +443,6 @@ void ToolDraw::create_arc(AiToolCommandData* data)
 
     if (radius <= 0.0) {
         acutPrintf(_T("[ERROR] create_arc: radius must be positive.\n"));
-        data->ret = 1;
         return;
     }
 
@@ -462,9 +455,9 @@ void ToolDraw::create_arc(AiToolCommandData* data)
     if (pModelSpace->appendAcDbEntity(arcId, pArc) == Acad::eOk) {
         pArc->close();
         appendHandleToResult(arcId, data);
+        data->ret = 0;
     } else {
         delete pArc;
-        data->ret = 1;
     }
 
     this->actionEnd();
@@ -484,7 +477,6 @@ void ToolDraw::create_mtext(AiToolCommandData* data)
         !cJSON_IsNumber(xItem) || !cJSON_IsNumber(yItem) || !cJSON_IsString(textItem))
     {
         acutPrintf(_T("[ERROR] create_mtext: invalid parameters.\n"));
-        data->ret = 1;
         return;
     }
 
@@ -499,7 +491,6 @@ void ToolDraw::create_mtext(AiToolCommandData* data)
     TCHAR textStr[1024] = {0};
     if (!CUtils::utf8ToTChar(textItem->valuestring, textStr, ARRAYSIZE(textStr))) {
         acutPrintf(_T("[ERROR] create_mtext: failed to convert text string.\n"));
-        data->ret = 1;
         return;
     }
 
@@ -515,9 +506,10 @@ void ToolDraw::create_mtext(AiToolCommandData* data)
     if (pModelSpace->appendAcDbEntity(mtextId, pMText) == Acad::eOk) {
         pMText->close();
         appendHandleToResult(mtextId, data);
+        
+        data->ret = 0;
     } else {
         delete pMText;
-        data->ret = 1;
     }
 
     this->actionEnd();
@@ -532,19 +524,16 @@ void ToolDraw::create_hatch(AiToolCommandData* data)
 
     if (!pointsItem || !cJSON_IsArray(pointsItem)) {
         acutPrintf(_T("[ERROR] create_hatch: invalid or missing 'points' array.\n"));
-        data->ret = 1;
         return;
     }
 
     int numPoints = cJSON_GetArraySize(pointsItem);
     if (numPoints < 2) {
         acutPrintf(_T("[ERROR] create_hatch: at least 2 points are required.\n"));
-        data->ret = 1;
         return;
     }
 
 	if (this->actionBefore()) {
-		data->ret = 1;
 		return;
 	}
 
@@ -596,9 +585,10 @@ void ToolDraw::create_hatch(AiToolCommandData* data)
     if (pModelSpace->appendAcDbEntity(hatchId, pHatch) == Acad::eOk) {
         pHatch->close();
         appendHandleToResult(hatchId, data);
+        
+		data->ret = 0;
     } else {
         delete pHatch;
-        data->ret = 1;
     }
 
     // Cleanup edges
