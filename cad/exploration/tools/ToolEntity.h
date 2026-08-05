@@ -14,6 +14,15 @@ public:
 	void delete_entities(AiToolCommandData* data);
 	void list_entities(AiToolCommandData* data);
 	
+	void entity_copy(AiToolCommandData* data);
+	void entity_move(AiToolCommandData* data);
+	void entity_rotate(AiToolCommandData* data);
+	void entity_scale(AiToolCommandData* data);
+	void entity_mirror(AiToolCommandData* data);
+	void entity_offset(AiToolCommandData* data);
+	void entity_fillet(AiToolCommandData* data);
+	void entity_chamfer(AiToolCommandData* data);
+	void entity_array(AiToolCommandData* data);
 	
 private:
 	ToolEntity(void);

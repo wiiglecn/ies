@@ -103,3 +103,13 @@ void ToolDrawBase::appendHandleToResult(AcDbObjectId entityId, AiToolCommandData
     }
     data->ret = 0;
 }
+AcDbObjectId ToolDrawBase::GetIdFromHandle(cJSON* json, const char* key, AcDbDatabase* pDb) {
+    cJSON* item = cJSON_GetObjectItem(json, key);
+    if (!item || !cJSON_IsString(item)) return AcDbObjectId::kNull;
+    TCHAR handleStr[32] = { 0 };
+    CUtils::utf8ToTChar(item->valuestring, handleStr, 32);
+    AcDbHandle dbHandle(handleStr);
+    AcDbObjectId objId;
+    pDb->getAcDbObjectId(objId, Adesk::kFalse, dbHandle);
+    return objId;
+}

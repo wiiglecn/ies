@@ -498,5 +498,255 @@
                 ]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_move",
+            "description": "Moves an entity in AutoCAD Model Space to a new coordinate.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "dx": {
+                        "type": "number",
+                        "description": "Displacement along the X axis"
+                    },
+                    "dy": {
+                        "type": "number",
+                        "description": "Displacement along the Y axis"
+                    }
+                },
+                "required": [
+                    "handle",
+                    "dx",
+                    "dy"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_copy",
+            "description": "Copies an entity in AutoCAD Model Space by a displacement vector.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "dx": {
+                        "type": "number",
+                        "description": "Displacement along the X axis"
+                    },
+                    "dy": {
+                        "type": "number",
+                        "description": "Displacement along the Y axis"
+                    }
+                },
+                "required": [
+                    "handle",
+                    "dx",
+                    "dy"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_rotate",
+            "description": "Rotates an entity around a base point.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "Base point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Base point Y coordinate"
+                    },
+                    "angle": {
+                        "type": "number",
+                        "description": "Rotation angle in radians"
+                    }
+                },
+                "required": [
+                    "handle",
+                    "x",
+                    "y",
+                    "angle"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_scale",
+            "description": "Scales an entity based on a base point.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "Base point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Base point Y coordinate"
+                    },
+                    "scale": {
+                        "type": "number",
+                        "description": "Scale factor"
+                    }
+                },
+                "required": [
+                    "handle",
+                    "x",
+                    "y",
+                    "scale"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_mirror",
+            "description": "Mirrors an entity along a line axis defined by two points.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "x1": { "type": "number", "description": "Axis start point X" },
+                    "y1": { "type": "number", "description": "Axis start point Y" },
+                    "x2": { "type": "number", "description": "Axis end point X" },
+                    "y2": { "type": "number", "description": "Axis end point Y" },
+                    "delete_original": {
+                        "type": "boolean",
+                        "description": "Whether to delete the original entity (optional, defaults to false)."
+                    }
+                },
+                "required": [
+                    "handle",
+                    "x1",
+                    "y1",
+                    "x2",
+                    "y2"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_offset",
+            "description": "Creates parallel offsets of curves (like lines, circles, polylines).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "distance": {
+                        "type": "number",
+                        "description": "Offset distance (positive or negative determines side)"
+                    }
+                },
+                "required": [
+                    "handle",
+                    "distance"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_fillet",
+            "description": "Constructs a fillet (arc) between two entities.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle1": { "type": "string", "description": "First entity handle" },
+                    "handle2": { "type": "string", "description": "Second entity handle" },
+                    "radius": { "type": "number", "description": "Fillet radius" }
+                },
+                "required": [
+                    "handle1",
+                    "handle2",
+                    "radius"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_chamfer",
+            "description": "Constructs a chamfer between two entities.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle1": { "type": "string", "description": "First entity handle" },
+                    "handle2": { "type": "string", "description": "Second entity handle" },
+                    "dist1": { "type": "number", "description": "First chamfer distance" },
+                    "dist2": { "type": "number", "description": "Second chamfer distance" }
+                },
+                "required": [
+                    "handle1",
+                    "handle2",
+                    "dist1",
+                    "dist2"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_array",
+            "description": "Creates a rectangular array of an entity.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "num_rows": { "type": "integer", "description": "Number of rows" },
+                    "num_cols": { "type": "integer", "description": "Number of columns" },
+                    "row_spacing": { "type": "number", "description": "Distance between rows" },
+                    "col_spacing": { "type": "number", "description": "Distance between columns" }
+                },
+                "required": [
+                    "handle",
+                    "num_rows",
+                    "num_cols",
+                    "row_spacing",
+                    "col_spacing"
+                ]
+            }
+        }
     }
 ]

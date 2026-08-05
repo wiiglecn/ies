@@ -598,3 +598,4 @@ void ToolDraw::create_hatch(AiToolCommandData* data)
 
     this->actionEnd();
 }
+

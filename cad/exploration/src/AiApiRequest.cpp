@@ -29,6 +29,16 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/delete_entities", "delete_entities", WM_USER_A_DELETEENTITIES },
     { "/ai/tool/list_entities", "list_entities", WM_USER_A_LISTENTITIES },
 
+    { "/ai/tool/entity_copy", "entity_copy", WM_USER_A_ENTITYCOPY },
+    { "/ai/tool/entity_move", "entity_move", WM_USER_A_ENTITYMOVE },
+    { "/ai/tool/entity_rotate", "entity_rotate", WM_USER_A_ENTITYROTATE },
+    { "/ai/tool/entity_scale", "entity_scale", WM_USER_A_ENTITYSCALE },
+    { "/ai/tool/entity_mirror", "entity_mirror", WM_USER_A_ENTITYMIRROR },
+    { "/ai/tool/entity_offset", "entity_offset", WM_USER_A_ENTITYOFFSET },
+    { "/ai/tool/entity_fillet", "entity_fillet", WM_USER_A_ENTITYFILLET },
+    { "/ai/tool/entity_chamfer", "entity_chamfer", WM_USER_A_ENTITYCHAMFER },
+    { "/ai/tool/entity_array", "entity_array", WM_USER_A_ENTITYARRAY },
+
     { "/ai/tool/create_layer", "create_layer", WM_USER_A_CREATELAYER },
     { "/ai/tool/list_layers", "list_layers", WM_USER_A_LISTLAYERS },
     { "/ai/tool/query_layer", "query_layer", WM_USER_A_QUERYLAYER },

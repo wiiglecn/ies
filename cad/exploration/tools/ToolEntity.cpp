@@ -7,7 +7,7 @@
 #include "dbsymtb.h"
 #include "dbelipse.h"
 #include "dbspline.h"
-
+#include "geassign.h"
 #include "utils.h"
 
 
@@ -143,5 +143,218 @@ void ToolEntity::list_entities(AiToolCommandData* data)
     }
 
     data->ret = 0;
+    actionEnd();
+}
+
+void ToolEntity::entity_copy(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+    AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+    if (objId.isNull()) { actionEnd(); return; }
+
+    double dx = cJSON_GetObjectItem(data->jsonRoot, "dx")->valuedouble;
+    double dy = cJSON_GetObjectItem(data->jsonRoot, "dy")->valuedouble;
+
+    AcDbEntity* pEnt;
+    if (acdbOpenAcDbEntity(pEnt, objId, AcDb::kForRead) == Acad::eOk) {
+        AcDbEntity* pClone = AcDbEntity::cast(pEnt->clone());
+        pClone->transformBy(AcGeMatrix3d::translation(AcGeVector3d(dx, dy, 0)));
+        pModelSpace->appendAcDbEntity(pClone);
+        pClone->close();
+        pEnt->close();
+        data->ret = 0;
+    }
+    actionEnd();
+}
+
+void ToolEntity::entity_move(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+    AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+    if (objId.isNull()) { actionEnd(); return; }
+
+    double dx = cJSON_GetObjectItem(data->jsonRoot, "dx")->valuedouble;
+    double dy = cJSON_GetObjectItem(data->jsonRoot, "dy")->valuedouble;
+
+    AcDbEntity* pEnt;
+    if (acdbOpenAcDbEntity(pEnt, objId, AcDb::kForWrite) == Acad::eOk) {
+        pEnt->transformBy(AcGeMatrix3d::translation(AcGeVector3d(dx, dy, 0)));
+        pEnt->close();
+        data->ret = 0;
+    }
+    actionEnd();
+}
+
+void ToolEntity::entity_rotate(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+    AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+    if (objId.isNull()) { actionEnd(); return; }
+
+    double x = cJSON_GetObjectItem(data->jsonRoot, "x")->valuedouble;
+    double y = cJSON_GetObjectItem(data->jsonRoot, "y")->valuedouble;
+    double angle = cJSON_GetObjectItem(data->jsonRoot, "angle")->valuedouble;
+
+    AcDbEntity* pEnt;
+    if (acdbOpenAcDbEntity(pEnt, objId, AcDb::kForWrite) == Acad::eOk) {
+        pEnt->transformBy(AcGeMatrix3d::rotation(angle, AcGeVector3d::kZAxis, AcGePoint3d(x, y, 0)));
+        pEnt->close();
+        data->ret = 0;
+    }
+    actionEnd();
+}
+
+void ToolEntity::entity_scale(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+    AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+    if (objId.isNull()) { actionEnd(); return; }
+
+    double x = cJSON_GetObjectItem(data->jsonRoot, "x")->valuedouble;
+    double y = cJSON_GetObjectItem(data->jsonRoot, "y")->valuedouble;
+    double scale = cJSON_GetObjectItem(data->jsonRoot, "scale")->valuedouble;
+
+    AcDbEntity* pEnt;
+    if (acdbOpenAcDbEntity(pEnt, objId, AcDb::kForWrite) == Acad::eOk) {
+        pEnt->transformBy(AcGeMatrix3d::scaling(scale, AcGePoint3d(x, y, 0)));
+        pEnt->close();
+        data->ret = 0;
+    }
+    actionEnd();
+}
+
+void ToolEntity::entity_mirror(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+    AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+    if (objId.isNull()) { actionEnd(); return; }
+
+    double x1 = cJSON_GetObjectItem(data->jsonRoot, "x1")->valuedouble;
+    double y1 = cJSON_GetObjectItem(data->jsonRoot, "y1")->valuedouble;
+    double x2 = cJSON_GetObjectItem(data->jsonRoot, "x2")->valuedouble;
+    double y2 = cJSON_GetObjectItem(data->jsonRoot, "y2")->valuedouble;
+    
+    int delOrig = 0;
+    cJSON* delItem = cJSON_GetObjectItem(data->jsonRoot, "delete_original");
+    if (delItem) delOrig = delItem->valueint;
+
+    AcGeLine3d line(AcGePoint3d(x1, y1, 0), AcGePoint3d(x2, y2, 0));
+    AcGeMatrix3d mat = AcGeMatrix3d::mirroring(line);
+
+    AcDbEntity* pEnt;
+    if (acdbOpenAcDbEntity(pEnt, objId, AcDb::kForRead) == Acad::eOk) {
+        AcDbEntity* pClone = AcDbEntity::cast(pEnt->clone());
+        pClone->transformBy(mat);
+        pModelSpace->appendAcDbEntity(pClone);
+        pClone->close();
+        pEnt->close();
+
+        if (delOrig) {
+            AcDbEntity* pEntDel;
+            if (acdbOpenAcDbEntity(pEntDel, objId, AcDb::kForWrite) == Acad::eOk) {
+                pEntDel->erase();
+                pEntDel->close();
+            }
+        }
+        data->ret = 0;
+    }
+    actionEnd();
+}
+
+void ToolEntity::entity_offset(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+    AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+    if (objId.isNull()) { actionEnd(); return; }
+
+    double dist = cJSON_GetObjectItem(data->jsonRoot, "distance")->valuedouble;
+
+    AcDbCurve* pCurve;
+    if (acdbOpenAcDbEntity((AcDbEntity*&)pCurve, objId, AcDb::kForRead) == Acad::eOk) {
+        AcDbVoidPtrArray curves;
+        Acad::ErrorStatus es = pCurve->getOffsetCurves(dist, curves);
+        if (es == Acad::eOk) {
+            for (int i = 0; i < curves.length(); ++i) {
+                AcDbEntity* pNewEnt = AcDbEntity::cast((AcRxObject*)curves[i]);
+                if (pNewEnt) {
+                    pModelSpace->appendAcDbEntity(pNewEnt);
+                    pNewEnt->close();
+                }
+            }
+            data->ret = 0;
+        }
+        pCurve->close();
+    }
+    actionEnd();
+}
+
+void ToolEntity::entity_fillet(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+    
+    cJSON* h1 = cJSON_GetObjectItem(data->jsonRoot, "handle1");
+    cJSON* h2 = cJSON_GetObjectItem(data->jsonRoot, "handle2");
+    cJSON* rItem = cJSON_GetObjectItem(data->jsonRoot, "radius");
+    if (!h1 || !h2 || !rItem) { actionEnd(); return; }
+
+    TCHAR h1Str[32] = {0}, h2Str[32] = {0};
+    CUtils::utf8ToTChar(h1->valuestring, h1Str, 32);
+    CUtils::utf8ToTChar(h2->valuestring, h2Str, 32);
+    double radius = rItem->valuedouble;
+
+    CString cmd;
+    // Utilize acedCommand via AutoLISP (handent) to robustly perform fillet
+    cmd.Format(_T("(command \"_.FILLET\" \"_R\" %f \"\" \"(handent \\\"%s\\\")\" \"(handent \\\"%s\\\")\" \"\") "), radius, h1Str, h2Str);
+    acedCommand(RTSTR, cmd, RTNONE);
+
+    data->ret = 0;
+    actionEnd();
+}
+
+void ToolEntity::entity_chamfer(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+    
+    cJSON* h1 = cJSON_GetObjectItem(data->jsonRoot, "handle1");
+    cJSON* h2 = cJSON_GetObjectItem(data->jsonRoot, "handle2");
+    cJSON* d1Item = cJSON_GetObjectItem(data->jsonRoot, "dist1");
+    cJSON* d2Item = cJSON_GetObjectItem(data->jsonRoot, "dist2");
+    if (!h1 || !h2 || !d1Item || !d2Item) { actionEnd(); return; }
+
+    TCHAR h1Str[32] = {0}, h2Str[32] = {0};
+    CUtils::utf8ToTChar(h1->valuestring, h1Str, 32);
+    CUtils::utf8ToTChar(h2->valuestring, h2Str, 32);
+    double d1 = d1Item->valuedouble;
+    double d2 = d2Item->valuedouble;
+
+    CString cmd;
+    // Utilize acedCommand via AutoLISP (handent) to robustly perform chamfer
+    cmd.Format(_T("(command \"_.CHAMFER\" \"_D\" %f %f \"\" \"(handent \\\"%s\\\")\" \"(handent \\\"%s\\\")\" \"\") "), d1, d2, h1Str, h2Str);
+    acedCommand(RTSTR, cmd, RTNONE);
+
+    data->ret = 0;
+    actionEnd();
+}
+
+void ToolEntity::entity_array(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+    AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+    if (objId.isNull()) { actionEnd(); return; }
+
+    int rows = cJSON_GetObjectItem(data->jsonRoot, "num_rows")->valueint;
+    int cols = cJSON_GetObjectItem(data->jsonRoot, "num_cols")->valueint;
+    double rowSp = cJSON_GetObjectItem(data->jsonRoot, "row_spacing")->valuedouble;
+    double colSp = cJSON_GetObjectItem(data->jsonRoot, "col_spacing")->valuedouble;
+
+    if (rows <= 0) rows = 1;
+    if (cols <= 0) cols = 1;
+
+    AcDbEntity* pEnt;
+    if (acdbOpenAcDbEntity(pEnt, objId, AcDb::kForRead) == Acad::eOk) {
+        for (int r = 0; r < rows; ++r) {
+            for (int c = 0; c < cols; ++c) {
+                if (r == 0 && c == 0) continue;
+                AcDbEntity* pClone = AcDbEntity::cast(pEnt->clone());
+                AcGeMatrix3d mat = AcGeMatrix3d::translation(AcGeVector3d(c * colSp, r * rowSp, 0));
+                pClone->transformBy(mat);
+                pModelSpace->appendAcDbEntity(pClone);
+                pClone->close();
+            }
+        }
+        pEnt->close();
+        data->ret = 0;
+    }
     actionEnd();
 }

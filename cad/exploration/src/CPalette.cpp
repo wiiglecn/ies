@@ -585,6 +585,34 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
             ToolEntity::getInstance().list_entities(params);
             break;
 
+        case WM_USER_A_ENTITYCOPY:
+            ToolEntity::getInstance().entity_copy(params);
+            break;
+        case WM_USER_A_ENTITYMOVE:
+            ToolEntity::getInstance().entity_move(params);
+            break;
+        case WM_USER_A_ENTITYROTATE:
+            ToolEntity::getInstance().entity_rotate(params);
+            break;
+        case WM_USER_A_ENTITYSCALE:
+            ToolEntity::getInstance().entity_scale(params);
+            break;
+        case WM_USER_A_ENTITYMIRROR:
+            ToolEntity::getInstance().entity_mirror(params);
+            break;
+        case WM_USER_A_ENTITYOFFSET:
+            ToolEntity::getInstance().entity_offset(params);
+            break;
+        case WM_USER_A_ENTITYFILLET:
+            ToolEntity::getInstance().entity_fillet(params);
+            break;
+        case WM_USER_A_ENTITYCHAMFER:
+            ToolEntity::getInstance().entity_chamfer(params);
+            break;
+        case WM_USER_A_ENTITYARRAY:
+            ToolEntity::getInstance().entity_array(params);
+            break;
+
 		//layer
 		case WM_USER_A_CREATELAYER:
             ToolLayer::getInstance().create_layer(params);
