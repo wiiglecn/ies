@@ -599,3 +599,18 @@ void ToolDraw::create_hatch(AiToolCommandData* data)
     this->actionEnd();
 }
 
+void ToolDraw::Init()
+{
+	CString strFilePath = CUtils::GetArxFolder();
+    strFilePath.Replace(_T("\\"), _T("/"));
+    CString strUrl;
+    strUrl.Format(_T("%stools.lsp"), strFilePath);
+
+	struct resbuf* rbArgs = acutBuildList(RTSTR, _T("load"), RTSTR, strUrl, RTNONE);
+    struct resbuf* rbResult = NULL;
+    int rc = acedInvoke(rbArgs, &rbResult);
+    acutRelRb(rbArgs);
+    if (rbResult) acutRelRb(rbResult);
+
+	acutPrintf(_T("\nLSP Load Status: %s\n"), (rc == RTNORM) ? _T("Success") : _T("Failed"));
+}

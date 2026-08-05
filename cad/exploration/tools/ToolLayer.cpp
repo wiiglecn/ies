@@ -397,3 +397,264 @@ void ToolLayer::get_current_layer_color(AiToolCommandData* data) {
     
     this->actionEnd();
 }
+
+void ToolLayer::layer_set_properties(AiToolCommandData* data) {
+    cJSON* params = data->jsonRoot;
+    cJSON* nameItem = cJSON_GetObjectItem(params, "name");
+
+    if (!nameItem || !cJSON_IsString(nameItem)) {
+        acutPrintf(_T("[ERROR] layer_set_properties: invalid name parameter.\n"));
+        return;
+    }
+
+    TCHAR layerName[256] = { 0 };
+    if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
+        acutPrintf(_T("[ERROR] layer_set_properties: failed to convert layer name.\n"));
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcDbLayerTable* pLayerTable = NULL;
+    if (pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk) {
+        acutPrintf(_T("[ERROR] layer_set_properties: failed to open Layer Table.\n"));
+        this->actionEnd();
+        return;
+    }
+
+    AcDbObjectId layerId;
+    if (pLayerTable->getAt(layerName, layerId) != Acad::eOk) {
+        acutPrintf(_T("[ERROR] layer_set_properties: layer not found.\n"));
+        pLayerTable->close();
+        this->actionEnd();
+        return;
+    }
+    pLayerTable->close();
+
+    AcDbLayerTableRecord* pLayerRec = NULL;
+    if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForWrite) != Acad::eOk) {
+        acutPrintf(_T("[ERROR] layer_set_properties: failed to open layer for write.\n"));
+        this->actionEnd();
+        return;
+    }
+
+    bool changed = false;
+
+    // Set color
+    cJSON* colorItem = cJSON_GetObjectItem(params, "color");
+    if (colorItem && cJSON_IsNumber(colorItem)) {
+        AcCmColor color;
+        color.setColorIndex((Adesk::UInt16)colorItem->valuedouble);
+        pLayerRec->setColor(color);
+        changed = true;
+    }
+
+    // Set linetype
+    cJSON* linetypeItem = cJSON_GetObjectItem(params, "linetype");
+    if (linetypeItem && cJSON_IsString(linetypeItem)) {
+        TCHAR ltName[256] = { 0 };
+        if (CUtils::utf8ToTChar(linetypeItem->valuestring, ltName, ARRAYSIZE(ltName))) {
+            AcDbLinetypeTable* pLtTable = NULL;
+            if (pDb->getLinetypeTable(pLtTable, AcDb::kForRead) == Acad::eOk) {
+                AcDbObjectId ltId;
+                if (pLtTable->getAt(ltName, ltId) == Acad::eOk) {
+                    pLayerRec->setLinetypeObjectId(ltId);
+                    changed = true;
+                }
+                pLtTable->close();
+            }
+        }
+    }
+
+    // Set lineweight
+    cJSON* lwItem = cJSON_GetObjectItem(params, "lineweight");
+    if (lwItem && cJSON_IsNumber(lwItem)) {
+        AcDb::LineWeight lw = (AcDb::LineWeight)(int)lwItem->valuedouble;
+        pLayerRec->setLineWeight(lw);
+        changed = true;
+    }
+
+    pLayerRec->close();
+
+    if (changed) {
+        data->resultJson = cJSON_CreateObject();
+        cJSON_AddStringToObject(data->resultJson, "name", nameItem->valuestring);
+        data->ret = 0;
+    } else {
+        acutPrintf(_T("[WARNING] layer_set_properties: no properties were set.\n"));
+    }
+
+    this->actionEnd();
+}
+
+void ToolLayer::layer_freeze(AiToolCommandData* data) {
+    cJSON* nameItem = cJSON_GetObjectItem(data->jsonRoot, "name");
+    if (!nameItem || !cJSON_IsString(nameItem)) {
+        acutPrintf(_T("[ERROR] layer_freeze: invalid name parameter.\n"));
+        return;
+    }
+
+    TCHAR layerName[256] = { 0 };
+    if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
+        acutPrintf(_T("[ERROR] layer_freeze: failed to convert layer name.\n"));
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcDbLayerTable* pLayerTable = NULL;
+    if (pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk) {
+        this->actionEnd();
+        return;
+    }
+
+    AcDbObjectId layerId;
+    if (pLayerTable->getAt(layerName, layerId) != Acad::eOk) {
+        acutPrintf(_T("[ERROR] layer_freeze: layer not found.\n"));
+        pLayerTable->close();
+        this->actionEnd();
+        return;
+    }
+    pLayerTable->close();
+
+    AcDbLayerTableRecord* pLayerRec = NULL;
+    if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForWrite) == Acad::eOk) {
+        pLayerRec->setIsFrozen(Adesk::kTrue);
+        pLayerRec->close();
+        data->resultJson = cJSON_CreateObject();
+        cJSON_AddStringToObject(data->resultJson, "name", nameItem->valuestring);
+        cJSON_AddBoolToObject(data->resultJson, "isFrozen", 1);
+        data->ret = 0;
+    }
+
+    this->actionEnd();
+}
+
+void ToolLayer::layer_thaw(AiToolCommandData* data) {
+    cJSON* nameItem = cJSON_GetObjectItem(data->jsonRoot, "name");
+    if (!nameItem || !cJSON_IsString(nameItem)) {
+        acutPrintf(_T("[ERROR] layer_thaw: invalid name parameter.\n"));
+        return;
+    }
+
+    TCHAR layerName[256] = { 0 };
+    if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
+        acutPrintf(_T("[ERROR] layer_thaw: failed to convert layer name.\n"));
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcDbLayerTable* pLayerTable = NULL;
+    if (pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk) {
+        this->actionEnd();
+        return;
+    }
+
+    AcDbObjectId layerId;
+    if (pLayerTable->getAt(layerName, layerId) != Acad::eOk) {
+        acutPrintf(_T("[ERROR] layer_thaw: layer not found.\n"));
+        pLayerTable->close();
+        this->actionEnd();
+        return;
+    }
+    pLayerTable->close();
+
+    AcDbLayerTableRecord* pLayerRec = NULL;
+    if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForWrite) == Acad::eOk) {
+        pLayerRec->setIsFrozen(Adesk::kFalse);
+        pLayerRec->close();
+        data->resultJson = cJSON_CreateObject();
+        cJSON_AddStringToObject(data->resultJson, "name", nameItem->valuestring);
+        cJSON_AddBoolToObject(data->resultJson, "isFrozen", 0);
+        data->ret = 0;
+    }
+
+    this->actionEnd();
+}
+
+void ToolLayer::layer_lock(AiToolCommandData* data) {
+    cJSON* nameItem = cJSON_GetObjectItem(data->jsonRoot, "name");
+    if (!nameItem || !cJSON_IsString(nameItem)) {
+        acutPrintf(_T("[ERROR] layer_lock: invalid name parameter.\n"));
+        return;
+    }
+
+    TCHAR layerName[256] = { 0 };
+    if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
+        acutPrintf(_T("[ERROR] layer_lock: failed to convert layer name.\n"));
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcDbLayerTable* pLayerTable = NULL;
+    if (pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk) {
+        this->actionEnd();
+        return;
+    }
+
+    AcDbObjectId layerId;
+    if (pLayerTable->getAt(layerName, layerId) != Acad::eOk) {
+        acutPrintf(_T("[ERROR] layer_lock: layer not found.\n"));
+        pLayerTable->close();
+        this->actionEnd();
+        return;
+    }
+    pLayerTable->close();
+
+    AcDbLayerTableRecord* pLayerRec = NULL;
+    if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForWrite) == Acad::eOk) {
+        pLayerRec->setIsLocked(Adesk::kTrue);
+        pLayerRec->close();
+        data->resultJson = cJSON_CreateObject();
+        cJSON_AddStringToObject(data->resultJson, "name", nameItem->valuestring);
+        cJSON_AddBoolToObject(data->resultJson, "isLocked", 1);
+        data->ret = 0;
+    }
+
+    this->actionEnd();
+}
+
+void ToolLayer::layer_unlock(AiToolCommandData* data) {
+    cJSON* nameItem = cJSON_GetObjectItem(data->jsonRoot, "name");
+    if (!nameItem || !cJSON_IsString(nameItem)) {
+        acutPrintf(_T("[ERROR] layer_unlock: invalid name parameter.\n"));
+        return;
+    }
+
+    TCHAR layerName[256] = { 0 };
+    if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
+        acutPrintf(_T("[ERROR] layer_unlock: failed to convert layer name.\n"));
+        return;
+    }
+
+    if (this->actionBefore()) return;
+
+    AcDbLayerTable* pLayerTable = NULL;
+    if (pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk) {
+        this->actionEnd();
+        return;
+    }
+
+    AcDbObjectId layerId;
+    if (pLayerTable->getAt(layerName, layerId) != Acad::eOk) {
+        acutPrintf(_T("[ERROR] layer_unlock: layer not found.\n"));
+        pLayerTable->close();
+        this->actionEnd();
+        return;
+    }
+    pLayerTable->close();
+
+    AcDbLayerTableRecord* pLayerRec = NULL;
+    if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForWrite) == Acad::eOk) {
+        pLayerRec->setIsLocked(Adesk::kFalse);
+        pLayerRec->close();
+        data->resultJson = cJSON_CreateObject();
+        cJSON_AddStringToObject(data->resultJson, "name", nameItem->valuestring);
+        cJSON_AddBoolToObject(data->resultJson, "isLocked", 0);
+        data->ret = 0;
+    }
+
+    this->actionEnd();
+}

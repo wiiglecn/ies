@@ -730,22 +730,110 @@
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "handle": {
-                        "type": "string",
-                        "description": "Entity handle (hexadecimal string)"
-                    },
+                    "handle": { "type": "string", "description": "Entity handle (hexadecimal string)" },
                     "num_rows": { "type": "integer", "description": "Number of rows" },
                     "num_cols": { "type": "integer", "description": "Number of columns" },
                     "row_spacing": { "type": "number", "description": "Distance between rows" },
                     "col_spacing": { "type": "number", "description": "Distance between columns" }
                 },
-                "required": [
-                    "handle",
-                    "num_rows",
-                    "num_cols",
-                    "row_spacing",
-                    "col_spacing"
-                ]
+                "required": ["handle", "num_rows", "num_cols", "row_spacing", "col_spacing"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "layer_set_properties",
+            "description": "Sets properties (color, linetype, lineweight) of an existing layer in the AutoCAD drawing.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to modify"
+                    },
+                    "color": {
+                        "type": "integer",
+                        "description": "AutoCAD color index (ACI) to set (optional)"
+                    },
+                    "linetype": {
+                        "type": "string",
+                        "description": "Name of the linetype to set (optional). Must already exist in the drawing."
+                    },
+                    "lineweight": {
+                        "type": "integer",
+                        "description": "Line weight value to set (optional). Common values: 0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211 (in hundredths of mm)."
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "layer_freeze",
+            "description": "Freezes a layer in the current AutoCAD drawing by name.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to freeze"
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "layer_thaw",
+            "description": "Thaws (unfreezes) a layer in the current AutoCAD drawing by name.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to thaw"
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "layer_lock",
+            "description": "Locks a layer in the current AutoCAD drawing by name.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to lock"
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "layer_unlock",
+            "description": "Unlocks a layer in the current AutoCAD drawing by name.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to unlock"
+                    }
+                },
+                "required": ["name"]
             }
         }
     }

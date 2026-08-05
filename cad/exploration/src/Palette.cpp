@@ -33,9 +33,11 @@
 #include "CPalette.h"
 #include "InspPalette.h"
 #include "Utils.h"
+#include "../tools/AcadFrameHook.h"
 
 // Global Palette Set Instance
-CMyPaletteSet  *pPaletteSet ;
+CMyPaletteSet  *pPaletteSet=NULL;
+CAcadFrameHook *pHook=NULL;
 
 HINSTANCE _hdllInstance =NULL ;
 // Forward declaration of DllMain
@@ -82,6 +84,7 @@ acrxEntryPoint(AcRx::AppMsgCode msg, void* pkt)
 void paletteShow()
 {
 	CMDIFrameWnd* pAcadFrame = acedGetAcadFrame();
+	
 	// If the paletteset is already created, show it
 	if(pPaletteSet)
 	{
@@ -133,6 +136,8 @@ void paletteShow()
 
 	// Change the title of the paletteset
 	pPaletteSet->SetName(_T("昇龙 工具条"));
+
+	//pHook=new CAcadFrameHook();
 }
 // 定时器回调函数，用于延迟执行 paletteShow
 VOID CALLBACK PaletteShowTimerProc(HWND hWnd, UINT nMsg, UINT_PTR nTimerid, DWORD dwTime)
@@ -220,6 +225,9 @@ void UnloadApplication()
 		delete pPaletteSet;
 
 		// pPaletteSet = NULL;
+	}
+	if (pHook){
+		delete pHook;
 	}
 	CoFreeUnusedLibraries();
 }

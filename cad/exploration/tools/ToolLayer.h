@@ -18,7 +18,13 @@ public:
     void get_current_layer(AiToolCommandData* data);
     void set_current_layer(AiToolCommandData* data);
     void get_current_layer_color(AiToolCommandData* data);
-	
+
+	void layer_set_properties(AiToolCommandData* data);
+	void layer_freeze(AiToolCommandData* data);
+	void layer_thaw(AiToolCommandData* data);
+	void layer_lock(AiToolCommandData* data);
+	void layer_unlock(AiToolCommandData* data);
+
 	void regen();
 private:
 	ToolLayer(void);

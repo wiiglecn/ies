@@ -46,7 +46,14 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/set_current_layer", "set_current_layer", WM_USER_A_SETCURRENTLAYER },
     { "/ai/tool/get_current_layer_color", "get_current_layer_color", WM_USER_A_GETCURRENTLAYERCOLOR },
     { "/ai/tool/query_all_layers", "query_all_layers", WM_USER_A_QUERYALLLAYERS },
-    { "/ai/tool/regen", "regen", WM_USER_A_REGEN } 
+    { "/ai/tool/layer_set_properties", "layer_set_properties", WM_USER_A_LAYERSETPROPERTIES },
+    { "/ai/tool/layer_freeze", "layer_freeze", WM_USER_A_LAYERFREEZE },
+    { "/ai/tool/layer_thaw", "layer_thaw", WM_USER_A_LAYERTHAW },
+    { "/ai/tool/layer_lock", "layer_lock", WM_USER_A_LAYERLOCK },
+    { "/ai/tool/layer_unlock", "layer_unlock", WM_USER_A_LAYERUNLOCK },
+    { "/ai/tool/regen", "regen", WM_USER_A_REGEN },
+
+	{ "/ai/tool/test", "test", WM_USER_TOOL_TEST } 
 };
 bool EndsWith(const std::string& str, const std::string& suffix) {
     if (suffix.size() > str.size()) return false;

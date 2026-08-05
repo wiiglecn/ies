@@ -171,6 +171,10 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
     UpdateHtmlDisplay();
 
     SetName(_T("Data HTML"));
+
+
+	//lisp init
+	ToolDraw::getInstance().Init();
     return 0;
 }
 
@@ -635,9 +639,28 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
         case WM_USER_A_QUERYALLLAYERS:
             ToolLayer::getInstance().query_all_layers(params);
             break;
+        case WM_USER_A_LAYERSETPROPERTIES:
+            ToolLayer::getInstance().layer_set_properties(params);
+            break;
+        case WM_USER_A_LAYERFREEZE:
+            ToolLayer::getInstance().layer_freeze(params);
+            break;
+        case WM_USER_A_LAYERTHAW:
+            ToolLayer::getInstance().layer_thaw(params);
+            break;
+        case WM_USER_A_LAYERLOCK:
+            ToolLayer::getInstance().layer_lock(params);
+            break;
+        case WM_USER_A_LAYERUNLOCK:
+            ToolLayer::getInstance().layer_unlock(params);
+            break;
 
         case WM_USER_A_REGEN:
             ToolDraw::getInstance().regen();
+            break;
+
+		case WM_USER_TOOL_TEST:
+            ToolDraw::getInstance().dispatch_command(params);
             break;
     }
     //acedUpdateDisplay();

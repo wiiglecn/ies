@@ -7,6 +7,7 @@
 #include "dbsymtb.h"
 #include "dbelipse.h"
 #include "dbspline.h"
+#include "acedads.h"
 
 #include "utils.h"
 
@@ -112,4 +113,22 @@ AcDbObjectId ToolDrawBase::GetIdFromHandle(cJSON* json, const char* key, AcDbDat
     AcDbObjectId objId;
     pDb->getAcDbObjectId(objId, Adesk::kFalse, dbHandle);
     return objId;
+}
+
+void ToolDrawBase::dispatch_command(AiToolCommandData* data){
+	/*CAcModuleResourceOverride resOverride;
+	actionBefore();
+	int ret = acedCommand(RTSTR, _T("_LINE"), RTSTR, _T("0,0"), RTSTR, _T("100,100"), RTNONE);
+	actionEnd();
+	acutPrintf(_T("dispatch_command ref :%d \n"),ret);*/
+	data->ret = 0;
+
+
+	::PostMessage(
+            acedGetAcadFrame()->GetSafeHwnd(), 
+            WM_USER_TOOL_TEST, 
+            0,                          // WPARAM 未使用，传 0
+            0             // LPARAM 传递动态指针
+        );
+	
 }
