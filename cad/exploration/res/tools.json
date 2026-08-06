@@ -836,5 +836,29 @@
                 "required": ["name"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "dispatch_command",
+            "description": "Directly executes an AutoCAD command with optional arguments.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "cmd": {
+                        "type": "string",
+                        "description": "The AutoCAD command name to execute (e.g., '_u', '_r')."
+                    },
+                    "args": {
+                        "type": "array",
+                        "description": "An array of arguments for the command. Supports strings and numbers.",
+                        "items": {
+                            "type": ["string", "number"]
+                        }
+                    }
+                },
+                "required": ["cmd"]
+            }
+        }
     }
 ]

@@ -33,11 +33,12 @@
 #include "CPalette.h"
 #include "InspPalette.h"
 #include "Utils.h"
-#include "../tools/AcadFrameHook.h"
+#include "../tools/ToolGlobal.h"
+//#include "../tools/AcadFrameHook.h"
 
 // Global Palette Set Instance
 CMyPaletteSet  *pPaletteSet=NULL;
-CAcadFrameHook *pHook=NULL;
+//CAcadFrameHook *pHook=NULL;
 
 HINSTANCE _hdllInstance =NULL ;
 // Forward declaration of DllMain
@@ -164,6 +165,7 @@ void InitApplication()
 	// Add a command to show the paletteset
 	AddCommand(_T("ASDK"), _T("SLSHOW"), _T("SLSHOW"), ACRX_CMD_MODAL, paletteShow);
 	AddCommand(_T("ASDK"), _T("SLHIDE"), _T("SLHIDE"), ACRX_CMD_MODAL, paletteHide);
+	AddCommand(_T("ASDK"), _T("SLCMD"), _T("SLCMD"), ACRX_CMD_MODAL, ToolGlobal::CMD);
 
 	// Register the COM Server upon loading
 	if ( FAILED(::DllRegisterServer ()) )
@@ -226,9 +228,9 @@ void UnloadApplication()
 
 		// pPaletteSet = NULL;
 	}
-	if (pHook){
+	/*if (pHook){
 		delete pHook;
-	}
+	}*/
 	CoFreeUnusedLibraries();
 }
 

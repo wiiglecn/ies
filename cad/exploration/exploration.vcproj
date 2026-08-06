@@ -265,6 +265,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\CPalette_cmd.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\CustPalette.cpp"
 				>
 			</File>
@@ -505,6 +509,14 @@
 			</File>
 			<File
 				RelativePath=".\tools\ToolEntity.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolGlobal.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolGlobal.h"
 				>
 			</File>
 			<File

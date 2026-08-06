@@ -6,7 +6,7 @@ class ToolDrawBase
 {
 public:
     void regen();
-	void dispatch_command(AiToolCommandData* data);
+	
 protected:
     ToolDrawBase(void);
     virtual ~ToolDrawBase(void);

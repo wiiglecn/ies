@@ -5,6 +5,7 @@
 #include "cJSON.h"
 #include "declare.h"
 
+#include "../tools/ToolGlobal.h"
 
 // 定义路由与命令的映射表
 struct ToolRouteInfo {
@@ -52,6 +53,8 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/layer_lock", "layer_lock", WM_USER_A_LAYERLOCK },
     { "/ai/tool/layer_unlock", "layer_unlock", WM_USER_A_LAYERUNLOCK },
     { "/ai/tool/regen", "regen", WM_USER_A_REGEN },
+
+	{ "/ai/tool/dispatch_command", "dispatch_command", WM_USER_TOOL_CMD },
 
 	{ "/ai/tool/test", "test", WM_USER_TOOL_TEST } 
 };
@@ -236,11 +239,18 @@ void HandleAiTool(struct mg_connection* nc,
 
     // 5. Post Message to AutoCAD Main Thread
     // WPARAM: Command ID, LPARAM: Pointer to our data structure
-    pAcadWnd->PostMessage(WM_USER_TOOL, nCommandID, (LPARAM)pData);
+	DWORD waitResult;
+	/*if (EndsWith(uri, "/dispatch_command")){
+		ToolGlobal::getInstance().dispatch_command(pData);
+		waitResult = WAIT_OBJECT_0;
+	}else{*/
+		pAcadWnd->PostMessage(WM_USER_TOOL, nCommandID, (LPARAM)pData);
+		waitResult = WaitForSingleObject(hEvent, 10000); 
+	//}
 
      // 6. Wait for the event to be signaled by the main thread
     // Timeout after 10 seconds to prevent indefinite hanging
-    DWORD waitResult = WaitForSingleObject(hEvent, 10000); 
+    //DWORD waitResult = WaitForSingleObject(hEvent, 10000); 
 
     // 7. Construct Response using cJSON
     if (waitResult == WAIT_OBJECT_0) {
