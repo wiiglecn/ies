@@ -1,21 +1,22 @@
 #include "stdafx.h"
 #include "ToolDraw.h"
 #include "cJSON.h"
-#include "adscodes.h"
-#include "actrans.h"
-#include "dbents.h"
-#include "dbsymtb.h"
-#include "dbelipse.h"
-#include "dbspline.h"
-#include "dbmtext.h"
-#include "dbhatch.h"
-#include "gelnsg3d.h"
-#include "dbhatch.h"
+#include "arxHeaders.h"
 #include "utils.h"
-#include <queue>
-#include "aced.h"
-#include "acdocman.h"
 
+//#include "adscodes.h"
+//#include "actrans.h"
+//#include "dbents.h"
+//#include "dbsymtb.h"
+//#include "dbelipse.h"
+//#include "dbspline.h"
+//#include "dbmtext.h"
+//#include "dbhatch.h"
+//#include "gelnsg3d.h"
+//#include "dbhatch.h"
+//#include <queue>
+//#include "aced.h"
+//#include "acdocman.h"
 
 
 ToolDraw::ToolDraw(void):ToolDrawBase()
@@ -25,6 +26,7 @@ ToolDraw::ToolDraw(void):ToolDrawBase()
 ToolDraw::~ToolDraw(void)
 {
 }
+
 ToolDraw& ToolDraw::getInstance()
 {
     static ToolDraw instance;
@@ -221,6 +223,7 @@ void ToolDraw::create_text(AiToolCommandData* data)
     cJSON* yItem = cJSON_GetObjectItem(params, "y");
     cJSON* heightItem = cJSON_GetObjectItem(params, "height");
     cJSON* textItem = cJSON_GetObjectItem(params, "text");
+    cJSON* rotationItem = cJSON_GetObjectItem(params, "rotation");
 
     if (!xItem || !yItem || !textItem ||
         !cJSON_IsNumber(xItem) || !cJSON_IsNumber(yItem) ||
@@ -236,6 +239,10 @@ void ToolDraw::create_text(AiToolCommandData* data)
     if (heightItem && cJSON_IsNumber(heightItem))
         height = heightItem->valuedouble;
 
+    double rotation = 0.0;
+    if (rotationItem && cJSON_IsNumber(rotationItem))
+        rotation = rotationItem->valuedouble;
+
     TCHAR textStr[512] = { 0 };
 	if (!CUtils::utf8ToTChar(textItem->valuestring, textStr, ARRAYSIZE(textStr)))
     {
@@ -246,6 +253,8 @@ void ToolDraw::create_text(AiToolCommandData* data)
     if (this->actionBefore()) return;
 
     AcDbText* pText = new AcDbText(AcGePoint3d(x, y, 0.0), textStr);
+    if (rotation != 0.0)
+        pText->setRotation(rotation);
     AcDbObjectId textId;
     if (pModelSpace->appendAcDbEntity(textId, pText) == Acad::eOk)
     {

@@ -488,6 +488,22 @@
 				>
 			</File>
 			<File
+				RelativePath=".\tools\ToolAnnotation.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolAnnotation.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolBlock.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolBlock.h"
+				>
+			</File>
+			<File
 				RelativePath=".\tools\ToolDraw.cpp"
 				>
 			</File>

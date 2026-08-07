@@ -119,6 +119,10 @@
                     "height": {
                         "type": "number",
                         "description": "Height of the text (optional, defaults to 1.0 if not provided)"
+                    },
+                    "rotation": {
+                        "type": "number",
+                        "description": "Rotation angle in radians (optional, defaults to 0.0)"
                     }
                 },
                 "required": [
@@ -271,6 +275,113 @@
                 "required": [
                     "points"
                 ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_dimension_linear",
+            "description": "Creates a linear (rotated) dimension in AutoCAD Model Space between two points.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x1": { "type": "number", "description": "First definition point X coordinate" },
+                    "y1": { "type": "number", "description": "First definition point Y coordinate" },
+                    "x2": { "type": "number", "description": "Second definition point X coordinate" },
+                    "y2": { "type": "number", "description": "Second definition point Y coordinate" },
+                    "dim_x": { "type": "number", "description": "Dimension line point X coordinate" },
+                    "dim_y": { "type": "number", "description": "Dimension line point Y coordinate" },
+                    "rotation": { "type": "number", "description": "Rotation angle of the dimension line in radians (optional, defaults to 0.0)" }
+                },
+                "required": ["x1", "y1", "x2", "y2", "dim_x", "dim_y"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_dimension_aligned",
+            "description": "Creates an aligned dimension in AutoCAD Model Space. The dimension line is parallel to the line between two definition points.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x1": { "type": "number", "description": "First definition point X coordinate" },
+                    "y1": { "type": "number", "description": "First definition point Y coordinate" },
+                    "x2": { "type": "number", "description": "Second definition point X coordinate" },
+                    "y2": { "type": "number", "description": "Second definition point Y coordinate" },
+                    "dim_x": { "type": "number", "description": "Dimension line point X coordinate" },
+                    "dim_y": { "type": "number", "description": "Dimension line point Y coordinate" }
+                },
+                "required": ["x1", "y1", "x2", "y2", "dim_x", "dim_y"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_dimension_angular",
+            "description": "Creates a 3-point angular dimension in AutoCAD Model Space. Measures the angle between two lines defined by a center point and two endpoints.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "center_x": { "type": "number", "description": "Center point X coordinate" },
+                    "center_y": { "type": "number", "description": "Center point Y coordinate" },
+                    "x1": { "type": "number", "description": "First endpoint X coordinate (defines first line from center)" },
+                    "y1": { "type": "number", "description": "First endpoint Y coordinate (defines first line from center)" },
+                    "x2": { "type": "number", "description": "Second endpoint X coordinate (defines second line from center)" },
+                    "y2": { "type": "number", "description": "Second endpoint Y coordinate (defines second line from center)" },
+                    "arc_x": { "type": "number", "description": "Arc point X coordinate (optional, determines where the dimension arc is drawn)" },
+                    "arc_y": { "type": "number", "description": "Arc point Y coordinate (optional, determines where the dimension arc is drawn)" }
+                },
+                "required": ["center_x", "center_y", "x1", "y1", "x2", "y2"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_dimension_radius",
+            "description": "Creates a radius dimension in AutoCAD Model Space for a circle or arc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "center_x": { "type": "number", "description": "Center point X coordinate" },
+                    "center_y": { "type": "number", "description": "Center point Y coordinate" },
+                    "radius": { "type": "number", "description": "Radius value (must be positive)" },
+                    "angle": { "type": "number", "description": "Angle in radians where the dimension line points to" },
+                    "leader_length": { "type": "number", "description": "Length of the leader line (optional, defaults to 0.0)" }
+                },
+                "required": ["center_x", "center_y", "radius", "angle"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_leader",
+            "description": "Creates a leader annotation in AutoCAD Model Space with optional text content.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "points": {
+                        "type": "array",
+                        "description": "Array of points defining the leader vertices (minimum 2 points).",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "x": { "type": "number", "description": "Point X coordinate" },
+                                "y": { "type": "number", "description": "Point Y coordinate" }
+                            },
+                            "required": ["x", "y"]
+                        }
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Text content for the leader annotation (optional)"
+                    }
+                },
+                "required": ["points"]
             }
         }
     },
@@ -858,6 +969,158 @@
                     }
                 },
                 "required": ["cmd"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_list",
+            "description": "Lists all block definitions in the current AutoCAD drawing. Returns a JSON array of objects containing block name, handle, and flags.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_insert",
+            "description": "Inserts a block reference into AutoCAD Model Space at a specified position.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the block definition to insert"
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "Insertion point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Insertion point Y coordinate"
+                    },
+                    "scale": {
+                        "type": "number",
+                        "description": "Uniform scale factor (optional, defaults to 1.0)"
+                    },
+                    "rotation": {
+                        "type": "number",
+                        "description": "Rotation angle in radians (optional, defaults to 0.0)"
+                    }
+                },
+                "required": ["name", "x", "y"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_insert_with_attributes",
+            "description": "Inserts a block reference with attribute values into AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the block definition to insert"
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "Insertion point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Insertion point Y coordinate"
+                    },
+                    "scale": {
+                        "type": "number",
+                        "description": "Uniform scale factor (optional, defaults to 1.0)"
+                    },
+                    "rotation": {
+                        "type": "number",
+                        "description": "Rotation angle in radians (optional, defaults to 0.0)"
+                    },
+                    "attributes": {
+                        "type": "object",
+                        "description": "Key-value pairs of attribute tag names and their values (e.g., {\"TAG1\": \"value1\"})"
+                    }
+                },
+                "required": ["name", "x", "y"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_get_attributes",
+            "description": "Gets all attribute values from a block reference by its handle.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string) of the block reference"
+                    }
+                },
+                "required": ["handle"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_update_attributes",
+            "description": "Updates attribute values on a block reference.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string) of the block reference"
+                    },
+                    "attributes": {
+                        "type": "object",
+                        "description": "Key-value pairs of attribute tag names and their new values (e.g., {\"TAG1\": \"new_value\"})"
+                    }
+                },
+                "required": ["handle", "attributes"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_define",
+            "description": "Defines a new block in the AutoCAD database. Optionally copies existing entities into the block definition.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the new block definition"
+                    },
+                    "base_x": {
+                        "type": "number",
+                        "description": "Block base point X coordinate (optional, defaults to 0.0)"
+                    },
+                    "base_y": {
+                        "type": "number",
+                        "description": "Block base point Y coordinate (optional, defaults to 0.0)"
+                    },
+                    "entities": {
+                        "type": "array",
+                        "description": "Array of entity handles (hexadecimal strings) to copy into the block definition (optional)",
+                        "items": {
+                            "type": "string",
+                            "description": "Entity handle (e.g., '1F2')"
+                        }
+                    }
+                },
+                "required": ["name"]
             }
         }
     }

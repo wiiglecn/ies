@@ -7,14 +7,14 @@
 
 #include "../tools/ToolGlobal.h"
 
-// ¶¨ÒåÂ·ÓÉÓëÃüÁîµÄÓ³Éä±í
+// ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó³ï¿½ï¿½ï¿½
 struct ToolRouteInfo {
     const char* uriPath;
     const char* uriSuffix;
     UINT commandID;
 };
 
-// È«¾Ö¹¤¾ßÂ·ÓÉÊý×é (ÇëÈ·±£ WM_USER_A_REGEN µÈºêÒÑÔÚÄãµÄÍ·ÎÄ¼þÖÐ¶¨Òå)
+// È«ï¿½Ö¹ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½È·ï¿½ï¿½ WM_USER_A_REGEN ï¿½Èºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½Ä¼ï¿½ï¿½Ð¶ï¿½ï¿½ï¿?
 static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/create_line", "create_line", WM_USER_A_CREATELINE },
     { "/ai/tool/create_circle", "create_circle", WM_USER_A_CREATECIRCLE },
@@ -26,6 +26,12 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/create_arc", "create_arc", WM_USER_A_CREATEARC },
     { "/ai/tool/create_mtext", "create_mtext", WM_USER_A_CREATEMTEXT },
     { "/ai/tool/create_hatch", "create_hatch", WM_USER_A_CREATEHATCH },
+
+    { "/ai/tool/create_dimension_linear", "create_dimension_linear", WM_USER_A_CREATE_DIM_LINEAR },
+    { "/ai/tool/create_dimension_aligned", "create_dimension_aligned", WM_USER_A_CREATE_DIM_ALIGNED },
+    { "/ai/tool/create_dimension_angular", "create_dimension_angular", WM_USER_A_CREATE_DIM_ANGULAR },
+    { "/ai/tool/create_dimension_radius", "create_dimension_radius", WM_USER_A_CREATE_DIM_RADIUS },
+    { "/ai/tool/create_leader", "create_leader", WM_USER_A_CREATE_LEADER },
 
     { "/ai/tool/delete_entities", "delete_entities", WM_USER_A_DELETEENTITIES },
     { "/ai/tool/list_entities", "list_entities", WM_USER_A_LISTENTITIES },
@@ -54,6 +60,13 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/layer_unlock", "layer_unlock", WM_USER_A_LAYERUNLOCK },
     { "/ai/tool/regen", "regen", WM_USER_A_REGEN },
 
+    { "/ai/tool/block_list", "block_list", WM_USER_A_BLOCKLIST },
+    { "/ai/tool/block_insert", "block_insert", WM_USER_A_BLOCKINSERT },
+    { "/ai/tool/block_insert_with_attributes", "block_insert_with_attributes", WM_USER_A_BLOCKINSERTWITHATTRS },
+    { "/ai/tool/block_get_attributes", "block_get_attributes", WM_USER_A_BLOCKGETATTRS },
+    { "/ai/tool/block_update_attributes", "block_update_attributes", WM_USER_A_BLOCKUPDATEATTRS },
+    { "/ai/tool/block_define", "block_define", WM_USER_A_BLOCKDEFINE },
+
 	{ "/ai/tool/dispatch_command", "dispatch_command", WM_USER_TOOL_CMD },
 
 	{ "/ai/tool/test", "test", WM_USER_TOOL_TEST } 
@@ -62,32 +75,32 @@ bool EndsWith(const std::string& str, const std::string& suffix) {
     if (suffix.size() > str.size()) return false;
     return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
 }
-// AI ÁÄÌì½Ó¿Ú
+// AI ï¿½ï¿½ï¿½ï¿½Ó¿ï¿?
 void HandleAiChat(struct mg_connection* nc, 
 				  struct mg_http_message* hm,
                   const std::map<std::string, std::string>& params,
                   const std::string& body,
 				  void* user_data)
 {
-    // ÕâÀï¿ÉÒÔµ÷ÓÃ OpenAI/°Ù¶ÈÎÄÐÄ/Ñ¶·ÉµÈ AI API
-    // body °üº¬¿Í»§¶Ë·¢À´µÄ JSON ÇëÇóÊý¾Ý
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôµï¿½ï¿½ï¿?OpenAI/ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½/Ñ¶ï¿½Éµï¿½ AI API
+    // body ï¿½ï¿½ï¿½ï¿½ï¿½Í»ï¿½ï¿½Ë·ï¿½ï¿½ï¿½ï¿½ï¿½ JSON ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     
     std::string response = "{\"status\":\"success\",\"message\":\"AI reply placeholder\"}";
     AiApiServer::SendJsonResponse(nc, 200, response);
 }
 
-// AI ÎÄ±¾Éú³É½Ó¿Ú
+// AI ï¿½Ä±ï¿½ï¿½ï¿½ï¿½É½Ó¿ï¿½
 void HandleAiGenerate(struct mg_connection* nc,
 					  struct mg_http_message* hm,
                       const std::map<std::string, std::string>& params,
                       const std::string& body,
 					  void* user_data)
 {
-    // µ÷ÓÃ AI ½Ó¿ÚÉú³ÉÎÄ±¾
+    // ï¿½ï¿½ï¿½ï¿½ AI ï¿½Ó¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½
     std::string response = "{\"text\":\"Generated content...\"}";
     AiApiServer::SendJsonResponse(nc, 200, response);
 }
-// AI ÃüÁîÖ´ÐÐ½Ó¿Ú
+// AI ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð½Ó¿ï¿½
 void HandleAiCommand(struct mg_connection* nc,
 					 struct mg_http_message* hm,
                       const std::map<std::string, std::string>& params,
@@ -319,13 +332,13 @@ AiApiRequest::~AiApiRequest(void)
 void AiApiRequest::Start()
 {
 	m_Server=new AiApiServer();
-	// ×¢²áÂ·ÓÉ
+	// ×¢ï¿½ï¿½Â·ï¿½ï¿½
     m_Server->RegisterRoute("POST", "/ai/chat", HandleAiChat);
     m_Server->RegisterRoute("POST", "/ai/generate", HandleAiGenerate);
 	m_Server->RegisterRoute("POST", "/ai/command", HandleAiCommand);
 	//tool
 
-	// ±éÀúÊý×é×¢²á tool Â·ÓÉ
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ tool Â·ï¿½ï¿½
     size_t routeCount = sizeof(toolRoutes) / sizeof(toolRoutes[0]);
     for (size_t i = 0; i <  routeCount; ++i) {
         m_Server->RegisterRoute("POST", toolRoutes[i].uriPath, HandleAiTool, this);

@@ -17,6 +17,8 @@
 #include "../tools/ToolLayer.h"
 #include "../tools/ToolEntity.h"
 #include "../tools/ToolGlobal.h"
+#include "../tools/ToolBlock.h"
+#include "../tools/ToolAnnotation.h"
 
 // Remove #include thread> and add a helper thread procedure
 struct ThreadProcData {
@@ -64,6 +66,23 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
             break;
         case WM_USER_A_CREATEHATCH:
             ToolDraw::getInstance().create_hatch(params);
+            break;
+
+		//annotation
+		case WM_USER_A_CREATE_DIM_LINEAR:
+            ToolAnnotation::getInstance().create_dimension_linear(params);
+            break;
+		case WM_USER_A_CREATE_DIM_ALIGNED:
+            ToolAnnotation::getInstance().create_dimension_aligned(params);
+            break;
+		case WM_USER_A_CREATE_DIM_ANGULAR:
+            ToolAnnotation::getInstance().create_dimension_angular(params);
+            break;
+		case WM_USER_A_CREATE_DIM_RADIUS:
+            ToolAnnotation::getInstance().create_dimension_radius(params);
+            break;
+		case WM_USER_A_CREATE_LEADER:
+            ToolAnnotation::getInstance().create_leader(params);
             break;
 
 		//entity
@@ -139,6 +158,26 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
             break;
         case WM_USER_A_LAYERUNLOCK:
             ToolLayer::getInstance().layer_unlock(params);
+            break;
+
+		//block
+		case WM_USER_A_BLOCKLIST:
+            ToolBlock::getInstance().block_list(params);
+            break;
+        case WM_USER_A_BLOCKINSERT:
+            ToolBlock::getInstance().block_insert(params);
+            break;
+        case WM_USER_A_BLOCKINSERTWITHATTRS:
+            ToolBlock::getInstance().block_insert_with_attributes(params);
+            break;
+        case WM_USER_A_BLOCKGETATTRS:
+            ToolBlock::getInstance().block_get_attributes(params);
+            break;
+        case WM_USER_A_BLOCKUPDATEATTRS:
+            ToolBlock::getInstance().block_update_attributes(params);
+            break;
+        case WM_USER_A_BLOCKDEFINE:
+            ToolBlock::getInstance().block_define(params);
             break;
 
 		case WM_USER_TOOL_CMD:
