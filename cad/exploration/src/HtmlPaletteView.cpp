@@ -154,6 +154,7 @@ void CHtmlPaletteView::InitializeBrowser()
     Navigate2(strUrl);
 
 
+	
 	// Navigate2(_T("file:///C:/Temp/PalettePage.html")); 
 }
 void CHtmlPaletteView::OnDestroy()

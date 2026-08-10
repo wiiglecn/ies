@@ -45,6 +45,8 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/entity_fillet", "entity_fillet", WM_USER_A_ENTITYFILLET },
     { "/ai/tool/entity_chamfer", "entity_chamfer", WM_USER_A_ENTITYCHAMFER },
     { "/ai/tool/entity_array", "entity_array", WM_USER_A_ENTITYARRAY },
+    { "/ai/tool/entity_get", "entity_get", WM_USER_A_ENTITYGET },
+    { "/ai/tool/entity_set_color", "entity_set_color", WM_USER_A_ENTITYSETCOLOR },
 
     { "/ai/tool/create_layer", "create_layer", WM_USER_A_CREATELAYER },
     { "/ai/tool/list_layers", "list_layers", WM_USER_A_LISTLAYERS },
@@ -66,6 +68,10 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/block_get_attributes", "block_get_attributes", WM_USER_A_BLOCKGETATTRS },
     { "/ai/tool/block_update_attributes", "block_update_attributes", WM_USER_A_BLOCKUPDATEATTRS },
     { "/ai/tool/block_define", "block_define", WM_USER_A_BLOCKDEFINE },
+
+    { "/ai/tool/zoom_extents", "zoom_extents", WM_USER_A_ZOOM_EXTENTS },
+    { "/ai/tool/zoom_window", "zoom_window", WM_USER_A_ZOOM_WINDOW },
+    { "/ai/tool/get_screenshot", "get_screenshot", WM_USER_A_GET_SCREENSHOT },
 
 	{ "/ai/tool/dispatch_command", "dispatch_command", WM_USER_TOOL_CMD },
 

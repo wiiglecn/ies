@@ -471,7 +471,11 @@ function sendChatMessage() {
     //     console.log("Current Chat History:", JSON.stringify(chatMessages));
     // }, 500);
 }
-
+function newChat(){
+    if (window.external){
+        window.external.OnJsCommand("ChatNew", message);
+    }
+}
 function checkEnter(event) {
     if (event.keyCode === 13 && event.ctrlKey) {
         sendChatMessage();

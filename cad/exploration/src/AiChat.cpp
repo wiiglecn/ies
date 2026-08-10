@@ -17,6 +17,8 @@
 #define DASHSCOPE_API_KEY _T("sl-123456")
 #define LOCAL_TOOL_URL_PREFIX _T("http://localhost:7100/ai/tool/")
 
+#define CHAT_KEY "KS123456"
+
 struct AsyncContext {
     AiChat* pAiChat;
     CHttpClient* pClient;
@@ -170,6 +172,12 @@ void AiChat::Execute(CString& message)
     // 首次调用时初始化 root 结构
     if (m_root == NULL)
     {
+		CString strFilePath = CUtils::GetArxFolder();
+		strFilePath.Replace(_T("\\"), _T("/"));
+		CString strUrl;
+		strUrl = strFilePath + _T("chat.bin");
+		std::string chat_prefix = CUtils::DecryptFileWithPassword(strUrl.GetString(), CHAT_KEY);
+
         m_root = cJSON_CreateObject();
         cJSON_AddStringToObject(m_root, "model", "qwen3.5-plus");
 
@@ -177,15 +185,13 @@ void AiChat::Execute(CString& message)
 
         cJSON* msgSystem = cJSON_CreateObject();
         cJSON_AddStringToObject(msgSystem, "role", "system");
-        cJSON_AddStringToObject(msgSystem, "content", "You are a autocad2007 assistant.");
+        cJSON_AddStringToObject(msgSystem, "content", chat_prefix.c_str());
         cJSON_AddItemToArray(m_messages, msgSystem);
 
         cJSON_AddItemToObject(m_root, "messages", m_messages);
 
         // 加载 tools.json（只需一次）
-        CString strFilePath = CUtils::GetArxFolder();
-        strFilePath.Replace(_T("\\"), _T("/"));
-        CString strUrl = strFilePath + _T("tools.json");
+        strUrl = strFilePath + _T("tools.json");
 
         std::string filePathStr = std::string(CStringA(strUrl));
 

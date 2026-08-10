@@ -13,7 +13,9 @@ public:
 
 	void delete_entities(AiToolCommandData* data);
 	void list_entities(AiToolCommandData* data);
-	
+
+	void entity_get(AiToolCommandData* data);
+	void entity_set_color(AiToolCommandData* data);
 	void entity_copy(AiToolCommandData* data);
 	void entity_move(AiToolCommandData* data);
 	void entity_rotate(AiToolCommandData* data);

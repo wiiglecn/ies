@@ -1,13 +1,7 @@
 #include "stdafx.h"
 #include "ToolEntity.h"
 #include "cJSON.h"
-#include "adscodes.h"
-#include "actrans.h"
-#include "dbents.h"
-#include "dbsymtb.h"
-#include "dbelipse.h"
-#include "dbspline.h"
-#include "geassign.h"
+#include "arxHeaders.h"
 #include "utils.h"
 
 
@@ -143,6 +137,207 @@ void ToolEntity::list_entities(AiToolCommandData* data)
     }
 
     data->ret = 0;
+    actionEnd();
+}
+
+void ToolEntity::entity_get(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+
+    AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+    if (objId.isNull()) { actionEnd(); return; }
+
+    AcDbEntity* pEnt = NULL;
+    if (acdbOpenAcDbEntity(pEnt, objId, AcDb::kForRead) != Acad::eOk) {
+        actionEnd();
+        return;
+    }
+
+    cJSON* pJson = cJSON_CreateObject();
+
+    // 1. Common properties
+    AcDbHandle handle = pEnt->objectId().handle();
+    TCHAR handleStr[20] = {0};
+    handle.getIntoAsciiBuffer(handleStr);
+    char utf8Handle[32] = {0};
+    CUtils::TCharToUtf8(handleStr, utf8Handle, sizeof(utf8Handle));
+    cJSON_AddStringToObject(pJson, "handle", utf8Handle);
+
+    const ACHAR* pName = pEnt->isA()->name();
+    char utf8Name[128] = {0};
+    CUtils::TCharToUtf8(pName, utf8Name, sizeof(utf8Name));
+    cJSON_AddStringToObject(pJson, "type", utf8Name);
+
+    cJSON_AddNumberToObject(pJson, "color", pEnt->colorIndex());
+
+    // Layer
+    AcDbObjectId layerId = pEnt->layerId();
+    TCHAR layerName[256] = {0};
+    AcDbLayerTableRecord* pLayerRec = NULL;
+    if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForRead) == Acad::eOk) {
+        const ACHAR* pLN = NULL;
+        if (pLayerRec->getName(pLN) == Acad::eOk && pLN) {
+            _tcsncpy(layerName, pLN, 255);
+        }
+        pLayerRec->close();
+    }
+    char utf8Layer[256] = {0};
+    CUtils::TCharToUtf8(layerName, utf8Layer, sizeof(utf8Layer));
+    cJSON_AddStringToObject(pJson, "layer", utf8Layer);
+
+    // 2. Type-specific properties
+    if (pEnt->isKindOf(AcDbLine::desc())) {
+        AcDbLine* pLine = AcDbLine::cast(pEnt);
+        AcGePoint3d sp = pLine->startPoint();
+        AcGePoint3d ep = pLine->endPoint();
+        cJSON* spArr = cJSON_CreateArray();
+        cJSON_AddItemToArray(spArr, cJSON_CreateNumber(sp.x));
+        cJSON_AddItemToArray(spArr, cJSON_CreateNumber(sp.y));
+        cJSON_AddItemToObject(pJson, "start_point", spArr);
+        cJSON* epArr = cJSON_CreateArray();
+        cJSON_AddItemToArray(epArr, cJSON_CreateNumber(ep.x));
+        cJSON_AddItemToArray(epArr, cJSON_CreateNumber(ep.y));
+        cJSON_AddItemToObject(pJson, "end_point", epArr);
+    }
+    else if (pEnt->isKindOf(AcDbPolyline::desc())) {
+        AcDbPolyline* pPline = AcDbPolyline::cast(pEnt);
+        cJSON* ptsArr = cJSON_CreateArray();
+        int numVerts = pPline->numVerts();
+        for (int i = 0; i < numVerts; i++) {
+            AcGePoint2d pt;
+            if (pPline->getPointAt(i, pt) == Acad::eOk) {
+                cJSON* ptObj = cJSON_CreateObject();
+                cJSON_AddNumberToObject(ptObj, "x", pt.x);
+                cJSON_AddNumberToObject(ptObj, "y", pt.y);
+                cJSON_AddItemToArray(ptsArr, ptObj);
+            }
+        }
+        cJSON_AddItemToObject(pJson, "points", ptsArr);
+        cJSON_AddBoolToObject(pJson, "closed", pPline->isClosed() ? 1 : 0);
+    }
+    else if (pEnt->isKindOf(AcDbCircle::desc())) {
+        AcDbCircle* pCircle = AcDbCircle::cast(pEnt);
+        AcGePoint3d cen = pCircle->center();
+        cJSON* cenArr = cJSON_CreateArray();
+        cJSON_AddItemToArray(cenArr, cJSON_CreateNumber(cen.x));
+        cJSON_AddItemToArray(cenArr, cJSON_CreateNumber(cen.y));
+        cJSON_AddItemToObject(pJson, "center", cenArr);
+        cJSON_AddNumberToObject(pJson, "radius", pCircle->radius());
+    }
+    else if (pEnt->isKindOf(AcDbArc::desc())) {
+        AcDbArc* pArc = AcDbArc::cast(pEnt);
+        AcGePoint3d cen = pArc->center();
+        cJSON* cenArr = cJSON_CreateArray();
+        cJSON_AddItemToArray(cenArr, cJSON_CreateNumber(cen.x));
+        cJSON_AddItemToArray(cenArr, cJSON_CreateNumber(cen.y));
+        cJSON_AddItemToObject(pJson, "center", cenArr);
+        cJSON_AddNumberToObject(pJson, "radius", pArc->radius());
+        cJSON_AddNumberToObject(pJson, "start_angle", pArc->startAngle());
+        cJSON_AddNumberToObject(pJson, "end_angle", pArc->endAngle());
+    }
+    else if (pEnt->isKindOf(AcDbEllipse::desc())) {
+        AcDbEllipse* pEllipse = AcDbEllipse::cast(pEnt);
+        AcGePoint3d cen = pEllipse->center();
+        AcGeVector3d major = pEllipse->majorAxis();
+        cJSON* cenArr = cJSON_CreateArray();
+        cJSON_AddItemToArray(cenArr, cJSON_CreateNumber(cen.x));
+        cJSON_AddItemToArray(cenArr, cJSON_CreateNumber(cen.y));
+        cJSON_AddItemToObject(pJson, "center", cenArr);
+        cJSON* majArr = cJSON_CreateArray();
+        cJSON_AddItemToArray(majArr, cJSON_CreateNumber(major.x));
+        cJSON_AddItemToArray(majArr, cJSON_CreateNumber(major.y));
+        cJSON_AddItemToObject(pJson, "major_axis", majArr);
+        cJSON_AddNumberToObject(pJson, "ratio", pEllipse->radiusRatio());
+    }
+    else if (pEnt->isKindOf(AcDbSpline::desc())) {
+        AcDbSpline* pSpline = AcDbSpline::cast(pEnt);
+        cJSON* ptsArr = cJSON_CreateArray();
+        int numCP = pSpline->numControlPoints();
+        for (int i = 0; i < numCP; i++) {
+            AcGePoint3d cp;
+            if (pSpline->getControlPointAt(i, cp) == Acad::eOk) {
+                cJSON* ptObj = cJSON_CreateObject();
+                cJSON_AddNumberToObject(ptObj, "x", cp.x);
+                cJSON_AddNumberToObject(ptObj, "y", cp.y);
+                cJSON_AddItemToArray(ptsArr, ptObj);
+            }
+        }
+        cJSON_AddItemToObject(pJson, "control_points", ptsArr);
+        cJSON_AddNumberToObject(pJson, "degree", pSpline->degree());
+    }
+    else if (pEnt->isKindOf(AcDbText::desc())) {
+        AcDbText* pText = AcDbText::cast(pEnt);
+        AcGePoint3d pos = pText->position();
+        cJSON* posArr = cJSON_CreateArray();
+        cJSON_AddItemToArray(posArr, cJSON_CreateNumber(pos.x));
+        cJSON_AddItemToArray(posArr, cJSON_CreateNumber(pos.y));
+        cJSON_AddItemToObject(pJson, "position", posArr);
+        const ACHAR* pTxt = pText->textString();
+        char utf8Txt[512] = {0};
+        CUtils::TCharToUtf8(pTxt, utf8Txt, sizeof(utf8Txt));
+        cJSON_AddStringToObject(pJson, "text", utf8Txt);
+        cJSON_AddNumberToObject(pJson, "height", pText->height());
+        cJSON_AddNumberToObject(pJson, "rotation", pText->rotation());
+    }
+    else if (pEnt->isKindOf(AcDbMText::desc())) {
+        AcDbMText* pMText = AcDbMText::cast(pEnt);
+        AcGePoint3d pos = pMText->location();
+        cJSON* posArr = cJSON_CreateArray();
+        cJSON_AddItemToArray(posArr, cJSON_CreateNumber(pos.x));
+        cJSON_AddItemToArray(posArr, cJSON_CreateNumber(pos.y));
+        cJSON_AddItemToObject(pJson, "position", posArr);
+        const ACHAR* pTxt = pMText->contents();
+        char utf8Txt[2048] = {0};
+        CUtils::TCharToUtf8(pTxt, utf8Txt, sizeof(utf8Txt));
+        cJSON_AddStringToObject(pJson, "text", utf8Txt);
+        cJSON_AddNumberToObject(pJson, "height", pMText->textHeight());
+        cJSON_AddNumberToObject(pJson, "width", pMText->width());
+    }
+    else if (pEnt->isKindOf(AcDbBlockReference::desc())) {
+        AcDbBlockReference* pBlkRef = AcDbBlockReference::cast(pEnt);
+        AcDbObjectId blkDefId = pBlkRef->blockTableRecord();
+        AcDbBlockTableRecord* pBTR = NULL;
+        if (acdbOpenAcDbObject((AcDbObject*&)pBTR, blkDefId, AcDb::kForRead) == Acad::eOk) {
+            const ACHAR* pBlkName = NULL;
+            if (pBTR->getName(pBlkName) == Acad::eOk && pBlkName) {
+                char utf8Blk[256] = {0};
+                CUtils::TCharToUtf8(pBlkName, utf8Blk, sizeof(utf8Blk));
+                cJSON_AddStringToObject(pJson, "block_name", utf8Blk);
+            }
+            pBTR->close();
+        }
+        AcGePoint3d pos = pBlkRef->position();
+        cJSON* posArr = cJSON_CreateArray();
+        cJSON_AddItemToArray(posArr, cJSON_CreateNumber(pos.x));
+        cJSON_AddItemToArray(posArr, cJSON_CreateNumber(pos.y));
+        cJSON_AddItemToObject(pJson, "position", posArr);
+        cJSON_AddNumberToObject(pJson, "scale_x", pBlkRef->scaleFactors().sx);
+        cJSON_AddNumberToObject(pJson, "scale_y", pBlkRef->scaleFactors().sy);
+        cJSON_AddNumberToObject(pJson, "rotation", pBlkRef->rotation());
+    }
+
+    pEnt->close();
+
+    data->resultJson = pJson;
+    data->ret = 0;
+    actionEnd();
+}
+
+void ToolEntity::entity_set_color(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+
+    AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+    if (objId.isNull()) { actionEnd(); return; }
+
+    cJSON* colorItem = cJSON_GetObjectItem(data->jsonRoot, "color");
+    if (!colorItem) { actionEnd(); return; }
+    Adesk::UInt16 colorIndex = (Adesk::UInt16)colorItem->valueint;
+
+    AcDbEntity* pEnt = NULL;
+    if (acdbOpenAcDbEntity(pEnt, objId, AcDb::kForWrite) == Acad::eOk) {
+        pEnt->setColorIndex(colorIndex);
+        pEnt->close();
+        data->ret = 0;
+    }
     actionEnd();
 }
 

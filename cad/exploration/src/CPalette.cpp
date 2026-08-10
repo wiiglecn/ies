@@ -173,7 +173,13 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
     SetName(_T("Data HTML"));
 
+	/*CString strFilePath = CUtils::GetArxFolder();
+	strFilePath.Replace(_T("\\"), _T("/"));
+	CString strUrl;
+    strUrl.Format(_T("%sChat.bin"), strFilePath);
 
+
+	std::string chat = CUtils::DecryptFileWithPassword(strUrl.GetString(),"KS123456");*/
 	//lisp init
 	//ToolDraw::getInstance().Init();
     return 0;
@@ -188,6 +194,7 @@ void CDataPalette::OnDestroy()
 	hServer = NULL;
 
 	acutPrintf(_T("CDataPalette::OnDestroy.\n"));
+
 
 	//CPaletteCleanup::SafeCleanupHtmlView(m_pHtmlView);
 
@@ -393,6 +400,16 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 		}
 		CString message_chat(szParam);
 		hChat->Execute(message_chat);
+    }
+
+	else if (_tcscmp(szCommand, _T("ChatNew")) == 0)
+    {
+		if(hChat==NULL){
+			return 0;
+		}else{
+			delete hChat;
+			hChat = NULL;
+		}
     }
 
     

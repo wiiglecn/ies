@@ -84,7 +84,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rxapi.lib acdb17.lib acge17.lib acgiapi.lib achapi17.lib acISMobj17.lib acad.lib acedapi.lib adui17.lib acui17.lib axdb.lib Oleacc.lib mongoose.lib"
+				AdditionalDependencies="rxapi.lib acdb17.lib acge17.lib acgiapi.lib achapi17.lib acISMobj17.lib acad.lib acedapi.lib adui17.lib acui17.lib axdb.lib Oleacc.lib mongoose.lib crypt32.lib"
 				OutputFile="$(outdir)/KsExploration.arx"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib"
@@ -119,7 +119,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.html&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.css&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.js&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
+				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.html&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.css&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.js&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\chat.bin&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -541,6 +541,14 @@
 			</File>
 			<File
 				RelativePath=".\tools\ToolLayer.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolView.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolView.h"
 				>
 			</File>
 		</Filter>

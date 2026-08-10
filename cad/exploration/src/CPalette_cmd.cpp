@@ -19,6 +19,7 @@
 #include "../tools/ToolGlobal.h"
 #include "../tools/ToolBlock.h"
 #include "../tools/ToolAnnotation.h"
+#include "../tools/ToolView.h"
 
 // Remove #include thread> and add a helper thread procedure
 struct ThreadProcData {
@@ -121,6 +122,12 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
         case WM_USER_A_ENTITYARRAY:
             ToolEntity::getInstance().entity_array(params);
             break;
+        case WM_USER_A_ENTITYGET:
+            ToolEntity::getInstance().entity_get(params);
+            break;
+        case WM_USER_A_ENTITYSETCOLOR:
+            ToolEntity::getInstance().entity_set_color(params);
+            break;
 
 		//layer
 		case WM_USER_A_CREATELAYER:
@@ -186,6 +193,17 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
 
         case WM_USER_A_REGEN:
             ToolDraw::getInstance().regen();
+            break;
+
+		//view
+		case WM_USER_A_ZOOM_EXTENTS:
+            ToolView::getInstance().zoom_extents(params);
+            break;
+		case WM_USER_A_ZOOM_WINDOW:
+            ToolView::getInstance().zoom_window(params);
+            break;
+		case WM_USER_A_GET_SCREENSHOT:
+            ToolView::getInstance().get_screenshot(params);
             break;
 
 		case WM_USER_TOOL_TEST:

@@ -1,6 +1,10 @@
 #include "StdAfx.h"
 #include "Utils.h"
 #include "arxHeaders.h"
+#include <wincrypt.h>
+#include <string>
+#include <fstream>
+#include <vector>
 
 CUtils::CUtils(void)
 {
@@ -164,4 +168,108 @@ void CUtils::TCharToUtf8(const TCHAR* tStr, char* utf8Str, int utf8Size)
 #else
     strcpy_s(utf8Str, utf8Size, tStr);
 #endif
+}
+
+
+// 使用密码解密文件，返回解密后的字符串内容
+std::string CUtils::DecryptFileWithPassword(const std::wstring& filePath, const std::string& password)
+{
+    // 1. 读取加密文件内容
+    std::ifstream file(filePath.c_str(), std::ios::binary);
+    if (!file.is_open())
+    {
+        return "";
+    }
+
+    std::vector<BYTE> encryptedData((std::istreambuf_iterator<char>(file)),
+                                    std::istreambuf_iterator<char>());
+
+    // Python 加密格式: 前 16 字节是 IV，后续是真正的密文
+    if (encryptedData.size() <= 16)
+    {
+        return "";
+    }
+
+    // 2. 提取前 16 字节作为 IV
+    BYTE iv[16] = {0};
+    memcpy(iv, &encryptedData[0], 16);
+
+    // 3. 获取真正的密文部分
+    std::vector<BYTE> cipherText(encryptedData.begin() + 16, encryptedData.end());
+    if (cipherText.empty())
+    {
+        return "";
+    }
+
+    HCRYPTPROV hProv = NULL;
+    HCRYPTHASH hHash = NULL;
+    HCRYPTKEY hKey = NULL;
+    std::string decryptedContent = "";
+
+    // 4. 获取 CSP 句柄
+    if (!CryptAcquireContextW(&hProv, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
+    {
+        return "";
+    }
+
+    // 5. 对密码进行 SHA-256 哈希计算，以匹配 Python 的 hashlib.sha256
+    if (CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash))
+    {
+        if (CryptHashData(hHash, reinterpret_cast<const BYTE*>(password.c_str()), static_cast<DWORD>(password.length()), 0))
+        {
+            DWORD hashLen = 32;
+            BYTE keyBytes[32] = {0};
+            
+            // 获取哈希结果作为 32 字节的密钥
+            if (CryptGetHashParam(hHash, HP_HASHVAL, keyBytes, &hashLen, 0))
+            {
+                // 6. 构造 PLAINTEXTKEYBLOB，与 Python 的 _import_aes_key 对应
+                struct {
+                    BLOBHEADER header;
+                    DWORD dwKeySize;
+                } keyBlobHeader;
+
+                keyBlobHeader.header.bType = PLAINTEXTKEYBLOB;
+                keyBlobHeader.header.bVersion = CUR_BLOB_VERSION;
+                keyBlobHeader.header.reserved = 0;
+                keyBlobHeader.header.aiKeyAlg = CALG_AES_256;
+                keyBlobHeader.dwKeySize = 32;
+
+                std::vector<BYTE> blob(sizeof(keyBlobHeader) + 32);
+                memcpy(&blob[0], &keyBlobHeader, sizeof(keyBlobHeader));
+                memcpy(&blob[sizeof(keyBlobHeader)], keyBytes, 32);
+
+                // 7. 使用 CryptImportKey 导入密钥
+                if (CryptImportKey(hProv, &blob[0], static_cast<DWORD>(blob.size()), 0, 0, &hKey))
+                {
+                    // 设置为 CBC 模式
+                    DWORD dwMode = CRYPT_MODE_CBC;
+                    CryptSetKeyParam(hKey, KP_MODE, reinterpret_cast<BYTE*>(&dwMode), 0);
+                    
+                    // 设置从文件头部提取的 IV
+                    CryptSetKeyParam(hKey, KP_IV, iv, 0);
+
+                    // 8. 准备解密缓冲区
+                    DWORD dwBufferLen = static_cast<DWORD>(cipherText.size());
+                    std::vector<BYTE> buffer(dwBufferLen);
+                    memcpy(&buffer[0], &cipherText[0], dwBufferLen);
+
+                    // 9. 执行解密
+                    if (CryptDecrypt(hKey, 0, TRUE, 0, &buffer[0], &dwBufferLen))
+                    {
+                        buffer.resize(dwBufferLen);
+                        decryptedContent.assign(reinterpret_cast<char*>(&buffer[0]), buffer.size());
+                    }
+
+                    CryptDestroyKey(hKey);
+                }
+            }
+        }
+        CryptDestroyHash(hHash);
+    }
+
+    // 10. 释放资源
+    CryptReleaseContext(hProv, 0);
+
+    return decryptedContent;
 }

@@ -42,6 +42,7 @@ void ToolDraw::create_line(AiToolCommandData* data)
     cJSON* y1Item = cJSON_GetObjectItem(params, "y1");
     cJSON* x2Item = cJSON_GetObjectItem(params, "x2");
     cJSON* y2Item = cJSON_GetObjectItem(params, "y2");
+    cJSON* widthItem = cJSON_GetObjectItem(params, "width");
 
     // 2. Validate and extract values
     if (!x1Item || !y1Item || !x2Item || !y2Item ||
@@ -55,6 +56,10 @@ void ToolDraw::create_line(AiToolCommandData* data)
     double y1 = y1Item->valuedouble;
     double x2 = x2Item->valuedouble;
     double y2 = y2Item->valuedouble;
+
+    double lineWidth = 0.0;
+    if (widthItem && cJSON_IsNumber(widthItem))
+        lineWidth = widthItem->valuedouble;
 
     // 3. Format coordinates into strings
     // Using a buffer size large enough to hold the coordinate string
@@ -72,6 +77,13 @@ void ToolDraw::create_line(AiToolCommandData* data)
 	AcGePoint3d pt_end(x2,y2,0);
 
 	AcDbLine* pLine = new AcDbLine(pt_start, pt_end);
+    if (lineWidth > 0.0)
+    {
+        int lw = (int)lineWidth;
+        if (lw < 0) lw = 0;
+        if (lw > 211) lw = 211;
+        pLine->setLineWeight(static_cast<AcDb::LineWeight>(lw));
+    }
 
 	AcDbObjectId lineId;
     if (pModelSpace->appendAcDbEntity(lineId, pLine) == Acad::eOk)
@@ -163,6 +175,7 @@ void ToolDraw::create_rectangle(AiToolCommandData* data)
     cJSON* y1Item = cJSON_GetObjectItem(params, "y1");
     cJSON* widthItem = cJSON_GetObjectItem(params, "width");
     cJSON* heightItem = cJSON_GetObjectItem(params, "height");
+    cJSON* lineWidthItem = cJSON_GetObjectItem(params, "line_width");
 
     if (!x1Item || !y1Item || !widthItem || !heightItem ||
         !cJSON_IsNumber(x1Item) || !cJSON_IsNumber(y1Item) ||
@@ -176,6 +189,10 @@ void ToolDraw::create_rectangle(AiToolCommandData* data)
     double y1 = y1Item->valuedouble;
     double width = widthItem->valuedouble;
     double height = heightItem->valuedouble;
+
+    double lineWidth = 0.0;
+    if (lineWidthItem && cJSON_IsNumber(lineWidthItem))
+        lineWidth = lineWidthItem->valuedouble;
 
     if (this->actionBefore()) return;
 
@@ -196,6 +213,9 @@ void ToolDraw::create_rectangle(AiToolCommandData* data)
 	}
 
 	pPoly->setClosed(Adesk::kTrue);
+
+    if (lineWidth > 0.0)
+        pPoly->setConstantWidth(lineWidth);
 
 	
 	AcDbObjectId rectId;
@@ -278,6 +298,7 @@ void ToolDraw::create_polyline(AiToolCommandData* data)
 {
     cJSON* params = data->jsonRoot;
     cJSON* pointsItem = cJSON_GetObjectItem(params, "points");
+    cJSON* widthItem = cJSON_GetObjectItem(params, "width");
 
     if (!pointsItem || !cJSON_IsArray(pointsItem)) {
         acutPrintf(_T("[ERROR] create_polyline: invalid or missing 'points' array.\n"));
@@ -313,6 +334,13 @@ void ToolDraw::create_polyline(AiToolCommandData* data)
     if (closedItem && cJSON_IsTrue(closedItem)) {
         pPoly->setClosed(Adesk::kTrue);
     }
+
+    double lineWidth = 0.0;
+    if (widthItem && cJSON_IsNumber(widthItem))
+        lineWidth = widthItem->valuedouble;
+
+    if (lineWidth > 0.0)
+        pPoly->setConstantWidth(lineWidth);
 
     AcDbObjectId polyId;
     if (valid && pModelSpace->appendAcDbEntity(polyId, pPoly) == Acad::eOk) {
@@ -626,8 +654,6 @@ void ToolDraw::Init()
  //   if (rbResult) acutRelRb(rbResult);
 
 	//acutPrintf(_T("\nLSP Load Status: %s\n"), (rc == RTNORM) ? _T("Success") : _T("Failed"));
-
-
 	
 }
 
