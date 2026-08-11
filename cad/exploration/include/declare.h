@@ -72,7 +72,7 @@
 
 //global
 #define WM_USER_TOOL_CMD (WM_USER + 1400)
-
+#define WM_USER_A_GETDRAWINGUNITS (WM_USER + 1401)
 
 #define WM_USER_A_REGEN (WM_USER + 3000)
 #define WM_USER_TOOL_TEST (WM_USER + 3001)

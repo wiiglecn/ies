@@ -130,3 +130,81 @@ void ToolGlobal::CMD()
 	// 6. Signal event to unblock dispatch_command
 	SetEvent(data->hEvent);
 }
+void ToolGlobal::get_drawing_units(AiToolCommandData* data) {
+    if (actionBefore() != 0) {
+        return;
+    }
+
+    cJSON* pJson = cJSON_CreateObject();
+
+    // 1. Get INSUNITS system variable (insertion/drawing units)
+    struct resbuf rbInsUnits;
+    if (acedGetVar(_T("INSUNITS"), &rbInsUnits) == RTNORM) {
+        int insUnits = rbInsUnits.resval.rint;
+        cJSON_AddNumberToObject(pJson, "insunits", insUnits);
+
+        const char* unitName = "Unknown";
+        switch (insUnits) {
+            case 0:  unitName = "Unspecified"; break;
+            case 1:  unitName = "Inches"; break;
+            case 2:  unitName = "Feet"; break;
+            case 3:  unitName = "Miles"; break;
+            case 4:  unitName = "Millimeters"; break;
+            case 5:  unitName = "Centimeters"; break;
+            case 6:  unitName = "Meters"; break;
+            case 7:  unitName = "Kilometers"; break;
+            case 8:  unitName = "Microinches"; break;
+            case 9:  unitName = "Mils"; break;
+            case 10: unitName = "Yards"; break;
+            case 11: unitName = "Angstroms"; break;
+            case 12: unitName = "Nanometers"; break;
+            case 13: unitName = "Microns"; break;
+            case 14: unitName = "Decimeters"; break;
+            case 15: unitName = "Decameters"; break;
+            case 16: unitName = "Hectometers"; break;
+            case 17: unitName = "Gigameters"; break;
+            case 18: unitName = "Astronomical units"; break;
+            case 19: unitName = "Light years"; break;
+            case 20: unitName = "Parsecs"; break;
+            default: break;
+        }
+        cJSON_AddStringToObject(pJson, "unit_name", unitName);
+    }
+
+    // 2. Get MEASUREMENT system variable (0=Imperial, 1=Metric)
+    struct resbuf rbMeasurement;
+    if (acedGetVar(_T("MEASUREMENT"), &rbMeasurement) == RTNORM) {
+        int measurement = rbMeasurement.resval.rint;
+        cJSON_AddNumberToObject(pJson, "measurement", measurement);
+        cJSON_AddStringToObject(pJson, "measurement_system", (measurement == 0) ? "Imperial" : "Metric");
+    }
+
+    // 3. Get LUNITS system variable (linear units display format)
+    struct resbuf rbLunits;
+    if (acedGetVar(_T("LUNITS"), &rbLunits) == RTNORM) {
+        int lunits = rbLunits.resval.rint;
+        cJSON_AddNumberToObject(pJson, "lunits", lunits);
+
+        const char* lunitsName = "Unknown";
+        switch (lunits) {
+            case 1: lunitsName = "Scientific"; break;
+            case 2: lunitsName = "Decimal"; break;
+            case 3: lunitsName = "Engineering"; break;
+            case 4: lunitsName = "Architectural"; break;
+            case 5: lunitsName = "Fractional"; break;
+            default: break;
+        }
+        cJSON_AddStringToObject(pJson, "lunits_name", lunitsName);
+    }
+
+    // 4. Get LUPREC system variable (linear units precision)
+    struct resbuf rbLuprec;
+    if (acedGetVar(_T("LUPREC"), &rbLuprec) == RTNORM) {
+        int luprec = rbLuprec.resval.rint;
+        cJSON_AddNumberToObject(pJson, "luprec", luprec);
+    }
+
+    data->resultJson = pJson;
+    data->ret = 0;
+    actionEnd();
+}

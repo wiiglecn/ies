@@ -357,19 +357,68 @@ void ToolEntity::entity_get(AiToolCommandData* data) {
 void ToolEntity::entity_set_color(AiToolCommandData* data) {
     if (actionBefore() != 0) return;
 
-    AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
-    if (objId.isNull()) { actionEnd(); return; }
-
+    // 获取颜色参数（必填）
     cJSON* colorItem = cJSON_GetObjectItem(data->jsonRoot, "color");
     if (!colorItem) { actionEnd(); return; }
     Adesk::UInt16 colorIndex = (Adesk::UInt16)colorItem->valueint;
 
-    AcDbEntity* pEnt = NULL;
-    if (acdbOpenAcDbEntity(pEnt, objId, AcDb::kForWrite) == Acad::eOk) {
-        pEnt->setColorIndex(colorIndex);
-        pEnt->close();
-        data->ret = 0;
+    cJSON* pResultArray = cJSON_CreateArray();
+
+    // 收集需要处理的 handle 列表
+    std::vector<std::pair<AcDbObjectId, std::string>> targets;
+
+    // 1. 优先检查 "handles" 数组
+    cJSON* handlesArray = cJSON_GetObjectItem(data->jsonRoot, "handles");
+    if (handlesArray && cJSON_IsArray(handlesArray)) {
+        cJSON* handleItem = NULL;
+        cJSON_ArrayForEach(handleItem, handlesArray) {
+            if (!cJSON_IsString(handleItem) || !handleItem->valuestring) {
+                continue;
+            }
+            TCHAR handleStr[32] = { 0 };
+            if (!CUtils::utf8ToTChar(handleItem->valuestring, handleStr, ARRAYSIZE(handleStr))) {
+                continue;
+            }
+            AcDbHandle dbHandle(handleStr);
+            AcDbObjectId objId;
+            if (pDb->getAcDbObjectId(objId, Adesk::kFalse, dbHandle) != Acad::eOk) {
+                continue;
+            }
+            if (objId.isNull()) {
+                continue;
+            }
+            targets.push_back(std::make_pair(objId, handleItem->valuestring));
+        }
     }
+    // 2. 兼容单个 "handle" 参数
+    else {
+        AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+        if (!objId.isNull()) {
+            cJSON* singleHandle = cJSON_GetObjectItem(data->jsonRoot, "handle");
+            if (singleHandle && cJSON_IsString(singleHandle)) {
+                targets.push_back(std::make_pair(objId, singleHandle->valuestring));
+            }
+        }
+    }
+
+    // 遍历所有目标实体并设置颜色
+    for (std::vector<std::pair<AcDbObjectId, std::string> >::const_iterator it = targets.begin(); it != targets.end(); ++it) {
+        cJSON* pResultItem = cJSON_CreateObject();
+        cJSON_AddStringToObject(pResultItem, "handle", it->second.c_str());
+
+        AcDbEntity* pEnt = NULL;
+        if (acdbOpenAcDbEntity(pEnt, it->first, AcDb::kForWrite) == Acad::eOk) {
+            pEnt->setColorIndex(colorIndex);
+            pEnt->close();
+            cJSON_AddBoolToObject(pResultItem, "success", 1);
+        } else {
+            cJSON_AddBoolToObject(pResultItem, "success", 0);
+        }
+        cJSON_AddItemToArray(pResultArray, pResultItem);
+    }
+
+    data->resultJson = pResultArray;
+    data->ret = 0;
     actionEnd();
 }
 

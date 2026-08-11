@@ -25,6 +25,8 @@
                 <button class="icon-btn" onclick="onSelectBlock()" title="选择多段线或者块，如果是块则块内的多段线则作为参照物进行计算">&#9678;</button>
                 <button class="icon-btn" onclick="onSelectLine()" title="通过拉取多段线进行智能部孔">&#9998;</button>
                 <button class="icon-btn" onclick="onSelectCircle()" title="仅选取圆环">&#8857;</button>
+                <button class="icon-btn" onclick="onScale()" title="比例缩放">&#10530;</button>
+                <button class="icon-btn" onclick="onScaleEntireModel()" title="整个模型一键缩放">&#9974;</button>
             </div>
         </div>
     </div>
@@ -51,9 +53,11 @@
                         </td>
                     </tr>
                     <tr>
-                        <td style="width: 65px; text-align: right; vertical-align: bottom;">
+                        <td style="width: 130px; text-align: right; vertical-align: bottom;">
                             <button class="custom-btn chat-send-btn t5" onclick="sendChatMessage()">发送</button>
+                            <button class="custom-btn chat-send-btn t5" onclick="newChat()">新会话</button>
                         </td>
+
                     </tr>
                 </table>
             </div>

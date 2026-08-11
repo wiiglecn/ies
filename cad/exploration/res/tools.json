@@ -856,20 +856,28 @@
         "type": "function",
         "function": {
             "name": "entity_set_color",
-            "description": "Sets the color of an entity by its handle using AutoCAD Color Index (ACI). Common ACI values: 0=ByBlock, 1=Red, 2=Yellow, 3=Green, 4=Cyan, 5=Blue, 6=Magenta, 7=White/Black, 256=ByLayer.",
+            "description": "Sets the color of one or more entities by their handles using AutoCAD Color Index (ACI). Common ACI values: 0=ByBlock, 1=Red, 2=Yellow, 3=Green, 4=Cyan, 5=Blue, 6=Magenta, 7=White/Black, 256=ByLayer.",
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "handles": {
+                        "type": "array",
+                        "description": "Array of entity handles (hexadecimal strings) to batch update. Recommended for bulk operations.",
+                        "items": {
+                            "type": "string",
+                            "description": "Entity handle (e.g., '1F2')"
+                        }
+                    },
                     "handle": {
                         "type": "string",
-                        "description": "Entity handle (hexadecimal string)"
+                        "description": "Single entity handle (hexadecimal string). Use this or 'handles' for batch processing."
                     },
                     "color": {
                         "type": "integer",
                         "description": "AutoCAD Color Index (ACI) value (0-256)"
                     }
                 },
-                "required": ["handle", "color"]
+                "required": ["color"]
             }
         }
     },
@@ -1202,6 +1210,17 @@
                     }
                 },
                 "required": ["handles"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_drawing_units",
+            "description": "Gets the current document's measurement units information. Returns a JSON object containing: 'insunits' (AutoCAD insertion units code, e.g., 4=Millimeters, 1=Inches, 6=Meters), 'unit_name' (readable unit name), 'measurement' (0=Imperial, 1=Metric), 'measurement_system' (string), 'lunits' (linear units display format: 1=Scientific, 2=Decimal, 3=Engineering, 4=Architectural, 5=Fractional), 'lunits_name' (string), and 'luprec' (decimal precision for linear units).",
+            "parameters": {
+                "type": "object",
+                "properties": {}
             }
         }
     }

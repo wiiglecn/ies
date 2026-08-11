@@ -359,8 +359,16 @@ function onSelectCircle(){
         window.external.OnJsCommand("PreSelectCircle", "");
     }
 }
-
-
+function onScale(){
+    if (window.external){
+        window.external.OnJsCommand("PreSelectScale", "");
+    }
+}
+function onScaleEntireModel(){
+    if (window.external){
+        window.external.OnJsCommand("PreSelectScaleWhole", "");
+    }
+}
 function startCursorBlink(cursorEl) {
     stopCursorBlink();
     var isVisible = true;
@@ -463,7 +471,32 @@ function sendChatMessage() {
     //     console.log("Current Chat History:", JSON.stringify(chatMessages));
     // }, 500);
 }
+function newChat(){
+    // 1. 停止可能正在进行的打字机和光标闪烁效果
+    if (typingInterval) {
+        clearInterval(typingInterval);
+        typingInterval = null;
+    }
+    stopCursorBlink();
 
+    // 2. 清空聊天记录数组
+    chatMessages.length = 0; 
+    
+    // 3. 清空聊天界面并恢复初始欢迎语
+    var chatContainer = document.getElementById('ai-chat-container');
+    if (chatContainer) {
+        chatContainer.innerHTML = 'div class="chat-message ai">昇龙助手: 您好! 今天我能帮助您做点什么吗?</div>hr style="border: 0; border-top: 1px dashed #cccccc; margin: 10px 0; color: #cccccc;">';
+    }
+
+    // 4. 重置状态标志
+    lastMessage.lastMessageDiv = null;
+    waitingForReply = false;
+
+    // 5. 通知 C++ 后端开启新会话 (修复了原代码中 message 变量未定义的问题)
+    if (window.external){
+        window.external.OnJsCommand("ChatNew", "");
+    }
+}
 function checkEnter(event) {
     if (event.keyCode === 13 && event.ctrlKey) {
         sendChatMessage();

@@ -74,6 +74,7 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/get_screenshot", "get_screenshot", WM_USER_A_GET_SCREENSHOT },
 
 	{ "/ai/tool/dispatch_command", "dispatch_command", WM_USER_TOOL_CMD },
+    { "/ai/tool/get_drawing_units", "get_drawing_units", WM_USER_A_GETDRAWINGUNITS },
 
 	{ "/ai/tool/test", "test", WM_USER_TOOL_TEST } 
 };

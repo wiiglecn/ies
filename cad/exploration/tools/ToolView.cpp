@@ -31,6 +31,7 @@ static char* bitmapToBase64(const BITMAP& bm, const BYTE* bits, int* outLen) {
     encoded[j] = '\0';
     if (outLen) *outLen = j;
     return encoded;
+
 }
 
 ToolView::ToolView(void):ToolDrawBase()

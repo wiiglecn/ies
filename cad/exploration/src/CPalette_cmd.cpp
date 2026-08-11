@@ -196,6 +196,9 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
 		case WM_USER_TOOL_CMD:
             ToolGlobal::getInstance().dispatch_command(params);
             return 0;
+        case WM_USER_A_GETDRAWINGUNITS:
+            ToolGlobal::getInstance().get_drawing_units(params);
+            break;
 
         case WM_USER_A_REGEN:
             ToolDraw::getInstance().regen();
