@@ -72,12 +72,36 @@ void ToolEntity::list_entities(AiToolCommandData* data)
 {
 	if (actionBefore() != 0){
         return;
-	}
+    }
 
+    AcDbBlockTableRecord* pTargetBTR = pModelSpace;
+    bool bCloseBTR = false;
 
+    // 检查是否传递了 AcDbBlockReference 的 handle
+    cJSON* handleItem = cJSON_GetObjectItem(data->jsonRoot, "handle");
+    if (handleItem && cJSON_IsString(handleItem)) {
+        AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+        if (!objId.isNull()) {
+            AcDbEntity* pEnt = NULL;
+            if (acdbOpenAcDbEntity(pEnt, objId, AcDb::kForRead) == Acad::eOk) {
+                if (pEnt->isKindOf(AcDbBlockReference::desc())) {
+                    AcDbBlockReference* pBlkRef = AcDbBlockReference::cast(pEnt);
+                    AcDbObjectId btrId = pBlkRef->blockTableRecord();
+                    pEnt->close();
+                    
+                    // 打开块定义以便遍历其内部的实体
+                    if (acdbOpenAcDbObject((AcDbObject*&)pTargetBTR, btrId, AcDb::kForRead) == Acad::eOk) {
+                        bCloseBTR = true;
+                    }
+                } else {
+                    pEnt->close();
+                }
+            }
+        }
+    }
 
     AcDbBlockTableRecordIterator *pIter;
-    if (pModelSpace->newIterator(pIter) == Acad::eOk)
+    if (pTargetBTR && pTargetBTR->newIterator(pIter) == Acad::eOk)
     {
         cJSON* pJsonArray = cJSON_CreateArray();
         
@@ -136,6 +160,11 @@ void ToolEntity::list_entities(AiToolCommandData* data)
         data->resultJson = pJsonArray;
     }
 
+    // 如果是我们自己打开的 BlockTableRecord，需要关闭它
+    if (bCloseBTR) {
+        pTargetBTR->close();
+    }
+
     data->ret = 0;
     actionEnd();
 }
@@ -168,6 +197,7 @@ void ToolEntity::entity_get(AiToolCommandData* data) {
     cJSON_AddStringToObject(pJson, "type", utf8Name);
 
     cJSON_AddNumberToObject(pJson, "color", pEnt->colorIndex());
+	cJSON_AddNumberToObject(pJson, "line_weight", pEnt->lineWeight());
 
     // Layer
     AcDbObjectId layerId = pEnt->layerId();
@@ -197,6 +227,7 @@ void ToolEntity::entity_get(AiToolCommandData* data) {
         cJSON_AddItemToArray(epArr, cJSON_CreateNumber(ep.x));
         cJSON_AddItemToArray(epArr, cJSON_CreateNumber(ep.y));
         cJSON_AddItemToObject(pJson, "end_point", epArr);
+		
     }
     else if (pEnt->isKindOf(AcDbPolyline::desc())) {
         AcDbPolyline* pPline = AcDbPolyline::cast(pEnt);
@@ -213,6 +244,7 @@ void ToolEntity::entity_get(AiToolCommandData* data) {
         }
         cJSON_AddItemToObject(pJson, "points", ptsArr);
         cJSON_AddBoolToObject(pJson, "closed", pPline->isClosed() ? 1 : 0);
+
     }
     else if (pEnt->isKindOf(AcDbCircle::desc())) {
         AcDbCircle* pCircle = AcDbCircle::cast(pEnt);
@@ -551,5 +583,134 @@ void ToolEntity::entity_array(AiToolCommandData* data) {
         pEnt->close();
         data->ret = 0;
     }
+    actionEnd();
+}
+void ToolEntity::get_selected_entity(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+
+    ads_name ssname;
+    cJSON* pJsonArray = cJSON_CreateArray();
+    
+    // 使用 acedSSGet 获取当前被选中的实体（隐式选择集 _I）
+    // 这样可以完美避开 acedSSGetFirst 的 resbuf** 参数声明冲突
+    if (acedSSGet(_T("_I"), NULL, NULL, NULL, ssname) == RTNORM) {
+        long len = 0;
+        if (acedSSLength(ssname, &len) == RTNORM) {
+            for (long i = 0; i < len; i++) {
+                ads_name ent;
+                if (acedSSName(ssname, i, ent) == RTNORM) {
+                    AcDbObjectId objId;
+                    if (acdbGetObjectId(objId, ent) == Acad::eOk) {
+                        AcDbEntity* pEnt = NULL;
+                        if (acdbOpenAcDbEntity(pEnt, objId, AcDb::kForRead) == Acad::eOk) {
+                            AcDbHandle handle = pEnt->objectId().handle();
+                            TCHAR handleStr[20] = {0};
+                            handle.getIntoAsciiBuffer(handleStr);
+
+                            char utf8Handle[32] = { 0 };
+                            CUtils::TCharToUtf8(handleStr, utf8Handle, sizeof(utf8Handle));
+
+                            const ACHAR* pName = pEnt->isA()->name();
+                            char utf8Name[128] = { 0 };
+                            CUtils::TCharToUtf8(pName, utf8Name, sizeof(utf8Name));
+
+                            Adesk::UInt16 colorIndex = pEnt->colorIndex();
+
+                            AcDbObjectId layerId = pEnt->layerId();
+                            TCHAR layerName[256] = { 0 };
+                            AcDbLayerTableRecord* pLayerRec = NULL;
+                            if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForRead) == Acad::eOk) {
+                                const ACHAR* pLayerName = NULL;
+                                if (pLayerRec->getName(pLayerName) == Acad::eOk && pLayerName != NULL) {
+                                    _tcsncpy(layerName, pLayerName, 255);
+                                }
+                                pLayerRec->close();
+                            }
+
+                            char utf8Layer[256] = { 0 };
+                            CUtils::TCharToUtf8(layerName, utf8Layer, sizeof(utf8Layer));
+
+                            cJSON* pJsonItem = cJSON_CreateObject();
+                            cJSON_AddStringToObject(pJsonItem, "handle", utf8Handle);
+                            cJSON_AddStringToObject(pJsonItem, "type", utf8Name);
+                            cJSON_AddNumberToObject(pJsonItem, "color", colorIndex);
+                            cJSON_AddStringToObject(pJsonItem, "layer", utf8Layer);
+                            
+                            cJSON_AddItemToArray(pJsonArray, pJsonItem);
+                            
+                            pEnt->close();
+                        }
+                    }
+                }
+            }
+        }
+        acedSSFree(ssname);
+    }
+
+    data->resultJson = pJsonArray;
+    data->ret = 0;
+    actionEnd();
+}
+
+void ToolEntity::set_selected_entity(AiToolCommandData* data) {
+    if (actionBefore() != 0) return;
+
+    cJSON* handlesArray = cJSON_GetObjectItem(data->jsonRoot, "handles");
+    if (handlesArray && cJSON_IsArray(handlesArray)) {
+        ads_name ssname;
+        bool bFirst = true;
+        
+        cJSON* handleItem = NULL;
+        cJSON_ArrayForEach(handleItem, handlesArray) {
+            if (!cJSON_IsString(handleItem) || !handleItem->valuestring) {
+                continue;
+            }
+
+            TCHAR handleStr[32] = { 0 };
+            if (!CUtils::utf8ToTChar(handleItem->valuestring, handleStr, ARRAYSIZE(handleStr))) {
+                continue;
+            }
+
+            AcDbHandle dbHandle(handleStr);
+            AcDbObjectId objId;
+            if (pDb->getAcDbObjectId(objId, Adesk::kFalse, dbHandle) != Acad::eOk) {
+                continue;
+            }
+
+            if (objId.isNull()) {
+                continue;
+            }
+
+            ads_name ent;
+            if (acdbGetAdsName(ent, objId) == Acad::eOk) {
+                if (bFirst) {
+                    acedSSAdd(ent, NULL, ssname);
+                    bFirst = false;
+                } else {
+                    acedSSAdd(ent, ssname, ssname);
+                }
+            }
+        }
+
+        if (!bFirst) {
+            acedSSSetFirst(ssname, NULL); // Highlights and selects the entities with grips
+            acedSSFree(ssname);
+            data->ret = 0;
+        }
+    } else {
+        // 兼容只传单个 "handle" 的情况
+        AcDbObjectId objId = GetIdFromHandle(data->jsonRoot, "handle", pDb);
+        if (!objId.isNull()) {
+            ads_name ent;
+            if (acdbGetAdsName(ent, objId) == Acad::eOk) {
+                ads_name ssname;
+                acedSSAdd(ent, NULL, ssname);
+                acedSSSetFirst(ssname, NULL);
+                acedSSFree(ssname);
+                data->ret = 0;
+            }
+        }
+    }
+
     actionEnd();
 }

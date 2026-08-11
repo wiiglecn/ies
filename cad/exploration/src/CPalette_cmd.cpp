@@ -128,6 +128,12 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
         case WM_USER_A_ENTITYSETCOLOR:
             ToolEntity::getInstance().entity_set_color(params);
             break;
+        case WM_USER_A_ENTITYGETSELECTION:
+            ToolEntity::getInstance().get_selected_entity(params);
+            break;
+        case WM_USER_A_ENTITYSETSELECTION:
+            ToolEntity::getInstance().set_selected_entity(params);
+            break;
 
 		//layer
 		case WM_USER_A_CREATELAYER:

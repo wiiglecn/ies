@@ -25,6 +25,9 @@ public:
 	void entity_fillet(AiToolCommandData* data);
 	void entity_chamfer(AiToolCommandData* data);
 	void entity_array(AiToolCommandData* data);
+
+	void get_selected_entity(AiToolCommandData* data);
+    void set_selected_entity(AiToolCommandData* data);
 	
 private:
 	ToolEntity(void);

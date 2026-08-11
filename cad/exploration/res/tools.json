@@ -3,7 +3,7 @@
         "type": "function",
         "function": {
             "name": "create_line",
-            "description": "Draws a line in AutoCAD Model Space.",
+            "description": "Draws a line in AutoCAD Model Space. Returns a JSON object containing the 'entityID' (handle) of the newly created line.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -29,7 +29,7 @@
         "type": "function",
         "function": {
             "name": "create_circle",
-            "description": "Draws a circle in AutoCAD Model Space.",
+            "description": "Draws a circle in AutoCAD Model Space. Returns a JSON object containing the 'entityID' (handle) of the newly created circle.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -58,7 +58,7 @@
         "type": "function",
         "function": {
             "name": "create_rectangle",
-            "description": "Draws a rectangle in AutoCAD Model Space using four lines.",
+            "description": "Draws a rectangle in AutoCAD Model Space as a closed polyline. Returns a JSON object containing the 'entityID' (handle) of the newly created rectangle.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -151,7 +151,7 @@
         "type": "function",
         "function": {
             "name": "create_polyline",
-            "description": "Draws a polyline in AutoCAD Model Space.",
+            "description": "Draws a polyline in AutoCAD Model Space. Returns a JSON object containing the 'entityID' (handle) of the newly created polyline.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -394,7 +394,12 @@
             "description": "Lists all first-level entities (objects) in the current AutoCAD Model Space. Returns a JSON array of objects containing their handle, type, color, and layer.",
             "parameters": {
                 "type": "object",
-                "properties": {}
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Optional. Entity handle (hexadecimal string) of an AcDbBlockReference. If provided, lists entities inside that block definition."
+                    }
+                }
             }
         }
     },
@@ -1166,6 +1171,37 @@
                     "y2": { "type": "number", "description": "Opposite corner Y coordinate" }
                 },
                 "required": ["x1", "y1", "x2", "y2"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_selected_entity",
+            "description": "Gets the currently selected entity (or entities) in AutoCAD. Returns a JSON array of objects containing their handle, type, color, and layer.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_selected_entity",
+            "description": "Sets one or more entities as the currently selected entities (highlights them with grips) in AutoCAD Model Space using their handles.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Array of entity handles (hexadecimal strings) to set as selected."
+                    }
+                },
+                "required": ["handles"]
             }
         }
     }

@@ -7,14 +7,12 @@
 
 #include "../tools/ToolGlobal.h"
 
-// ����·���������ӳ���
 struct ToolRouteInfo {
     const char* uriPath;
     const char* uriSuffix;
     UINT commandID;
 };
 
-// ȫ�ֹ���·������ (��ȷ�� WM_USER_A_REGEN �Ⱥ��������ͷ�ļ��ж���?
 static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/create_line", "create_line", WM_USER_A_CREATELINE },
     { "/ai/tool/create_circle", "create_circle", WM_USER_A_CREATECIRCLE },
@@ -47,6 +45,8 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/entity_array", "entity_array", WM_USER_A_ENTITYARRAY },
     { "/ai/tool/entity_get", "entity_get", WM_USER_A_ENTITYGET },
     { "/ai/tool/entity_set_color", "entity_set_color", WM_USER_A_ENTITYSETCOLOR },
+    { "/ai/tool/get_selected_entity", "get_selected_entity", WM_USER_A_ENTITYGETSELECTION },
+    { "/ai/tool/set_selected_entity", "set_selected_entity", WM_USER_A_ENTITYSETSELECTION },
 
     { "/ai/tool/create_layer", "create_layer", WM_USER_A_CREATELAYER },
     { "/ai/tool/list_layers", "list_layers", WM_USER_A_LISTLAYERS },
@@ -81,32 +81,31 @@ bool EndsWith(const std::string& str, const std::string& suffix) {
     if (suffix.size() > str.size()) return false;
     return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
 }
-// AI ����ӿ�?
+
 void HandleAiChat(struct mg_connection* nc, 
 				  struct mg_http_message* hm,
                   const std::map<std::string, std::string>& params,
                   const std::string& body,
 				  void* user_data)
 {
-    // ������Ե���?OpenAI/�ٶ�����/Ѷ�ɵ� AI API
-    // body �����ͻ��˷����� JSON ��������
+    
     
     std::string response = "{\"status\":\"success\",\"message\":\"AI reply placeholder\"}";
     AiApiServer::SendJsonResponse(nc, 200, response);
 }
 
-// AI �ı����ɽӿ�
+
 void HandleAiGenerate(struct mg_connection* nc,
 					  struct mg_http_message* hm,
                       const std::map<std::string, std::string>& params,
                       const std::string& body,
 					  void* user_data)
 {
-    // ���� AI �ӿ������ı�
+   
     std::string response = "{\"text\":\"Generated content...\"}";
     AiApiServer::SendJsonResponse(nc, 200, response);
 }
-// AI ����ִ�нӿ�
+
 void HandleAiCommand(struct mg_connection* nc,
 					 struct mg_http_message* hm,
                       const std::map<std::string, std::string>& params,
@@ -338,13 +337,13 @@ AiApiRequest::~AiApiRequest(void)
 void AiApiRequest::Start()
 {
 	m_Server=new AiApiServer();
-	// ע��·��
+	
     m_Server->RegisterRoute("POST", "/ai/chat", HandleAiChat);
     m_Server->RegisterRoute("POST", "/ai/generate", HandleAiGenerate);
 	m_Server->RegisterRoute("POST", "/ai/command", HandleAiCommand);
 	//tool
 
-	// ��������ע�� tool ·��
+	
     size_t routeCount = sizeof(toolRoutes) / sizeof(toolRoutes[0]);
     for (size_t i = 0; i <  routeCount; ++i) {
         m_Server->RegisterRoute("POST", toolRoutes[i].uriPath, HandleAiTool, this);
