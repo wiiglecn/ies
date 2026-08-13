@@ -1,7 +1,6 @@
 // coding: gb18030
 #include "LineJig.h"
-#include "dbtrans.h"
-#include "gept3dar.h"
+#include "arxHeaders.h"
 
 CLineJig::CLineJig()
     : m_pLine(NULL)

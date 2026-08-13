@@ -24,10 +24,6 @@
 //-----------------------------------------------------------------------------
 #include "StdAfx.h"
 
-#if defined(_DEBUG) && !defined(AC_FULL_DEBUG)
-#error _DEBUG should not be defined except in internal Adesk debug builds
-#endif
-
 
 #include "CPalette.h"
 #include "PaletteSet.h"
@@ -155,7 +151,7 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
                              rectClient, this, AFX_IDW_PANE_FIRST))
     {
 		// 3. create CHtmlPaletteView failed
-        acutPrintf(_T("Error: Failed to create CHtmlPaletteView.\n"));
+         CUtils::acutPrintf(_T("Error: Failed to create CHtmlPaletteView.\n"));
         
         delete m_pHtmlView;
         m_pHtmlView = NULL;
@@ -193,7 +189,7 @@ void CDataPalette::OnDestroy()
 	delete hServer;
 	hServer = NULL;
 
-	acutPrintf(_T("CDataPalette::OnDestroy.\n"));
+	 CUtils::acutPrintf(_T("CDataPalette::OnDestroy.\n"));
 
 
 	//CPaletteCleanup::SafeCleanupHtmlView(m_pHtmlView);
@@ -284,7 +280,7 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
     if (_tcscmp(szCommand, _T("SetProfile")) == 0)
     {
         // Output szParam to AutoCAD console
-        acutPrintf(_T("Debug: SetProfile Param = %s\n"), szParam);
+        CUtils::acutPrintf(_T("Debug: SetProfile Param = %s\n"), szParam);
 
         // szParam is a JSON string
         /*if (szParam.IsEmpty()) {
@@ -298,7 +294,7 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
         cJSON* pIncomingJson = cJSON_Parse(utf8Param.GetString());
         if (!pIncomingJson) {
             // Invalid JSON in szParam
-            acutPrintf(_T("Error: Failed to parse JSON.\n"));
+            CUtils::acutPrintf(_T("Error: Failed to parse JSON.\n"));
             return 0;
         }
 
@@ -306,7 +302,7 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
         cJSON* pRootConfig = CMyPaletteSet::GetJsonConfig();
         if (!pRootConfig) {
             // If config is null, we can't save. 
-            acutPrintf(_T("Warning: JSON Config is NULL. Cannot save profile.\n"));
+            CUtils::acutPrintf(_T("Warning: JSON Config is NULL. Cannot save profile.\n"));
             cJSON_Delete(pIncomingJson);
             return 0;
         }
@@ -417,7 +413,7 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 	else if (_tcscmp(szCommand, _T("ReplyContinue")) == 0)
     {
 		if(hChat==NULL){
-			acutPrintf(_T("\nWarning: 调用异常，chat 服务还没有开始.\n"));
+			CUtils::acutPrintf(_T("\nWarning: 调用异常，chat 服务还没有开始.\n"));
 			return 0;
 		}
 		hChat->ContinueChat();
@@ -488,28 +484,28 @@ void CDataPalette::onPageReady()
     
     
     cJSON* pRootConfig = CMyPaletteSet::GetJsonConfig();
-    acutPrintf(_T("\n[DEBUG] GetJsonConfig returned: %p"), pRootConfig);
+    CUtils::acutPrintf(_T("\n[DEBUG] GetJsonConfig returned: %p"), pRootConfig);
 
     if (pRootConfig) {
-        acutPrintf(_T("[DEBUG] Checking for 'profile' attribute...\n"));
+        CUtils::acutPrintf(_T("[DEBUG] Checking for 'profile' attribute...\n"));
         
         // Check if "profile" attribute exists
         cJSON* pProfile = cJSON_GetObjectItem(pRootConfig, "profile");
         
         if (pProfile) {
-            acutPrintf(_T("[DEBUG] 'profile' attribute found.\n"));
+            CUtils::acutPrintf(_T("[DEBUG] 'profile' attribute found.\n"));
             
             // Convert profile object to JSON string
             char* profileJsonStr = cJSON_Print(pProfile);
-            acutPrintf(_T("[DEBUG] cJSON_Print returned: %p\n"), profileJsonStr);
+            CUtils::acutPrintf(_T("[DEBUG] cJSON_Print returned: %p\n"), profileJsonStr);
             
             if (profileJsonStr) {
-                acutPrintf(_T("[DEBUG] Profile JSON String: %S\n"), profileJsonStr); // Use %S for char* in Unicode build
+                CUtils::acutPrintf(_T("[DEBUG] Profile JSON String: %S\n"), profileJsonStr); // Use %S for char* in Unicode build
 
                 // Convert char* to CString/TCHAR* for CallJsFunction
 #ifdef UNICODE
                 CString strProfile(profileJsonStr);
-                acutPrintf(_T("[DEBUG] Calling onReady with CString length: %d\n"), strProfile.GetLength());
+                CUtils::acutPrintf(_T("[DEBUG] Calling onReady with CString length: %d\n"), strProfile.GetLength());
                 m_pHtmlView->CallJsFunction(_T("onReady"), strProfile);
 #else
                 acutPrintf(_T("[DEBUG] Calling onReady with char*\n"));
@@ -517,15 +513,15 @@ void CDataPalette::onPageReady()
 #endif
                 // Free the string allocated by cJSON_Print
                 cJSON_free(profileJsonStr);
-                acutPrintf(_T("[DEBUG] Freed profileJsonStr.\n"));
+                CUtils::acutPrintf(_T("[DEBUG] Freed profileJsonStr.\n"));
             } else {
-                acutPrintf(_T("[DEBUG] ERROR: cJSON_Print failed to serialize profile.\n"));
+                CUtils::acutPrintf(_T("[DEBUG] ERROR: cJSON_Print failed to serialize profile.\n"));
             }
         } else {
-            acutPrintf(_T("[DEBUG] 'profile' attribute NOT found in config.\n"));
+            CUtils::acutPrintf(_T("[DEBUG] 'profile' attribute NOT found in config.\n"));
         }
     } else {
-        acutPrintf(_T("[DEBUG] ERROR: pRootConfig is NULL.\n"));
+        CUtils::acutPrintf(_T("[DEBUG] ERROR: pRootConfig is NULL.\n"));
     }
     acedPostCommandPrompt();
 }
@@ -553,12 +549,12 @@ void CDataPalette::SetDiameter(CBaseMarker& marker)
                 // OR if m_Diameter is public:
                 // marker.m_Diameter = diameter;
                 
-                acutPrintf(_T("[INFO] Hole Diameter set to: %.3f\n"), diameter);
+                CUtils::acutPrintf(_T("[INFO] Hole Diameter set to: %.3f\n"), diameter);
                 marker.SetDiameter(diameter);
             }
             else
             {
-                acutPrintf(_T("[WARNING] hole_diameter is not a valid string in JSON.\n"));
+                CUtils::acutPrintf(_T("[WARNING] hole_diameter is not a valid string in JSON.\n"));
             }
         }
     }

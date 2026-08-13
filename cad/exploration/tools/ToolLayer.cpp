@@ -1,14 +1,9 @@
 #include "stdafx.h"
 #include "ToolLayer.h"
 #include "cJSON.h"
-#include "adscodes.h"
-#include "actrans.h"
-#include "dbents.h"
-#include "dbsymtb.h"
-#include "dbelipse.h"
-#include "dbspline.h"
-
+#include "arxHeaders.h"
 #include "utils.h"
+
 ToolLayer::ToolLayer(void):ToolDrawBase()
 {
 }
@@ -29,16 +24,20 @@ void ToolLayer::create_layer(AiToolCommandData* data)
 
     if (!nameItem || !cJSON_IsString(nameItem))
     {
-        acutPrintf(_T("[ERROR] create_layer: invalid parameters.\n"));
+        CUtils::acutPrintf(_T("[ERROR] create_layer: invalid parameters.\n"));
         return;
     }
 
-    TCHAR layerName[256] = { 0 };
+    ACHAR layerName[256] = { 0 };
+#ifdef _CAD2005
+	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+#else
 	if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName)))
     {
-        acutPrintf(_T("[ERROR] create_layer: failed to convert layer name.\n"));
+        CUtils::acutPrintf(_T("[ERROR] create_layer: failed to convert layer name.\n"));
         return;
     }
+#endif
 
     /*int colorIndex = 7;
     if (colorItem && cJSON_IsNumber(colorItem))
@@ -49,7 +48,7 @@ void ToolLayer::create_layer(AiToolCommandData* data)
     AcDbLayerTable* pLayerTable = NULL;
     if (this->pDb->getLayerTable(pLayerTable, AcDb::kForWrite) != Acad::eOk)
     {
-        acutPrintf(_T("[ERROR] create_layer: failed to open Layer Table.\n"));
+        CUtils::acutPrintf(_T("[ERROR] create_layer: failed to open Layer Table.\n"));
         this->actionEnd();
         return;
     }
@@ -57,7 +56,7 @@ void ToolLayer::create_layer(AiToolCommandData* data)
     AcDbObjectId layerId;
     if (pLayerTable->getAt(layerName, layerId) == Acad::eOk)
     {
-        acutPrintf(_T("[INFO] create_layer: layer \"%s\" already exists.\n"), layerName);
+        CUtils::acutPrintf(_T("[INFO] create_layer: layer \"%s\" already exists.\n"), layerName);
         pLayerTable->close();
         this->actionEnd();
         return;
@@ -78,7 +77,7 @@ void ToolLayer::create_layer(AiToolCommandData* data)
     }
     else
     {
-        acutPrintf(_T("[ERROR] create_layer: failed to add layer record.\n"));
+        CUtils::acutPrintf(_T("[ERROR] create_layer: failed to add layer record.\n"));
         delete pLayerRecord;
     }
 
@@ -97,7 +96,7 @@ void ToolLayer::list_layers(AiToolCommandData* data)
     AcDbLayerTable* pLayerTable = NULL;
     if (this->pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk)
     {
-        acutPrintf(_T("[ERROR] list_layers: failed to open Layer Table.\n"));
+        CUtils::acutPrintf(_T("[ERROR] list_layers: failed to open Layer Table.\n"));
         this->actionEnd();
         return;
     }
@@ -117,7 +116,9 @@ void ToolLayer::list_layers(AiToolCommandData* data)
                 {
                     // Convert ACHAR* (Unicode) to UTF-8 string for cJSON
                     // Assuming TCHAR is wchar_t (Unicode)
-#ifdef _UNICODE
+#ifdef _CAD2005
+                   cJSON_AddItemToArray(data->resultJson, cJSON_CreateString(pName));
+#else
                     int utf8Len = WideCharToMultiByte(CP_UTF8, 0, pName, -1, NULL, 0, NULL, NULL);
                     if (utf8Len > 0)
                     {
@@ -129,15 +130,12 @@ void ToolLayer::list_layers(AiToolCommandData* data)
                         }
                         delete[] utf8Str;
                     }
-#else
-                    // For MBCS, assume it's already ANSI/UTF-8 compatible or convert appropriately
-                    cJSON_AddItemToArray(data->resultJson, cJSON_CreateString(pName));
 #endif
-                    acutPrintf(_T("[LAYER] %s\n"), pName);
+                    CUtils::acutPrintf(_T("[LAYER] %s\n"), pName);
                 }
                 else
                 {
-                    acutPrintf(_T("[LAYER] <Unknown Name>\n"));
+                    CUtils::acutPrintf(_T("[LAYER] <Unknown Name>\n"));
                 }
                 pLayerRecord->close();
             }
@@ -148,7 +146,7 @@ void ToolLayer::list_layers(AiToolCommandData* data)
     }
     else
     {
-        acutPrintf(_T("[ERROR] list_layers: failed to create Layer Table iterator.\n"));
+        CUtils::acutPrintf(_T("[ERROR] list_layers: failed to create Layer Table iterator.\n"));
     }
 
     pLayerTable->close();
@@ -165,7 +163,7 @@ void ToolLayer::query_all_layers(AiToolCommandData* data)
     AcDbLayerTable* pLayerTable = NULL;
     if (this->pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk)
     {
-        acutPrintf(_T("[ERROR] query_all_layers: failed to open Layer Table.\n"));
+        CUtils::acutPrintf(_T("[ERROR] query_all_layers: failed to open Layer Table.\n"));
         this->actionEnd();
         return;
     }
@@ -187,8 +185,12 @@ void ToolLayer::query_all_layers(AiToolCommandData* data)
 
 
                     // 1. layer name
+#ifdef _CAD2005
+					char* utf8Name=const_cast<char*>(pName);
+#else
                     char utf8Name[256] = { 0 };
                     CUtils::TCharToUtf8(pName, utf8Name, sizeof(utf8Name));
+#endif
                     cJSON_AddStringToObject(pJsonItem, "name", utf8Name);
 
                     // 2. color index
@@ -227,7 +229,7 @@ void ToolLayer::query_all_layers(AiToolCommandData* data)
     }
     else
     {
-        acutPrintf(_T("[ERROR] query_all_layers: failed to create Layer Table iterator.\n"));
+        CUtils::acutPrintf(_T("[ERROR] query_all_layers: failed to create Layer Table iterator.\n"));
         cJSON_Delete(pJsonArray);
         pLayerTable->close();
         this->actionEnd();
@@ -247,15 +249,19 @@ void ToolLayer::query_layer(AiToolCommandData* data) {
     cJSON* nameItem = cJSON_GetObjectItem(params, "name");
 
     if (!nameItem || !cJSON_IsString(nameItem)) {
-        acutPrintf(_T("[ERROR] query_layer: invalid parameters.\n"));
+        CUtils::acutPrintf(_T("[ERROR] query_layer: invalid parameters.\n"));
         return;
     }
 
-    TCHAR layerName[256] = { 0 };
+    ACHAR layerName[256] = { 0 };
+#ifdef _CAD2005
+	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+#else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
-        acutPrintf(_T("[ERROR] query_layer: failed to convert layer name.\n"));
+        CUtils::acutPrintf(_T("[ERROR] query_layer: failed to convert layer name.\n"));
         return;
     }
+#endif
 
     if (this->actionBefore()) {
         return;
@@ -268,9 +274,12 @@ void ToolLayer::query_layer(AiToolCommandData* data) {
             AcDbLayerTableRecord* pLayerRec = NULL;
             if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForRead) == Acad::eOk) {
                 data->resultJson = cJSON_CreateObject();
-                
+#ifdef _CAD2005
+				char* utf8Name=layerName;
+#else
                 char utf8Name[256] = { 0 };
                 CUtils::TCharToUtf8(layerName, utf8Name, sizeof(utf8Name));
+#endif
                 cJSON_AddStringToObject(data->resultJson, "name", utf8Name);
                 
                 AcCmColor color = pLayerRec->color();
@@ -289,11 +298,11 @@ void ToolLayer::query_layer(AiToolCommandData* data) {
                 data->ret = 0;
             } 
         } else {
-            acutPrintf(_T("[ERROR] query_layer: layer not found.\n"));
+            CUtils::acutPrintf(_T("[ERROR] query_layer: layer not found.\n"));
         }
         pLayerTable->close();
     } else {
-        acutPrintf(_T("[ERROR] query_layer: failed to open Layer Table.\n"));
+        CUtils::acutPrintf(_T("[ERROR] query_layer: failed to open Layer Table.\n"));
     }
 
     this->actionEnd();
@@ -309,15 +318,18 @@ void ToolLayer::get_current_layer(AiToolCommandData* data) {
         const ACHAR* pName = NULL;
         if (pLayerRec->getName(pName) == Acad::eOk && pName != NULL) {
             data->resultJson = cJSON_CreateObject();
-            
+#ifdef _CAD2005
+			char* utf8Name = const_cast<char*>(pName);
+#else
             char utf8Name[256] = { 0 };
             CUtils::TCharToUtf8(pName, utf8Name, sizeof(utf8Name));
+#endif
             cJSON_AddStringToObject(data->resultJson, "name", utf8Name);
         }
         pLayerRec->close();
         data->ret = 0;
     } else {
-        acutPrintf(_T("[ERROR] get_current_layer: failed to get current layer.\n"));
+        CUtils::acutPrintf(_T("[ERROR] get_current_layer: failed to get current layer.\n"));
         
     }
     
@@ -329,15 +341,19 @@ void ToolLayer::set_current_layer(AiToolCommandData* data) {
     cJSON* nameItem = cJSON_GetObjectItem(params, "name");
 
     if (!nameItem || !cJSON_IsString(nameItem)) {
-        acutPrintf(_T("[ERROR] set_current_layer: invalid parameters.\n"));
+        CUtils::acutPrintf(_T("[ERROR] set_current_layer: invalid parameters.\n"));
         return;
     }
 
-    TCHAR layerName[256] = { 0 };
+    ACHAR layerName[256] = { 0 };
+#ifdef _CAD2005
+	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+#else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
-        acutPrintf(_T("[ERROR] set_current_layer: failed to convert layer name.\n"));
+        CUtils::acutPrintf(_T("[ERROR] set_current_layer: failed to convert layer name.\n"));
         return;
     }
+#endif
 
     if (this->actionBefore()) return;
 
@@ -360,7 +376,7 @@ void ToolLayer::set_current_layer(AiToolCommandData* data) {
         
         data->ret = 0;
     } else {
-        acutPrintf(_T("[ERROR] set_current_layer: failed to set layer.\n"));
+        CUtils::acutPrintf(_T("[ERROR] set_current_layer: failed to set layer.\n"));
     }
 
     this->actionEnd();
@@ -392,7 +408,7 @@ void ToolLayer::get_current_layer_color(AiToolCommandData* data) {
         
 		data->ret = 0;
     } else {
-        acutPrintf(_T("[ERROR] get_current_layer_color: failed to get layer color.\n"));
+        CUtils::acutPrintf(_T("[ERROR] get_current_layer_color: failed to get layer color.\n"));
     }
     
     this->actionEnd();
@@ -403,28 +419,32 @@ void ToolLayer::layer_set_properties(AiToolCommandData* data) {
     cJSON* nameItem = cJSON_GetObjectItem(params, "name");
 
     if (!nameItem || !cJSON_IsString(nameItem)) {
-        acutPrintf(_T("[ERROR] layer_set_properties: invalid name parameter.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_set_properties: invalid name parameter.\n"));
         return;
     }
 
-    TCHAR layerName[256] = { 0 };
+    ACHAR layerName[256] = { 0 };
+#ifdef _CAD2005
+	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+#else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
-        acutPrintf(_T("[ERROR] layer_set_properties: failed to convert layer name.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_set_properties: failed to convert layer name.\n"));
         return;
     }
+#endif
 
     if (this->actionBefore()) return;
 
     AcDbLayerTable* pLayerTable = NULL;
     if (pDb->getLayerTable(pLayerTable, AcDb::kForRead) != Acad::eOk) {
-        acutPrintf(_T("[ERROR] layer_set_properties: failed to open Layer Table.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_set_properties: failed to open Layer Table.\n"));
         this->actionEnd();
         return;
     }
 
     AcDbObjectId layerId;
     if (pLayerTable->getAt(layerName, layerId) != Acad::eOk) {
-        acutPrintf(_T("[ERROR] layer_set_properties: layer not found.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_set_properties: layer not found.\n"));
         pLayerTable->close();
         this->actionEnd();
         return;
@@ -433,7 +453,7 @@ void ToolLayer::layer_set_properties(AiToolCommandData* data) {
 
     AcDbLayerTableRecord* pLayerRec = NULL;
     if (acdbOpenAcDbObject((AcDbObject*&)pLayerRec, layerId, AcDb::kForWrite) != Acad::eOk) {
-        acutPrintf(_T("[ERROR] layer_set_properties: failed to open layer for write.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_set_properties: failed to open layer for write.\n"));
         this->actionEnd();
         return;
     }
@@ -452,17 +472,21 @@ void ToolLayer::layer_set_properties(AiToolCommandData* data) {
     // Set linetype
     cJSON* linetypeItem = cJSON_GetObjectItem(params, "linetype");
     if (linetypeItem && cJSON_IsString(linetypeItem)) {
-        TCHAR ltName[256] = { 0 };
-        if (CUtils::utf8ToTChar(linetypeItem->valuestring, ltName, ARRAYSIZE(ltName))) {
-            AcDbLinetypeTable* pLtTable = NULL;
-            if (pDb->getLinetypeTable(pLtTable, AcDb::kForRead) == Acad::eOk) {
-                AcDbObjectId ltId;
-                if (pLtTable->getAt(ltName, ltId) == Acad::eOk) {
-                    pLayerRec->setLinetypeObjectId(ltId);
-                    changed = true;
-                }
-                pLtTable->close();
+        ACHAR ltName[256] = { 0 };
+#ifdef _CAD2005
+		strcpy_s(ltName, sizeof(ltName), linetypeItem->valuestring);
+#else
+		CUtils::utf8ToTChar(linetypeItem->valuestring, ltName, ARRAYSIZE(ltName));
+#endif
+        
+        AcDbLinetypeTable* pLtTable = NULL;
+        if (pDb->getLinetypeTable(pLtTable, AcDb::kForRead) == Acad::eOk) {
+            AcDbObjectId ltId;
+            if (pLtTable->getAt(ltName, ltId) == Acad::eOk) {
+                pLayerRec->setLinetypeObjectId(ltId);
+                changed = true;
             }
+            pLtTable->close();
         }
     }
 
@@ -481,7 +505,7 @@ void ToolLayer::layer_set_properties(AiToolCommandData* data) {
         cJSON_AddStringToObject(data->resultJson, "name", nameItem->valuestring);
         data->ret = 0;
     } else {
-        acutPrintf(_T("[WARNING] layer_set_properties: no properties were set.\n"));
+        CUtils::acutPrintf(_T("[WARNING] layer_set_properties: no properties were set.\n"));
     }
 
     this->actionEnd();
@@ -490,15 +514,19 @@ void ToolLayer::layer_set_properties(AiToolCommandData* data) {
 void ToolLayer::layer_freeze(AiToolCommandData* data) {
     cJSON* nameItem = cJSON_GetObjectItem(data->jsonRoot, "name");
     if (!nameItem || !cJSON_IsString(nameItem)) {
-        acutPrintf(_T("[ERROR] layer_freeze: invalid name parameter.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_freeze: invalid name parameter.\n"));
         return;
     }
 
-    TCHAR layerName[256] = { 0 };
+    ACHAR layerName[256] = { 0 };
+#ifdef _CAD2005
+	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+#else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
-        acutPrintf(_T("[ERROR] layer_freeze: failed to convert layer name.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_freeze: failed to convert layer name.\n"));
         return;
     }
+#endif
 
     if (this->actionBefore()) return;
 
@@ -510,7 +538,7 @@ void ToolLayer::layer_freeze(AiToolCommandData* data) {
 
     AcDbObjectId layerId;
     if (pLayerTable->getAt(layerName, layerId) != Acad::eOk) {
-        acutPrintf(_T("[ERROR] layer_freeze: layer not found.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_freeze: layer not found.\n"));
         pLayerTable->close();
         this->actionEnd();
         return;
@@ -533,15 +561,19 @@ void ToolLayer::layer_freeze(AiToolCommandData* data) {
 void ToolLayer::layer_thaw(AiToolCommandData* data) {
     cJSON* nameItem = cJSON_GetObjectItem(data->jsonRoot, "name");
     if (!nameItem || !cJSON_IsString(nameItem)) {
-        acutPrintf(_T("[ERROR] layer_thaw: invalid name parameter.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_thaw: invalid name parameter.\n"));
         return;
     }
 
-    TCHAR layerName[256] = { 0 };
+    ACHAR layerName[256] = { 0 };
+#ifdef _CAD2005
+	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+#else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
-        acutPrintf(_T("[ERROR] layer_thaw: failed to convert layer name.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_thaw: failed to convert layer name.\n"));
         return;
     }
+#endif
 
     if (this->actionBefore()) return;
 
@@ -553,7 +585,7 @@ void ToolLayer::layer_thaw(AiToolCommandData* data) {
 
     AcDbObjectId layerId;
     if (pLayerTable->getAt(layerName, layerId) != Acad::eOk) {
-        acutPrintf(_T("[ERROR] layer_thaw: layer not found.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_thaw: layer not found.\n"));
         pLayerTable->close();
         this->actionEnd();
         return;
@@ -576,15 +608,19 @@ void ToolLayer::layer_thaw(AiToolCommandData* data) {
 void ToolLayer::layer_lock(AiToolCommandData* data) {
     cJSON* nameItem = cJSON_GetObjectItem(data->jsonRoot, "name");
     if (!nameItem || !cJSON_IsString(nameItem)) {
-        acutPrintf(_T("[ERROR] layer_lock: invalid name parameter.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_lock: invalid name parameter.\n"));
         return;
     }
 
-    TCHAR layerName[256] = { 0 };
+    ACHAR layerName[256] = { 0 };
+#ifdef _CAD2005
+	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+#else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
-        acutPrintf(_T("[ERROR] layer_lock: failed to convert layer name.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_lock: failed to convert layer name.\n"));
         return;
     }
+#endif
 
     if (this->actionBefore()) return;
 
@@ -596,7 +632,7 @@ void ToolLayer::layer_lock(AiToolCommandData* data) {
 
     AcDbObjectId layerId;
     if (pLayerTable->getAt(layerName, layerId) != Acad::eOk) {
-        acutPrintf(_T("[ERROR] layer_lock: layer not found.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_lock: layer not found.\n"));
         pLayerTable->close();
         this->actionEnd();
         return;
@@ -619,15 +655,19 @@ void ToolLayer::layer_lock(AiToolCommandData* data) {
 void ToolLayer::layer_unlock(AiToolCommandData* data) {
     cJSON* nameItem = cJSON_GetObjectItem(data->jsonRoot, "name");
     if (!nameItem || !cJSON_IsString(nameItem)) {
-        acutPrintf(_T("[ERROR] layer_unlock: invalid name parameter.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_unlock: invalid name parameter.\n"));
         return;
     }
 
-    TCHAR layerName[256] = { 0 };
+    ACHAR layerName[256] = { 0 };
+#ifdef _CAD2005
+	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+#else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
-        acutPrintf(_T("[ERROR] layer_unlock: failed to convert layer name.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_unlock: failed to convert layer name.\n"));
         return;
     }
+#endif
 
     if (this->actionBefore()) return;
 
@@ -639,7 +679,7 @@ void ToolLayer::layer_unlock(AiToolCommandData* data) {
 
     AcDbObjectId layerId;
     if (pLayerTable->getAt(layerName, layerId) != Acad::eOk) {
-        acutPrintf(_T("[ERROR] layer_unlock: layer not found.\n"));
+        CUtils::acutPrintf(_T("[ERROR] layer_unlock: layer not found.\n"));
         pLayerTable->close();
         this->actionEnd();
         return;

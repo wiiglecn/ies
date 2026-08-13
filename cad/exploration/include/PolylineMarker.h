@@ -1,7 +1,6 @@
 #pragma once
 
-#include "dbents.h"
-#include "gedll.h"
+#include "arxHeaders.h"
 #include "BaseMarker.h"
 class CPolylineMarker : public CBaseMarker
 {

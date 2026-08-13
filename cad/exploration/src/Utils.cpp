@@ -273,3 +273,36 @@ std::string CUtils::DecryptFileWithPassword(const std::wstring& filePath, const 
 
     return decryptedContent;
 }
+Acad::ErrorStatus CUtils::sendStringToExecute(AcApDocument* pAcTargetDocument,
+                                       const KCHAR * pszExecute,
+                                       bool bActivate,
+                                       bool bWrapUpInactiveDoc,
+                                       bool bEchoString)
+{
+	return acDocManager->sendStringToExecute(pAcTargetDocument, pszExecute, bActivate, bWrapUpInactiveDoc, bEchoString);
+}
+int CUtils::acutPrintf (const KCHAR *format, ...)
+{
+	va_list args;
+    va_start(args, format);
+
+    ACHAR buffer[4096];
+    _vstprintf_s(buffer, _countof(buffer), format, args);
+
+    va_end(args);
+
+    // 用 "%s" 避免已格式化的字符串被二次解释
+    #ifdef _CAD2005
+        // AutoCAD 2005 的 acutPrintf 只接受 char*
+        int len = WideCharToMultiByte(CP_ACP, 0, buffer, -1, NULL, 0, NULL, NULL);
+        if (len > 0)
+        {
+            std::vector<char> charBuffer(len);
+            WideCharToMultiByte(CP_ACP, 0, buffer, -1, charBuffer.data(), len, NULL, NULL);
+            return ::acutPrintf("%s", charBuffer.data());
+        }
+        return 0;
+    #else
+        return ::acutPrintf(buffer);
+    #endif
+}

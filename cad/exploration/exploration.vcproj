@@ -277,23 +277,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\DWGPreview.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\src\HtmlPaletteView.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\src\HttpClient.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\InspData.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\InspPalette.cpp"
 				>
 			</File>
 			<File
@@ -378,11 +366,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\include\declare.h"
+				RelativePath=".\CustPalette.h"
 				>
 			</File>
 			<File
-				RelativePath=".\include\DWGPreview.h"
+				RelativePath=".\include\declare.h"
 				>
 			</File>
 			<File
@@ -391,14 +379,6 @@
 			</File>
 			<File
 				RelativePath=".\include\HttpClient.h"
-				>
-			</File>
-			<File
-				RelativePath=".\include\InspData.h"
-				>
-			</File>
-			<File
-				RelativePath=".\include\InspPalette.h"
 				>
 			</File>
 			<File
@@ -443,6 +423,10 @@
 			</File>
 			<File
 				RelativePath=".\include\StdAfx.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\StdAfx2007.h"
 				>
 			</File>
 			<File

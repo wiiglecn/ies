@@ -78,7 +78,7 @@ void CHtmlPaletteView::OnDocumentComplete(LPCTSTR lpszURL)
     CHtmlView::OnDocumentComplete(lpszURL);
 
     // 调试用：在控制台输出，确认 OnDocumentComplete 被触发
-    acutPrintf(_T("[昇龙] Document Complete: %s \n"), lpszURL);
+    CUtils::acutPrintf(_T("[昇龙] Document Complete: %s \n"), lpszURL);
 }
 // C++ 函数实现：被 JS 调用
 void CHtmlPaletteView::OnJsCallCpp(LPCTSTR szMessage)
@@ -150,7 +150,7 @@ void CHtmlPaletteView::InitializeBrowser()
     strUrl.Format(_T("file:///%sPalettePage.html"), strFilePath);
 
     // 6. Navigate
-    acutPrintf(_T("[昇龙] Loading from: %s\n"), strUrl);
+    CUtils::acutPrintf(_T("[昇龙] Loading from: %s\n"), strUrl);
     Navigate2(strUrl);
 
 
@@ -159,7 +159,7 @@ void CHtmlPaletteView::InitializeBrowser()
 }
 void CHtmlPaletteView::OnDestroy()
 {
-    acutPrintf(_T("CHtmlPaletteView::OnDestroy.\n"));
+    CUtils::acutPrintf(_T("CHtmlPaletteView::OnDestroy.\n"));
 
     // 1. 确保焦点不在内部子窗口上
    /* if (GetFocus() != NULL && (this == GetFocus() || IsChild(GetFocus())))

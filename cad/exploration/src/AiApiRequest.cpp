@@ -3,8 +3,7 @@
 #include "AiApiRequest.h"
 #include "AiApiServer.h"
 #include "cJSON.h"
-#include "declare.h"
-
+#include "Utils.h"
 #include "../tools/ToolGlobal.h"
 
 struct ToolRouteInfo {
@@ -169,7 +168,7 @@ void HandleAiCommand(struct mg_connection* nc,
             // acedCommand(RTSTR, wCmd.c_str(), RTNONE);
             
             // Alternative: sendStringToExecute is often safer for asynchronous execution
-            acDocManager->sendStringToExecute(acDocManager->curDocument(), wCmd.c_str());
+            CUtils::sendStringToExecute(acDocManager->curDocument(), wCmd.c_str());
         #else
             // Example using acedCommand (Multi-byte)
             // acedCommand(RTSTR, fullCommand.c_str(), RTNONE);

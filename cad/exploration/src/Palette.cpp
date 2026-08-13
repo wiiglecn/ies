@@ -31,7 +31,7 @@
 #include "resource.h"
 #include "PaletteSet.h"
 #include "CPalette.h"
-#include "InspPalette.h"
+//#include "InspPalette.h"
 #include "Utils.h"
 #include "../tools/ToolGlobal.h"
 //#include "../tools/AcadFrameHook.h"
@@ -95,7 +95,7 @@ void paletteShow()
 
 	// If paletteset not created, create new palette set
 	CDataPalette *pPalette1;
-	CInspPalette *pPalette2;
+	//CInspPalette *pPalette2;
 
 	pPaletteSet = new CMyPaletteSet;
 	CRect rect(0, 0, 300, 500);
@@ -169,7 +169,7 @@ void InitApplication()
 
 	// Register the COM Server upon loading
 	if ( FAILED(::DllRegisterServer ()) )
-		acutPrintf (_T("Failed to register COM server.\n"));
+		CUtils::acutPrintf (_T("Failed to register COM server.\n"));
 
 	// 延迟 2000 毫秒（2秒）自动显示工具条，确保 AutoCAD 环境准备完毕
     SetTimer(NULL, 1, 2000, PaletteShowTimerProc);
@@ -184,7 +184,11 @@ void UnloadApplication()
 
 	// CUtils::FocusAcadDrawing();
 	// Unregister commands
+#ifdef _CAD2005
+	acedRegCmds->removeGroup("ASDK");
+#else
 	acedRegCmds->removeGroup(_T("ASDK"));
+#endif
 
 	// Destroy the paletteset
 	if(pPaletteSet)
@@ -211,7 +215,7 @@ void UnloadApplication()
 
 				if (pPal->GetSafeHwnd())
 				{
-					acutPrintf (_T("CAdUiPalette DestroyWindow \n")) ;
+					CUtils::acutPrintf (_T("CAdUiPalette DestroyWindow \n")) ;
 					pPal->DestroyWindow();
 				}
 
@@ -240,18 +244,47 @@ void UnloadApplication()
 void AddCommand(const TCHAR* cmdGroup, const TCHAR* cmdInt, const TCHAR* cmdLoc,
 				const int cmdFlags, const AcRxFunctionPtr cmdProc, const int idLocal)
 {
-	TCHAR cmdLocRes[65];
+	#ifdef _CAD2005
+		char szCmdGroup[256], szCmdInt[256], szCmdLoc[256];
 
-	// If idLocal is not -1, it's treated as an ID for
-	// a string stored in the resources.
-	if (idLocal != -1) {
+        #ifdef _UNICODE
+            WideCharToMultiByte(CP_ACP, 0, cmdGroup, -1, szCmdGroup, 256, NULL, NULL);
+            WideCharToMultiByte(CP_ACP, 0, cmdInt, -1, szCmdInt, 256, NULL, NULL);
+            WideCharToMultiByte(CP_ACP, 0, cmdLoc, -1, szCmdLoc, 256, NULL, NULL);
+        #else
+            strcpy_s(szCmdGroup, cmdGroup);
+            strcpy_s(szCmdInt, cmdInt);
+            strcpy_s(szCmdLoc, cmdLoc);
+        #endif
 
-		// Load strings from the string table and register the command.
-		::LoadString(_hdllInstance, idLocal, cmdLocRes, 64);
-		acedRegCmds->addCommand(cmdGroup, cmdInt, cmdLocRes, cmdFlags, cmdProc);
+        if (idLocal != -1) {
+            TCHAR cmdLocRes[65];
+            ::LoadString(_hdllInstance, idLocal, cmdLocRes, 64);
 
-	} else
-		// idLocal is -1, so the 'hard coded'
-		// localized function name is used.
-		acedRegCmds->addCommand(cmdGroup, cmdInt, cmdLoc, cmdFlags, cmdProc);
+            #ifdef _UNICODE
+                char cmdLocResA[65];
+                WideCharToMultiByte(CP_ACP, 0, cmdLocRes, -1, cmdLocResA, 65, NULL, NULL);
+                acedRegCmds->addCommand(szCmdGroup, szCmdInt, cmdLocResA, cmdFlags, cmdProc);
+            #else
+                acedRegCmds->addCommand(szCmdGroup, szCmdInt, cmdLocRes, cmdFlags, cmdProc);
+            #endif
+        } else {
+            acedRegCmds->addCommand(szCmdGroup, szCmdInt, szCmdLoc, cmdFlags, cmdProc);
+        }
+	#else
+		TCHAR cmdLocRes[65];
+
+		// If idLocal is not -1, it's treated as an ID for
+		// a string stored in the resources.
+		if (idLocal != -1) {
+
+			// Load strings from the string table and register the command.
+			::LoadString(_hdllInstance, idLocal, cmdLocRes, 64);
+			acedRegCmds->addCommand(cmdGroup, cmdInt, cmdLocRes, cmdFlags, cmdProc);
+
+		} else
+			// idLocal is -1, so the 'hard coded'
+			// localized function name is used.
+			acedRegCmds->addCommand(cmdGroup, cmdInt, cmdLoc, cmdFlags, cmdProc);
+	#endif
 }

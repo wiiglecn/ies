@@ -80,6 +80,10 @@
 #define WM_USER_CHAT (WM_USER + 4000)
 #define WM_USER_CHAT_SEND_ERROR (WM_USER + 4001)
 
+//#ifdef _AUTOCAD2005
+typedef wchar_t KCHAR;
+//#endif
+
 class cJSON;
 // Add this struct definition in AiApiRequest.h or a common header
 // In AiApiRequest.h or where the struct is defined

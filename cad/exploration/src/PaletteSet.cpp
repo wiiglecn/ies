@@ -34,7 +34,7 @@
 #include "PaletteSet.h"
 #include "resource.h"
 #include "CPalette.h"
-
+#include "Utils.h"
 
 
 // The file name of the persisted paletteset
@@ -115,19 +115,22 @@ void CMyPaletteSet::LoadPaletteSet()
 	}
 
 	// Get the file where the palette set's properties are saved
-	const TCHAR *pRoam;
+	const ACHAR *pRoam;
 	TCHAR paletteBuffer[MAX_PATH];
 	Acad::ErrorStatus bResult = acdbHostApplicationServices()->getRoamableRootFolder(pRoam);
 	if (bResult != Acad::eOk) {
-		acutPrintf(_T("[DEBUG] getRoamableRootFolder: Failed to get Roamable Root Folder. Result: %d \n"), bResult);
+		CUtils::acutPrintf(_T("[DEBUG] getRoamableRootFolder: Failed to get Roamable Root Folder. Result: %d \n"), bResult);
 		
 		return;
 	}
-	
+#ifdef _CAD2005
+	MultiByteToWideChar(CP_ACP, 0, pRoam, -1, paletteBuffer, MAX_PATH);
+#else
 	_tcscpy(paletteBuffer, pRoam);
+#endif
 	_tcscat(paletteBuffer, KSPALETTESET_FILENAME);
 	// Print the buffer
-    acutPrintf(_T("[DEBUG] LoadPaletteSet: Target file path: %s \n"), paletteBuffer);
+    CUtils::acutPrintf(_T("[DEBUG] LoadPaletteSet: Target file path: %s \n"), paletteBuffer);
 
 	// Read file content
 	FILE* fp = _tfopen(paletteBuffer, _T("rb")); // Use binary mode for reading
@@ -177,13 +180,13 @@ void CMyPaletteSet::SavePaletteSet()
 	 // 1. 检查是否在有效的 AutoCAD 会话/线程上下文中
     // acdbHostApplicationServices() 应该在主线程且 AutoCAD 运行时有效
     if (!acdbHostApplicationServices()) {
-        acutPrintf(_T("[DEBUG] SavePaletteSet: Aborted. Invalid Host Application Services. \n"));
+        CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Aborted. Invalid Host Application Services. \n"));
         return;
     }
-    acutPrintf(_T("[DEBUG] SavePaletteSet: Starting... \n"));
+    CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Starting... \n"));
 
     if (!s_pJsonConfig) {
-        acutPrintf(_T("[DEBUG] SavePaletteSet: Aborted. s_pJsonConfig is NULL. \n"));
+        CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Aborted. s_pJsonConfig is NULL. \n"));
         return;
     }
 
@@ -191,8 +194,8 @@ void CMyPaletteSet::SavePaletteSet()
     // const TCHAR *pRoam;
     
     TCHAR paletteBuffer[MAX_PATH];
-    const TCHAR *pRoam;
-    acutPrintf(_T("[DEBUG] SavePaletteSet: Getting Roamable Root Folder... \n"));
+    const ACHAR *pRoam;
+    CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Getting Roamable Root Folder... \n"));
     // 直接接收返回的指针，不需要传入参数
 	// 调用 API，传入缓冲区和大小
     // 注意：请确认你的 ObjectARX 版本中该函数的具体签名。
@@ -206,43 +209,47 @@ void CMyPaletteSet::SavePaletteSet()
 
     if (bResult != Acad::eOk) {
 		// 处理错误
-		acutPrintf(_T("[DEBUG] SavePaletteSet: Failed to get Roamable Root Folder. \n"));
+		CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Failed to get Roamable Root Folder. \n"));
 		return;
 	}
-    _tcscpy(paletteBuffer, pRoam);
+#ifdef _CAD2005
+	MultiByteToWideChar(CP_ACP, 0, pRoam, -1, paletteBuffer, MAX_PATH);
+#else
+	_tcscpy(paletteBuffer, pRoam);
+#endif
     _tcscat(paletteBuffer, KSPALETTESET_FILENAME);
-    acutPrintf(_T("[DEBUG] SavePaletteSet: Target file path: %s \n"), paletteBuffer);
+    CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Target file path: %s \n"), paletteBuffer);
 
     // Serialize JSON to string
-    acutPrintf(_T("[DEBUG] SavePaletteSet: Serializing JSON... \n"));
+    CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Serializing JSON... \n"));
     char* jsonString = cJSON_Print(s_pJsonConfig);
     if (!jsonString) {
-        acutPrintf(_T("[DEBUG] SavePaletteSet: Failed to serialize JSON. \n"));
+        CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Failed to serialize JSON. \n"));
         return;
     }
 
     // Write to file
-    acutPrintf(_T("[DEBUG] SavePaletteSet: Opening file for writing... \n"));
+    CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Opening file for writing... \n"));
     FILE* fp = _tfopen(paletteBuffer, _T("wb")); // Use binary mode for writing
     if (!fp) {
-        acutPrintf(_T("[DEBUG] SavePaletteSet: Failed to open file for writing. Error: %d \n"), errno);
+        CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Failed to open file for writing. Error: %d \n"), errno);
         cJSON_free(jsonString);
         return;
     }
 
-    acutPrintf(_T("[DEBUG] SavePaletteSet: Writing content to file... \n"));
+    CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Writing content to file... \n"));
     size_t writeSize = fprintf(fp, "%s", jsonString);
     fclose(fp);
     
     if (writeSize < 0) {
-        acutPrintf(_T("[DEBUG] SavePaletteSet: Error writing to file. \n"));
+        CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Error writing to file. \n"));
     } else {
-        acutPrintf(_T("[DEBUG] SavePaletteSet: Successfully wrote %d bytes. \n"), writeSize);
+        CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Successfully wrote %d bytes. \n"), writeSize);
     }
 
     // Free the serialized string
     cJSON_free(jsonString);
-    acutPrintf(_T("[DEBUG] SavePaletteSet: Finished. \n"));
+    CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Finished. \n"));
 }
 // Static accessor implementation
 cJSON* CMyPaletteSet::GetJsonConfig()

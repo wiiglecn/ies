@@ -1,20 +1,9 @@
 #include "stdafx.h"
 #include "ToolBlock.h"
-#include "cJSON.h"
-#include "adscodes.h"
-#include "actrans.h"
-#include "dbents.h"
-#include "dbsymtb.h"
-#include "dbelipse.h"
-#include "dbspline.h"
-#include "dbmtext.h"
-#include "dbhatch.h"
-#include "gelnsg3d.h"
-#include "dbhatch.h"
-#include "utils.h"
 #include <queue>
-#include "aced.h"
-#include "acdocman.h"
+#include "cJSON.h"
+#include "arxHeaders.h"
+#include "Utils.h"
 
 ToolBlock::ToolBlock(void):ToolDrawBase()
 {
@@ -56,15 +45,27 @@ void ToolBlock::block_list(AiToolCommandData* data)
 			const ACHAR* pName = NULL;
 			if (pBTR->getName(pName) == Acad::eOk && pName != NULL) {
 				char utf8Name[256] = { 0 };
+#ifdef _CAD2005
+				strcpy_s(utf8Name, sizeof(utf8Name), pName);
+#else
 				CUtils::TCharToUtf8(pName, utf8Name, sizeof(utf8Name));
+#endif
 
 				// 获取块表记录句柄
 				AcDbHandle handle = pBTR->objectId().handle();
+#ifdef _CAD2005
+				ACHAR handleStr[20] = { 0 };
+#else	
 				TCHAR handleStr[20] = { 0 };
+#endif
 				handle.getIntoAsciiBuffer(handleStr);
+				
+#ifdef _CAD2005
+				char* utf8Handle = handleStr;
+#else
 				char utf8Handle[32] = { 0 };
 				CUtils::TCharToUtf8(handleStr, utf8Handle, sizeof(utf8Handle));
-
+#endif
 				// 是否为匿名块
 				int isAnonymous = pBTR->isAnonymous();
 				// 是否为布局坿
@@ -100,9 +101,12 @@ void ToolBlock::block_insert(AiToolCommandData* data)
 		return;
 	}
 
-	TCHAR blockName[256] = { 0 };
+	ACHAR blockName[256] = { 0 };
+#ifdef _CAD2005
+	strcpy_s(blockName, sizeof(blockName), nameItem->valuestring);
+#else
 	CUtils::utf8ToTChar(nameItem->valuestring, blockName, ARRAYSIZE(blockName));
-
+#endif
 	double x = cJSON_GetObjectItem(data->jsonRoot, "x")->valuedouble;
 	double y = cJSON_GetObjectItem(data->jsonRoot, "y")->valuedouble;
 
@@ -114,7 +118,7 @@ void ToolBlock::block_insert(AiToolCommandData* data)
 	cJSON* rotItem = cJSON_GetObjectItem(data->jsonRoot, "rotation");
 	if (rotItem) rotation = rotItem->valuedouble;
 
-	// 查找块定乿
+	// 查找块
 	AcDbBlockTable* pBlockTable = NULL;
 	if (pDb->getBlockTable(pBlockTable, AcDb::kForRead) != Acad::eOk) {
 		actionEnd();
@@ -129,7 +133,7 @@ void ToolBlock::block_insert(AiToolCommandData* data)
 	}
 	pBlockTable->close();
 
-	// 创建块参煿
+	// 创建块
 	AcGePoint3d insertPt(x, y, 0);
 	AcDbBlockReference* pBlkRef = new AcDbBlockReference(insertPt, blockId);
 	pBlkRef->setScaleFactors(scale);
@@ -138,11 +142,14 @@ void ToolBlock::block_insert(AiToolCommandData* data)
 	if (pModelSpace->appendAcDbEntity(pBlkRef) == Acad::eOk) {
 		// 返回块参照的句柄
 		AcDbHandle handle = pBlkRef->objectId().handle();
-		TCHAR handleStr[20] = { 0 };
+		ACHAR handleStr[20] = { 0 };
 		handle.getIntoAsciiBuffer(handleStr);
+#ifdef _CAD2005
+		char* utf8Handle = handleStr;
+#else
 		char utf8Handle[32] = { 0 };
 		CUtils::TCharToUtf8(handleStr, utf8Handle, sizeof(utf8Handle));
-
+#endif
 		cJSON* pResult = cJSON_CreateObject();
 		cJSON_AddStringToObject(pResult, "handle", utf8Handle);
 		data->resultJson = pResult;
@@ -164,9 +171,12 @@ void ToolBlock::block_insert_with_attributes(AiToolCommandData* data)
 		return;
 	}
 
-	TCHAR blockName[256] = { 0 };
+	ACHAR blockName[256] = { 0 };
+#ifdef _CAD2005
+	strcpy_s(blockName, sizeof(blockName), nameItem->valuestring);
+#else
 	CUtils::utf8ToTChar(nameItem->valuestring, blockName, ARRAYSIZE(blockName));
-
+#endif
 	double x = cJSON_GetObjectItem(data->jsonRoot, "x")->valuedouble;
 	double y = cJSON_GetObjectItem(data->jsonRoot, "y")->valuedouble;
 
@@ -180,7 +190,7 @@ void ToolBlock::block_insert_with_attributes(AiToolCommandData* data)
 
 	cJSON* attrsObj = cJSON_GetObjectItem(data->jsonRoot, "attributes");
 
-	// 查找块定乿
+	// 查找块定
 	AcDbBlockTable* pBlockTable = NULL;
 	if (pDb->getBlockTable(pBlockTable, AcDb::kForRead) != Acad::eOk) {
 		actionEnd();
@@ -225,8 +235,12 @@ void ToolBlock::block_insert_with_attributes(AiToolCommandData* data)
 
 					// 获取属性标记
 					const ACHAR* pTag = pAttDef->tag();
+#ifdef _CAD2005
+					char* utf8Tag=const_cast<char*>(pTag);
+#else
 					char utf8Tag[128] = { 0 };
 					CUtils::TCharToUtf8(pTag, utf8Tag, sizeof(utf8Tag));
+#endif
 
 					// 从JSON中查找对应的倿
 					cJSON* valItem = cJSON_GetObjectItem(attrsObj, utf8Tag);
@@ -236,9 +250,14 @@ void ToolBlock::block_insert_with_attributes(AiToolCommandData* data)
 					pAtt->setFieldLength(pAttDef->fieldLength());
 
 					if (valItem && cJSON_IsString(valItem)) {
+#ifdef _CAD2005
+						char* valStr=valItem->valuestring;
+#else
 						TCHAR valStr[512] = { 0 };
 						CUtils::utf8ToTChar(valItem->valuestring, valStr, ARRAYSIZE(valStr));
+#endif
 						pAtt->setTextString(valStr);
+
 					} else {
 						// 使用默认值
 						const ACHAR* pDefault = pAttDef->textString();
@@ -262,11 +281,14 @@ void ToolBlock::block_insert_with_attributes(AiToolCommandData* data)
 
 	// 返回块参照句柿
 	AcDbHandle handle = pBlkRef->objectId().handle();
-	TCHAR handleStr[20] = { 0 };
+	ACHAR handleStr[20] = { 0 };
 	handle.getIntoAsciiBuffer(handleStr);
+#ifdef _CAD2005
+	char* utf8Handle=handleStr;
+#else
 	char utf8Handle[32] = { 0 };
 	CUtils::TCharToUtf8(handleStr, utf8Handle, sizeof(utf8Handle));
-
+#endif
 	cJSON* pResult = cJSON_CreateObject();
 	cJSON_AddStringToObject(pResult, "handle", utf8Handle);
 	data->resultJson = pResult;
@@ -300,13 +322,19 @@ void ToolBlock::block_get_attributes(AiToolCommandData* data)
 			AcDbAttribute* pAtt = NULL;
 			if (acdbOpenAcDbObject((AcDbObject*&)pAtt, attId, AcDb::kForRead) == Acad::eOk) {
 				const ACHAR* pTag = pAtt->tag();
+#ifdef _CAD2005
+				char* utf8Tag = const_cast<char*>(pTag);
+#else
 				char utf8Tag[128] = { 0 };
 				CUtils::TCharToUtf8(pTag, utf8Tag, sizeof(utf8Tag));
-
+#endif
 				const ACHAR* pVal = pAtt->textString();
+#ifdef _CAD2005
+				char* utf8Val = const_cast<char*>(pVal);
+#else
 				char utf8Val[512] = { 0 };
 				CUtils::TCharToUtf8(pVal, utf8Val, sizeof(utf8Val));
-
+#endif
 				cJSON_AddStringToObject(pJsonObj, utf8Tag, utf8Val);
 				pAtt->close();
 			}
@@ -349,13 +377,20 @@ void ToolBlock::block_update_attributes(AiToolCommandData* data)
 			AcDbAttribute* pAtt = NULL;
 			if (acdbOpenAcDbObject((AcDbObject*&)pAtt, attId, AcDb::kForWrite) == Acad::eOk) {
 				const ACHAR* pTag = pAtt->tag();
+#ifdef _CAD2005
+				char* utf8Tag=const_cast<char*>(pTag);
+#else
 				char utf8Tag[128] = { 0 };
 				CUtils::TCharToUtf8(pTag, utf8Tag, sizeof(utf8Tag));
-
+#endif
 				cJSON* valItem = cJSON_GetObjectItem(attrsObj, utf8Tag);
 				if (valItem && cJSON_IsString(valItem)) {
-					TCHAR valStr[512] = { 0 };
+					ACHAR valStr[512] = { 0 };
+#ifdef _CAD2005
+					strcpy_s(valStr, sizeof(valStr), valItem->valuestring);
+#else
 					CUtils::utf8ToTChar(valItem->valuestring, valStr, ARRAYSIZE(valStr));
+#endif
 					pAtt->setTextString(valStr);
 				}
 				pAtt->close();
@@ -381,9 +416,12 @@ void ToolBlock::block_define(AiToolCommandData* data)
 		return;
 	}
 
-	TCHAR blockName[256] = { 0 };
+	ACHAR blockName[256] = { 0 };
+#ifdef _CAD2005
+	strcpy_s(blockName, sizeof(blockName), nameItem->valuestring);
+#else
 	CUtils::utf8ToTChar(nameItem->valuestring, blockName, ARRAYSIZE(blockName));
-
+#endif
 	// 获取块表
 	AcDbBlockTable* pBlockTable = NULL;
 	if (pDb->getBlockTable(pBlockTable, AcDb::kForWrite) != Acad::eOk) {
@@ -396,11 +434,14 @@ void ToolBlock::block_define(AiToolCommandData* data)
 	if (pBlockTable->getAt(blockName, existingId) == Acad::eOk) {
 		// 块已存在，返回已有块的句柿
 		AcDbHandle handle = existingId.handle();
-		TCHAR handleStr[20] = { 0 };
+		ACHAR handleStr[20] = { 0 };
 		handle.getIntoAsciiBuffer(handleStr);
+#ifdef _CAD2005
+		char* utf8Handle=handleStr;
+#else
 		char utf8Handle[32] = { 0 };
 		CUtils::TCharToUtf8(handleStr, utf8Handle, sizeof(utf8Handle));
-
+#endif
 		cJSON* pResult = cJSON_CreateObject();
 		cJSON_AddStringToObject(pResult, "handle", utf8Handle);
 		cJSON_AddNumberToObject(pResult, "created", 0);
@@ -455,11 +496,14 @@ void ToolBlock::block_define(AiToolCommandData* data)
 
 		// 返回新块定义的句柿
 		AcDbHandle handle = pBTR->objectId().handle();
-		TCHAR handleStr[20] = { 0 };
+		ACHAR handleStr[20] = { 0 };
 		handle.getIntoAsciiBuffer(handleStr);
+#ifdef _CAD2005
+		char* utf8Handle=handleStr;
+#else
 		char utf8Handle[32] = { 0 };
 		CUtils::TCharToUtf8(handleStr, utf8Handle, sizeof(utf8Handle));
-
+#endif
 		cJSON* pResult = cJSON_CreateObject();
 		cJSON_AddStringToObject(pResult, "handle", utf8Handle);
 		cJSON_AddNumberToObject(pResult, "created", 1);

@@ -4,19 +4,6 @@
 #include "arxHeaders.h"
 #include "utils.h"
 
-//#include "adscodes.h"
-//#include "actrans.h"
-//#include "dbents.h"
-//#include "dbsymtb.h"
-//#include "dbelipse.h"
-//#include "dbspline.h"
-//#include "dbmtext.h"
-//#include "dbhatch.h"
-//#include "gelnsg3d.h"
-//#include "dbhatch.h"
-//#include <queue>
-//#include "aced.h"
-//#include "acdocman.h"
 
 
 ToolDraw::ToolDraw(void):ToolDrawBase()

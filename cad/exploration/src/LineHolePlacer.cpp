@@ -27,18 +27,18 @@ Acad::ErrorStatus CLineHolePlacer::Execute()
     
     if (es == Acad::eOk)
     {
-        acutPrintf(_T("直线绘制完成。\n"));
+        CUtils::acutPrintf(_T("直线绘制完成。\n"));
 
     }
     else if (es == Acad::eCancel)
     {
-        acutPrintf(_T("命令已取消。\n"));
+        CUtils::acutPrintf(_T("命令已取消。\n"));
 		return Acad::eUserBreak;
 
     }
     else
     {
-        acutPrintf(_T("发生错误。\n"));
+        CUtils::acutPrintf(_T("发生错误。\n"));
 		return Acad::eNoErrorHandler;
     }
 	ptStart = lineJig.getStartPoint();
@@ -58,7 +58,7 @@ Acad::ErrorStatus CLineHolePlacer::Execute()
 
     if (nHoles <= 0)
     {
-        acutPrintf(_T("Error: Number of holes must be greater than 0.\n"));
+        CUtils::acutPrintf(_T("Error: Number of holes must be greater than 0.\n"));
         return Acad::eInvalidInput;
     }
 
@@ -68,7 +68,7 @@ Acad::ErrorStatus CLineHolePlacer::Execute()
     
     if (totalLength < 1e-6)
     {
-        acutPrintf(_T("Error: Points are too close.\n"));
+        CUtils::acutPrintf(_T("Error: Points are too close.\n"));
         return Acad::eInvalidInput;
     }
 
@@ -101,7 +101,7 @@ Acad::ErrorStatus CLineHolePlacer::Execute()
 
 	es = acDocManager->lockDocument(pDoc);
     if (es != Acad::eOk) {
-        acutPrintf(_T("Failed to lock the document...\n"));
+        CUtils::acutPrintf(_T("Failed to lock the document...\n"));
 		return Acad::eInvalidOpenState;
     }
 
@@ -120,12 +120,12 @@ Acad::ErrorStatus CLineHolePlacer::Execute()
         es = CreateHole(ptHole,this->m_Diameter / 2.0); // Assuming m_Diameter is the diameter, radius = diameter / 2
         if (es != Acad::eOk)
         {
-            acutPrintf(_T("Error creating hole %d.\n"), i + 1);
+            CUtils::acutPrintf(_T("Error creating hole %d.\n"), i + 1);
             return es;
         }
     }
 
-    acutPrintf(_T("Successfully placed %d exploration holes.\n"), nHoles);
+    CUtils::acutPrintf(_T("Successfully placed %d exploration holes.\n"), nHoles);
 
 	acDocManager->unlockDocument(pDoc);
 

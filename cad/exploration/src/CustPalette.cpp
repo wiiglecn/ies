@@ -30,9 +30,9 @@
 
 #include "resource.h"
 #include <initguid.h>
-#include "../CustPalette.h"
+//#include "../CustPalette.h"
 #include <afxdllx.h>
-#include "../CustPalette_i.c"
+//#include "../CustPalette_i.c"
 
 
 
@@ -40,7 +40,7 @@
 class CCustPaletteModule : public CAtlDllModuleT<CCustPaletteModule> {
 
 public :
-	DECLARE_LIBID(LIBID_AsdkCustPaletteLib)
+	//DECLARE_LIBID(LIBID_AsdkCustPaletteLib)
 	DECLARE_REGISTRY_APPID_RESOURCEID(IDR_CUSTPALETTE, "{3D1E8F5B-7A9C-4C2E-6D4F-1A3B7E9C2D5F}")
 } ;
 

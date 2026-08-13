@@ -70,12 +70,12 @@ BEGIN
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "FileDescription", "CustPalette ObjectARX application"
+            VALUE "FileDescription", "SLPalette ObjectARX application"
             VALUE "FileVersion", "1, 0, 0, 1"
-            VALUE "InternalName", "CustPalette"
-            VALUE "LegalCopyright", "Copyright ?2002"
-            VALUE "OriginalFilename", "AsdkCustPalette.arx"
-            VALUE "ProductName", "CustPalette Application"
+            VALUE "InternalName", "SL Palette"
+            VALUE "LegalCopyright", "Copyright ?2026"
+            VALUE "OriginalFilename", "KsExploration.arx"
+            VALUE "ProductName", "SLPalette Application"
             VALUE "ProductVersion", "1, 0, 0, 1"
         END
     END
@@ -117,7 +117,7 @@ END
 //
 // Generated from the TEXTINCLUDE 3 resource.
 //
-1 TYPELIB "AsdkCustPalette.tlb"
+//1 TYPELIB "AsdkCustPalette.tlb"
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
