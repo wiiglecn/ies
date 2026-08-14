@@ -37,7 +37,7 @@ def proxy(path):
                 headers=headers,
                 params=request.args,
                 stream=True,
-                timeout=60,  # 设置60秒超时
+                timeout=90,  # 设置60秒超时
             )
         else:
             resp = requests.post(
@@ -46,7 +46,7 @@ def proxy(path):
                 params=request.args,
                 data=request.get_data(),
                 stream=True,
-                timeout=60,  # 设置60秒超时
+                timeout=90,  # 设置60秒超时
             )
     except requests.exceptions.Timeout:
         # 同步超时：立即返回 504 给客户端

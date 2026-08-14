@@ -7,6 +7,5 @@ Release
 bak
 /cad/library_src
 *.suo
-*.suo
 *_i.c
 *_i.p
