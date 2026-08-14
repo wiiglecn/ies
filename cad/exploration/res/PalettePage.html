@@ -53,11 +53,12 @@
                         </td>
                     </tr>
                     <tr>
-                        <td style="width: 130px; text-align: right; vertical-align: bottom;">
-                            <button class="custom-btn chat-send-btn t5" onclick="sendChatMessage()">发送</button>
-                            <button class="custom-btn chat-send-btn t5" onclick="newChat()">新会话</button>
+                        <td style="width: 200px; text-align: left; vertical-align: bottom;">
+                            <button class="custom-btn chat-send-btn t5" onclick="sendChat()" id="buSend">发送</button>
+                            <button class="custom-btn chat-send-btn t5 hidden" onclick="stopChat()" id="buStop">停止</button>
+                            <button class="custom-btn chat-send-btn t5 hidden" onclick="retryChat()" id="buRetry">重试</button>
+                            <button class="custom-btn chat-send-btn t5" onclick="newChat()" id="buNew">新会话</button>
                         </td>
-
                     </tr>
                 </table>
             </div>

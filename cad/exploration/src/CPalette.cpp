@@ -408,6 +408,14 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 		}
     }
 
+	else if (_tcscmp(szCommand, _T("ChatRetry")) == 0)
+    {
+		if(hChat==NULL){
+			return 0;
+		}
+		hChat->ContinueChat();
+    }
+
     
 
 	else if (_tcscmp(szCommand, _T("ReplyContinue")) == 0)

@@ -225,3 +225,6 @@ input[type="text"]:focus {
 .icon-btn:active {
     background-color: #004578;
 }
+.hidden{
+    display: none;
+}

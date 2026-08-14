@@ -197,7 +197,7 @@ void ToolEntity::entity_get(AiToolCommandData* data) {
     cJSON_AddStringToObject(pJson, "type", utf8Name);
 
     cJSON_AddNumberToObject(pJson, "color", pEnt->colorIndex());
-	cJSON_AddNumberToObject(pJson, "line_weight", pEnt->lineWeight());
+	//cJSON_AddNumberToObject(pJson, "line_weight", pEnt->lineWeight());
 
     // Layer
     AcDbObjectId layerId = pEnt->layerId();
@@ -244,6 +244,9 @@ void ToolEntity::entity_get(AiToolCommandData* data) {
         }
         cJSON_AddItemToObject(pJson, "points", ptsArr);
         cJSON_AddBoolToObject(pJson, "closed", pPline->isClosed() ? 1 : 0);
+		double line_width;
+		pPline->getConstantWidth(line_width);
+		cJSON_AddNumberToObject(pJson, "line_width", line_width);
 
     }
     else if (pEnt->isKindOf(AcDbCircle::desc())) {

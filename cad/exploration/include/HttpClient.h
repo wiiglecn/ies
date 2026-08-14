@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 
+
 class CHttpClient
 {
 public:
@@ -35,7 +36,13 @@ public:
                    ResponseCallback pCallback, LPVOID pUserData = NULL);
 
     void Cleanup();
-
+protected:
+    BOOL DoRequestWithSession(CInternetSession* pSession,
+                              const CString& strUrl,
+                              const std::string* pBody,
+                              const std::map<CString, CString>& headers,
+                              std::string& strResponse,
+                              DWORD& dwStatusCode);
 private:
     CInternetSession* m_pSession;
     std::map<CString, CString> m_mapHeaders;

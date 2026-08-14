@@ -7,6 +7,7 @@ var lastMessage = {
 var blinkInterval = null;
 var typingInterval = null; // 新增：打字机效果的定时器
 var waitingForReply = false;
+var lastUserMessage = "";
 
 if (!window.console) {
     window.console = {
@@ -162,8 +163,33 @@ function init() {
     // Initial resize
     
 }
+// 新增：隐藏重试按钮的辅助函数
+function hideRetryButton() {
+    var buRetry = document.getElementById('buRetry');
+    if (buRetry && buRetry.className.indexOf('hidden') === -1) {
+        buRetry.className += ' hidden';
+    }
+}
+// 新增：辅助函数，用于切换“发送”和“停止”按钮的显示状态
+function updateButtonVisibility() {
+    var buSend = document.getElementById('buSend');
+    var buStop = document.getElementById('buStop');
+    if (!buSend || !buStop) return;
 
-
+    if (waitingForReply) {
+        // 正在工作：隐藏发送，显示停止
+        if (buSend.className.indexOf('hidden') === -1) {
+            buSend.className += ' hidden';
+        }
+        buStop.className = buStop.className.replace(' hidden', '');
+    } else {
+        // 不在工作：显示发送，隐藏停止
+        buSend.className = buSend.className.replace(' hidden', '');
+        if (buStop.className.indexOf('hidden') === -1) {
+            buStop.className += ' hidden';
+        }
+    }
+}
 
 // C++ calls this when document is loaded
 function onReady(dataStr) {
@@ -251,6 +277,7 @@ function onReply(dataStr,isContinue){
                 }
             }else{
                 waitingForReply = false;
+                updateButtonVisibility(); // 新增：更新按钮状态
             }
         }
     }, 30); 
@@ -283,6 +310,12 @@ function onChatError(){
     targetDiv.innerHTML = aiResponseText;
     lastMessage.lastMessageDiv = null;
     waitingForReply = false;
+    updateButtonVisibility(); 
+
+    var buRetry = document.getElementById('buRetry');
+    if (buRetry) {
+        buRetry.className = buRetry.className.replace(' hidden', '');
+    }
 }
 function toggleGroup(headerElement) {
     var content = headerElement.nextSibling;
@@ -384,14 +417,16 @@ function stopCursorBlink() {
         blinkInterval = null;
     }
 }
-function sendChatMessage() {
+function sendChat() {
     if (lastMessage.lastMessageDiv || waitingForReply){
         alert("请等待上一条消息回复完成！");
         return;
     }
     var input = document.getElementById('ai-chat-input');
     var message = input.value;
-    
+    lastUserMessage = message; // 记录最后发送的消息
+
+
     // Use the IE7-compatible trim function
     var trimmedMessage = trimString(message);
     
@@ -438,7 +473,10 @@ function sendChatMessage() {
     if (window.external){
         window.external.OnJsCommand("Chat", message);
         waitingForReply = true;
+        updateButtonVisibility();
     }else{
+        waitingForReply = true;
+        updateButtonVisibility();
         setTimeout(function(){
             onReply("图像API接口的通用问题汇总，包含接口调试、模型计费与限流、接口高频报错等。\n" +
 " 本文涉及的图像模型有：文生图V1和V2、涂鸦作画、图像局部重绘、Cosplay动漫人物生成、人像风格重绘、虚拟模特、鞋靴模特、图像画面扩展、人物实例分割、图像擦除补全、创意海报生成、图像背景生成、图配文。\n" +
@@ -471,7 +509,44 @@ function sendChatMessage() {
     //     console.log("Current Chat History:", JSON.stringify(chatMessages));
     // }, 500);
 }
+function stopChat(){
+    hideRetryButton(); // 停止时隐藏重试
+    if (!waitingForReply) return;
+
+    // 新增：确认弹出框
+    var isConfirmed = confirm("确定要停止当前的回复吗？");
+    if (!isConfirmed) return;
+
+    // 通知 C++ 后端停止生成
+    if (window.external){
+        window.external.OnJsCommand("ChatStop", "");
+    }
+
+    // 如果正在打字，停止打字效果
+    if (typingInterval) {
+        clearInterval(typingInterval);
+        typingInterval = null;
+    }
+    stopCursorBlink();
+
+    // 重置状态
+    waitingForReply = false;
+    if (lastMessage.lastMessageDiv) {
+        // 清除当前消息上的光标
+        var cursors = getElementsByClass('thinking-cursor', lastMessage.lastMessageDiv, 'span');
+        for(var i=0; i<cursors.length; i++){
+            cursors[i].style.visibility = 'hidden';
+        }
+        lastMessage.lastMessageDiv = null;
+    }
+    updateButtonVisibility(); // 更新按钮状态
+}
 function newChat(){
+    // 新增：确认弹出框
+    var isConfirmed = confirm("确定要开启新会话并清空当前聊天记录吗？");
+    if (!isConfirmed) return;
+
+    hideRetryButton(); // 新会话时隐藏重试
     // 1. 停止可能正在进行的打字机和光标闪烁效果
     if (typingInterval) {
         clearInterval(typingInterval);
@@ -485,20 +560,57 @@ function newChat(){
     // 3. 清空聊天界面并恢复初始欢迎语
     var chatContainer = document.getElementById('ai-chat-container');
     if (chatContainer) {
-        chatContainer.innerHTML = 'div class="chat-message ai">昇龙助手: 您好! 今天我能帮助您做点什么吗?</div>hr style="border: 0; border-top: 1px dashed #cccccc; margin: 10px 0; color: #cccccc;">';
+        chatContainer.innerHTML = '<div class="chat-message ai">昇龙助手: 您好! 今天我能帮助您做点什么吗?</div><hr style="border: 0; border-top: 1px dashed #cccccc; margin: 10px 0; color: #cccccc;">';
     }
 
     // 4. 重置状态标志
     lastMessage.lastMessageDiv = null;
     waitingForReply = false;
+    updateButtonVisibility(); 
 
     // 5. 通知 C++ 后端开启新会话 (修复了原代码中 message 变量未定义的问题)
     if (window.external){
         window.external.OnJsCommand("ChatNew", "");
     }
 }
+// 新增：重试发送上一条消息
+function retryChat() {
+    if (!lastUserMessage || waitingForReply) return;
+    
+    hideRetryButton(); // 开始重试，隐藏按钮
+
+    var chatContainer = document.getElementById('ai-chat-container');
+    
+    // 显示思考状态
+    var aiResponseText = "昇龙助手:  \"" + lastMessage.text ;
+    var aiMsgDiv = document.createElement('div');
+    aiMsgDiv.className = 'chat-message ai';
+    aiMsgDiv.innerText = aiResponseText;
+
+    var cursor = document.createElement('span');
+    cursor.className = 'thinking-cursor';
+    aiMsgDiv.appendChild(cursor);
+    startCursorBlink(cursor); 
+    
+    chatContainer.appendChild(aiMsgDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    lastMessage.lastMessageDiv=aiMsgDiv;
+    
+    if (window.external){
+        window.external.OnJsCommand("ChatRetry", lastUserMessage);
+        waitingForReply = true;
+        updateButtonVisibility();
+    }else{
+        waitingForReply = true;
+        updateButtonVisibility();
+        setTimeout(function(){
+            onReply("重试成功！");
+        },2000);
+    }
+}
 function checkEnter(event) {
     if (event.keyCode === 13 && event.ctrlKey) {
-        sendChatMessage();
+        sendChat();
     }
 }

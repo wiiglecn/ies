@@ -153,7 +153,7 @@ void AiChat::SendChatRequest(const std::string& jsonBody)
 
     CString authorization;
     authorization.Format(_T("Bearer %s"), DASHSCOPE_API_KEY);
-    CHttpClient* pClient = new CHttpClient;
+    CHttpClient* pClient = new CHttpClient();
     pClient->SetHeader(_T("Content-Type"), _T("application/json"));
     pClient->SetHeader(_T("Authorization"), authorization);
 

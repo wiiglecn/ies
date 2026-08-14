@@ -67,7 +67,7 @@ BOOL CHttpClient::ParseUrl(const CString& strUrl,
                           INTERNET_PORT& nPort,
                           DWORD& dwServiceType)
 {
-    DWORD dwFlags = INTERNET_FLAG_EXISTING_CONNECT;
+    DWORD dwFlags = 0;
     // Declare temporary strings for username and password
     CString strUserName;
     CString strPassword;
@@ -77,20 +77,34 @@ BOOL CHttpClient::ParseUrl(const CString& strUrl,
                          strUserName, strPassword, dwFlags) != FALSE;
 }
 
+
 BOOL CHttpClient::DoRequest(const CString& strUrl,
                             const std::string* pBody,
                             const std::map<CString, CString>& headers,
                             std::string& strResponse,
                             DWORD& dwStatusCode)
 {
-    strResponse.clear();
-    dwStatusCode = 0;
-
     if (m_pSession == NULL)
     {
         if (!Initialize())
             return FALSE;
     }
+
+    return DoRequestWithSession(m_pSession, strUrl, pBody, headers, strResponse, dwStatusCode);
+}
+
+BOOL CHttpClient::DoRequestWithSession(CInternetSession* pSession,
+                                       const CString& strUrl,
+                                       const std::string* pBody,
+                                       const std::map<CString, CString>& headers,
+                                       std::string& strResponse,
+                                       DWORD& dwStatusCode)
+{
+    strResponse.clear();
+    dwStatusCode = 0;
+
+    if (pSession == NULL)
+        return FALSE;
 
     CString strHost, strPath;
     INTERNET_PORT nPort = 0;
@@ -100,13 +114,17 @@ BOOL CHttpClient::DoRequest(const CString& strUrl,
         return FALSE;
 
     BOOL bHttps = (dwServiceType == AFX_INET_SERVICE_HTTPS);
-    DWORD dwFlags = INTERNET_FLAG_EXISTING_CONNECT | INTERNET_FLAG_RELOAD;
+    // 连接级标志
+    DWORD dwConnFlags = 0;
+
+    // 请求级标志
+    DWORD dwReqFlags = INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE;
     if (bHttps)
     {
-        dwFlags |= INTERNET_FLAG_SECURE | 
-                   SECURITY_FLAG_IGNORE_UNKNOWN_CA |
-                   SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
-                   SECURITY_FLAG_IGNORE_CERT_CN_INVALID;
+        dwReqFlags |= INTERNET_FLAG_SECURE |
+                      SECURITY_FLAG_IGNORE_UNKNOWN_CA |
+                      SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
+                      SECURITY_FLAG_IGNORE_CERT_CN_INVALID;
     }
 
     CHttpConnection* pConnection = NULL;
@@ -114,12 +132,14 @@ BOOL CHttpClient::DoRequest(const CString& strUrl,
 
     try
     {
-        pConnection = m_pSession->GetHttpConnection(strHost, dwFlags, nPort, NULL, NULL);
+        pConnection = pSession->GetHttpConnection(strHost, dwConnFlags, nPort, NULL, NULL);
         if (pConnection == NULL)
             return FALSE;
 
         LPCTSTR pszVerb = (pBody != NULL) ? _T("POST") : _T("GET");
-        pFile = pConnection->OpenRequest(pszVerb, strPath, NULL, 1, NULL, NULL, dwFlags);
+        
+        // 修复：最后一个参数必须是 dwReqFlags，之前错误地传了 dwConnFlags
+        pFile = pConnection->OpenRequest(pszVerb, strPath, NULL, 1, NULL, NULL, dwReqFlags);
         if (pFile == NULL)
         {
             pConnection->Close();
@@ -133,15 +153,12 @@ BOOL CHttpClient::DoRequest(const CString& strUrl,
             DWORD dwSecurityFlags = 0;
             DWORD dwBuffLen = sizeof(dwSecurityFlags);
             
-            // 获取现有的安全标志
             pFile->QueryOption(INTERNET_OPTION_SECURITY_FLAGS, &dwSecurityFlags, &dwBuffLen);
             
-            // 追加忽略未知CA、证书日期无效、证书CN不匹配等标志
             dwSecurityFlags |= SECURITY_FLAG_IGNORE_UNKNOWN_CA |
                                SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
                                SECURITY_FLAG_IGNORE_CERT_CN_INVALID ;
             
-            // 设置强制覆盖的安全标志
             pFile->SetOption(INTERNET_OPTION_SECURITY_FLAGS, &dwSecurityFlags, sizeof(dwSecurityFlags));
         }
 
@@ -168,7 +185,7 @@ BOOL CHttpClient::DoRequest(const CString& strUrl,
         pFile->QueryInfoStatusCode(dwStatusCode);
 
         // Read response
-		char szBuffer[4096]={0};
+        char szBuffer[4096] = {0};
         UINT nRead = 0;
         do
         {
@@ -205,6 +222,8 @@ BOOL CHttpClient::DoRequest(const CString& strUrl,
     }
 }
 
+// ...existing code...
+
 BOOL CHttpClient::Get(LPCTSTR pszUrl, std::string& strResponse, DWORD& dwStatusCode)
 {
     if (pszUrl == NULL) return FALSE;
@@ -223,15 +242,25 @@ UINT CHttpClient::AsyncThreadProc(LPVOID pParam)
     AsyncData* pData = (AsyncData*)pParam;
     if (pData == NULL || pData->pThis == NULL) return 1;
 
+    // 为每个异步线程创建独立的 Session，避免跨线程竞争
+    CInternetSession localSession(_T("MFC-HttpClient/1.0"), 1, INTERNET_OPEN_TYPE_PRECONFIG);
+    localSession.SetOption(INTERNET_OPTION_CONNECT_TIMEOUT, pData->pThis->m_dwConnectTimeout);
+    localSession.SetOption(INTERNET_OPTION_SEND_TIMEOUT, pData->pThis->m_dwSendTimeout);
+    localSession.SetOption(INTERNET_OPTION_RECEIVE_TIMEOUT, pData->pThis->m_dwReceiveTimeout);
+
     std::string strResponse;
     DWORD dwStatusCode = 0;
 
-    BOOL bSuccess = pData->pThis->DoRequest(
+    // 使用 localSession 替代共享的 m_pSession
+    BOOL bSuccess = pData->pThis->DoRequestWithSession(
+        &localSession,
         pData->url,
         pData->hasBody ? &pData->body : NULL,
         pData->headers,
         strResponse,
         dwStatusCode);
+
+    localSession.Close();
 
     if (pData->callback)
     {
