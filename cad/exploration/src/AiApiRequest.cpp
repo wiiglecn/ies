@@ -72,6 +72,17 @@ static const ToolRouteInfo toolRoutes[] = {
     { "/ai/tool/zoom_window", "zoom_window", WM_USER_A_ZOOM_WINDOW },
     { "/ai/tool/get_screenshot", "get_screenshot", WM_USER_A_GET_SCREENSHOT },
 
+    { "/ai/tool/add_text_style", "add_text_style", WM_USER_A_ADD_TEXT_STYLE },
+    { "/ai/tool/modify_text_style", "modify_text_style", WM_USER_A_MODIFY_TEXT_STYLE },
+    { "/ai/tool/delete_text_style", "delete_text_style", WM_USER_A_DELETE_TEXT_STYLE },
+    { "/ai/tool/add_dim_style", "add_dim_style", WM_USER_A_ADD_DIM_STYLE },
+    { "/ai/tool/modify_dim_style", "modify_dim_style", WM_USER_A_MODIFY_DIM_STYLE },
+    { "/ai/tool/delete_dim_style", "delete_dim_style", WM_USER_A_DELETE_DIM_STYLE },
+    { "/ai/tool/list_text_styles", "list_text_styles", WM_USER_A_LIST_TEXT_STYLES },
+    { "/ai/tool/get_text_styles", "get_text_styles", WM_USER_A_GET_TEXT_STYLES },
+    { "/ai/tool/list_dim_styles", "list_dim_styles", WM_USER_A_LIST_DIM_STYLES },
+    { "/ai/tool/get_dim_styles", "get_dim_styles", WM_USER_A_GET_DIM_STYLES },
+
 	{ "/ai/tool/dispatch_command", "dispatch_command", WM_USER_TOOL_CMD },
     { "/ai/tool/get_drawing_units", "get_drawing_units", WM_USER_A_GETDRAWINGUNITS },
 

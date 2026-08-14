@@ -20,6 +20,7 @@
 #include "../tools/ToolBlock.h"
 #include "../tools/ToolAnnotation.h"
 #include "../tools/ToolView.h"
+#include "../tools/ToolStyle.h"
 
 // Remove #include thread> and add a helper thread procedure
 struct ThreadProcData {
@@ -213,6 +214,38 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
             break;
 		case WM_USER_A_GET_SCREENSHOT:
             ToolView::getInstance().get_screenshot(params);
+            break;
+
+        //style
+        case WM_USER_A_ADD_TEXT_STYLE:
+            ToolStyle::getInstance().add_text_style(params);
+            break;
+        case WM_USER_A_MODIFY_TEXT_STYLE:
+            ToolStyle::getInstance().modify_text_style(params);
+            break;
+        case WM_USER_A_DELETE_TEXT_STYLE:
+            ToolStyle::getInstance().delete_text_style(params);
+            break;
+        case WM_USER_A_ADD_DIM_STYLE:
+            ToolStyle::getInstance().add_dim_style(params);
+            break;
+        case WM_USER_A_MODIFY_DIM_STYLE:
+            ToolStyle::getInstance().modify_dim_style(params);
+            break;
+        case WM_USER_A_DELETE_DIM_STYLE:
+            ToolStyle::getInstance().delete_dim_style(params);
+            break;
+        case WM_USER_A_LIST_TEXT_STYLES:
+            ToolStyle::getInstance().list_text_styles(params);
+            break;
+        case WM_USER_A_GET_TEXT_STYLES:
+            ToolStyle::getInstance().get_text_styles(params);
+            break;
+        case WM_USER_A_LIST_DIM_STYLES:
+            ToolStyle::getInstance().list_dim_styles(params);
+            break;
+        case WM_USER_A_GET_DIM_STYLES:
+            ToolStyle::getInstance().get_dim_styles(params);
             break;
 
 		case WM_USER_TOOL_TEST:

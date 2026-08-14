@@ -528,6 +528,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\tools\ToolStyle.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tools\ToolStyle.h"
+				>
+			</File>
+			<File
 				RelativePath=".\tools\ToolView.cpp"
 				>
 			</File>

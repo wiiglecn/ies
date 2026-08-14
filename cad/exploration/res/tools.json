@@ -1223,6 +1223,180 @@
                 "properties": {}
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "add_text_style",
+            "description": "Creates a new text style in the AutoCAD database. Returns a JSON object containing the 'name' and 'handle' of the newly created text style.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "description": "Name of the new text style" },
+                    "font": { "type": "string", "description": "Font file name (e.g., 'simplex.shx', 'arial.ttf'). Optional, defaults to the drawing's default font." },
+                    "height": { "type": "number", "description": "Fixed text height. Use 0 for variable height (optional, defaults to 0)." },
+                    "width_factor": { "type": "number", "description": "Width factor for character expansion/condensing (optional, defaults to 1.0)." },
+                    "oblique_angle": { "type": "number", "description": "Oblique angle in radians (optional, defaults to 0.0, range: -1.48 to 1.48)." },
+                    "upside_down": { "type": "boolean", "description": "Whether text is upside down (optional, defaults to false)." },
+                    "backward": { "type": "boolean", "description": "Whether text is backward (mirrored, optional, defaults to false)." }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "modify_text_style",
+            "description": "Modifies the properties of an existing text style in the AutoCAD database.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "description": "Name of the text style to modify" },
+                    "font": { "type": "string", "description": "New font file name (optional)." },
+                    "height": { "type": "number", "description": "New fixed text height (optional)." },
+                    "width_factor": { "type": "number", "description": "New width factor (optional)." },
+                    "oblique_angle": { "type": "number", "description": "New oblique angle in radians (optional)." },
+                    "upside_down": { "type": "boolean", "description": "Whether text is upside down (optional)." },
+                    "backward": { "type": "boolean", "description": "Whether text is backward (optional)." }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_text_style",
+            "description": "Deletes a text style from the AutoCAD database by name. The 'Standard' style cannot be deleted. Styles currently in use may not be deletable.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "description": "Name of the text style to delete" }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "add_dim_style",
+            "description": "Creates a new dimension style in the AutoCAD database. Returns a JSON object containing the 'name' and 'handle' of the newly created dimension style.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "description": "Name of the new dimension style" },
+                    "arrow_size": { "type": "number", "description": "Size of dimension arrowheads (optional, defaults to drawing default)." },
+                    "text_height": { "type": "number", "description": "Height of dimension text (optional)." },
+                    "dim_scale": { "type": "number", "description": "Global scale factor for dimensions (optional, defaults to 1.0)." },
+                    "decimal_places": { "type": "integer", "description": "Number of decimal places for dimension values (optional)." },
+                    "text_color": { "type": "integer", "description": "AutoCAD Color Index (ACI) for dimension text (optional)." },
+                    "dim_line_color": { "type": "integer", "description": "AutoCAD Color Index (ACI) for dimension lines and arrowheads (optional)." },
+                    "extension_line_offset": { "type": "number", "description": "Distance from the origin point to the start of the extension line (optional)." },
+                    "extension_line_extend": { "type": "number", "description": "Distance the extension line extends beyond the dimension line (optional)." },
+                    "text_gap": { "type": "number", "description": "Gap between dimension text and dimension line (optional)." },
+                    "text_style": { "type": "string", "description": "Name of the text style to use for dimension text (optional). Must already exist." }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "modify_dim_style",
+            "description": "Modifies the properties of an existing dimension style in the AutoCAD database.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "description": "Name of the dimension style to modify" },
+                    "arrow_size": { "type": "number", "description": "New arrowhead size (optional)." },
+                    "text_height": { "type": "number", "description": "New dimension text height (optional)." },
+                    "dim_scale": { "type": "number", "description": "New global scale factor (optional)." },
+                    "decimal_places": { "type": "integer", "description": "New number of decimal places (optional)." },
+                    "text_color": { "type": "integer", "description": "New ACI color for dimension text (optional)." },
+                    "dim_line_color": { "type": "integer", "description": "New ACI color for dimension lines (optional)." },
+                    "extension_line_offset": { "type": "number", "description": "New extension line offset distance (optional)." },
+                    "extension_line_extend": { "type": "number", "description": "New extension line extend distance (optional)." },
+                    "text_gap": { "type": "number", "description": "New text gap distance (optional)." },
+                    "text_style": { "type": "string", "description": "New text style name (optional)." }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_dim_style",
+            "description": "Deletes a dimension style from the AutoCAD database by name. The 'Standard' style cannot be deleted. Styles currently in use may not be deletable.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "description": "Name of the dimension style to delete" }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_text_styles",
+            "description": "Lists all text styles in the AutoCAD database.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_text_styles",
+            "description": "Gets the properties of multiple text styles by their names.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "names": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Array of text style names to query."
+                    }
+                },
+                "required": ["names"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_dim_styles",
+            "description": "Lists all dimension styles in the AutoCAD database.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_dim_styles",
+            "description": "Gets the properties of multiple dimension styles by their names.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "names": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Array of dimension style names to query."
+                    }
+                },
+                "required": ["names"]
+            }
+        }
     }
     
 ]
