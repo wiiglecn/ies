@@ -203,6 +203,7 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
 
         case WM_USER_A_REGEN:
             ToolDraw::getInstance().regen();
+			params->ret = 0;
             break;
 
 		//view

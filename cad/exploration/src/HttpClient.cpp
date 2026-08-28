@@ -116,6 +116,10 @@ BOOL CHttpClient::DoRequestWithSession(CInternetSession* pSession,
     BOOL bHttps = (dwServiceType == AFX_INET_SERVICE_HTTPS);
     // 连接级标志
     DWORD dwConnFlags = 0;
+    // 使用 INTERNET_FLAG_KEEP_CONNECTION 来控制连接复用
+    // 如果设置此标志，MFC 会尝试保持连接；如果不设置，每次请求后关闭
+    // 为了避免 Session 耗尽，我们显式地不使用连接池
+    dwConnFlags = 0;
 
     // 请求级标志
     DWORD dwReqFlags = INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE;
@@ -132,18 +136,29 @@ BOOL CHttpClient::DoRequestWithSession(CInternetSession* pSession,
 
     try
     {
+        // 不使用连接池，避免 Session 耗尽问题
+        // 每次请求都创建新的 Connection，用完立即删除
         pConnection = pSession->GetHttpConnection(strHost, dwConnFlags, nPort, NULL, NULL);
         if (pConnection == NULL)
             return FALSE;
 
         LPCTSTR pszVerb = (pBody != NULL) ? _T("POST") : _T("GET");
         
-        // 修复：最后一个参数必须是 dwReqFlags，之前错误地传了 dwConnFlags
+        // 添加调试输出以便追踪问题
+        ::OutputDebugString(_T("Opening request: "));  
+        ::OutputDebugString(strPath.GetBuffer());
+        ::OutputDebugString(_T("\n"));
+        
         pFile = pConnection->OpenRequest(pszVerb, strPath, NULL, 1, NULL, NULL, dwReqFlags);
         if (pFile == NULL)
         {
-            pConnection->Close();
-            delete pConnection;
+            ::OutputDebugString(_T("OpenRequest failed!\n"));
+            // 关键修复：先 Close 再 Delete，且不要重复调用 Close
+            if (pConnection)
+            {
+                delete pConnection;
+                pConnection = NULL;
+            }
             return FALSE;
         }
 
@@ -171,18 +186,45 @@ BOOL CHttpClient::DoRequestWithSession(CInternetSession* pSession,
             pFile->AddRequestHeaders(strHeader);
         }
 
-        // Send request
+        // 关键修复：POST 请求时设置正确的 Content-Length
         if (pBody != NULL)
         {
-            pFile->SendRequest(NULL, 0, (LPVOID)pBody->data(), (DWORD)pBody->length());
+            CString strLength;
+            strLength.Format(_T("Content-Length: %d\r\n"), pBody->length());
+            pFile->AddRequestHeaders(strLength);
+        }
+
+        // Send request - 直接传递数据并等待完成
+        BOOL bSendSuccess = FALSE;
+        
+        if (pBody != NULL)
+        {
+            // POST: 立即发送 body 数据
+            bSendSuccess = pFile->SendRequest(NULL, 0, (LPVOID)pBody->data(), (DWORD)pBody->length());
+            if (!bSendSuccess)
+            {
+                ::OutputDebugString(_T("SendRequest (POST) failed immediately\n"));
+                throw new CInternetException(ERROR_CAN_NOT_COMPLETE);
+            }
         }
         else
         {
-            pFile->SendRequest();
+            // GET: 先发送请求头，然后等待响应
+            bSendSuccess = pFile->SendRequest();
+            if (!bSendSuccess)
+            {
+                ::OutputDebugString(_T("SendRequest (GET) failed immediately\n"));
+                throw new CInternetException(ERROR_FILE_INVALID);
+            }
         }
 
-        // Query status code
-        pFile->QueryInfoStatusCode(dwStatusCode);
+        // 等待服务器响应 - QueryInfoStatusCode 会阻塞直到收到响应
+        bSendSuccess = pFile->QueryInfoStatusCode(dwStatusCode);
+        if (!bSendSuccess)
+        {
+            ::OutputDebugString(_T("QueryInfoStatusCode failed\n"));
+            throw new CInternetException(ERROR_INTERNET_TIMEOUT);
+        }
 
         // Read response
         char szBuffer[4096] = {0};
@@ -197,9 +239,13 @@ BOOL CHttpClient::DoRequestWithSession(CInternetSession* pSession,
         } while (nRead > 0);
 
         pFile->Close();
-        pConnection->Close();
         delete pFile;
+        pFile = NULL;
+        
+        // 关键：立即删除 Connection，不重用连接
+        pConnection->Close();
         delete pConnection;
+        pConnection = NULL;
 
         return TRUE;
     }
@@ -208,16 +254,41 @@ BOOL CHttpClient::DoRequestWithSession(CInternetSession* pSession,
         TCHAR szErr[256] = {0};
         pEx->GetErrorMessage(szErr, 256);
         TRACE(_T("HTTP Exception: %s\n"), szErr);
+        ::OutputDebugString(szErr);
+        ::OutputDebugString(_T("\n"));
         pEx->Delete();
 
-        if (pFile) { delete pFile; }
-        if (pConnection) { delete pConnection; }
+        // 确保所有资源都被清理 - VC8 MFC 没有 TryClose，使用普通 Close+try-catch
+        if (pFile) 
+        {
+            try { pFile->Close(); } catch (...) {}
+            delete pFile;
+            pFile = NULL;
+        }
+        if (pConnection) 
+        {
+            try { pConnection->Close(); } catch (...) {}
+            delete pConnection;
+            pConnection = NULL;
+        }
         return FALSE;
     }
     catch (...)
     {
-        if (pFile) { delete pFile; }
-        if (pConnection) { delete pConnection; }
+        ::OutputDebugString(_T("Unknown exception\n"));
+        // 确保所有资源都被清理 - VC8 MFC 没有 TryClose，使用普通 Close+try-catch
+        if (pFile) 
+        {
+            try { pFile->Close(); } catch (...) {}
+            delete pFile;
+            pFile = NULL;
+        }
+        if (pConnection) 
+        {
+            try { pConnection->Close(); } catch (...) {}
+            delete pConnection;
+            pConnection = NULL;
+        }
         return FALSE;
     }
 }
@@ -242,7 +313,7 @@ UINT CHttpClient::AsyncThreadProc(LPVOID pParam)
     AsyncData* pData = (AsyncData*)pParam;
     if (pData == NULL || pData->pThis == NULL) return 1;
 
-    // 为每个异步线程创建独立的 Session，避免跨线程竞争
+    // 为每个异步请求创建独立的 Session
     CInternetSession localSession(_T("MFC-HttpClient/1.0"), 1, INTERNET_OPEN_TYPE_PRECONFIG);
     localSession.SetOption(INTERNET_OPTION_CONNECT_TIMEOUT, pData->pThis->m_dwConnectTimeout);
     localSession.SetOption(INTERNET_OPTION_SEND_TIMEOUT, pData->pThis->m_dwSendTimeout);
@@ -251,7 +322,7 @@ UINT CHttpClient::AsyncThreadProc(LPVOID pParam)
     std::string strResponse;
     DWORD dwStatusCode = 0;
 
-    // 使用 localSession 替代共享的 m_pSession
+    // 使用 localSession 进行请求
     BOOL bSuccess = pData->pThis->DoRequestWithSession(
         &localSession,
         pData->url,
@@ -260,6 +331,7 @@ UINT CHttpClient::AsyncThreadProc(LPVOID pParam)
         strResponse,
         dwStatusCode);
 
+    // 确保资源完全释放
     localSession.Close();
 
     if (pData->callback)
@@ -283,8 +355,7 @@ BOOL CHttpClient::GetAsync(LPCTSTR pszUrl, ResponseCallback pCallback, LPVOID pU
     pData->callback  = pCallback;
     pData->userData  = pUserData;
 
-    if (m_pSession == NULL) Initialize();
-
+    // 不再依赖 m_pSession，每个异步请求都有自己独立的 session
     CWinThread* pThread = AfxBeginThread(AsyncThreadProc, pData,
         THREAD_PRIORITY_NORMAL, 0, CREATE_SUSPENDED);
 
@@ -313,8 +384,7 @@ BOOL CHttpClient::PostAsync(LPCTSTR pszUrl, const std::string& strBody,
     pData->callback  = pCallback;
     pData->userData  = pUserData;
 
-    if (m_pSession == NULL) Initialize();
-
+    // 不再依赖 m_pSession，每个异步请求都有自己独立的 session
     CWinThread* pThread = AfxBeginThread(AsyncThreadProc, pData,
         THREAD_PRIORITY_NORMAL, 0, CREATE_SUSPENDED);
 

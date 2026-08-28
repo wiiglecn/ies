@@ -149,6 +149,7 @@ CWnd* AiChat::getAcadWnd()
 }
 void AiChat::SendChatRequest(const std::string& jsonBody)
 {
+    CLogger::GetInstance().Debug(_T("[AI] Starting send request...\n"));
     CLogger::GetInstance().Debug(jsonBody);
 
     CString authorization;
@@ -161,6 +162,8 @@ void AiChat::SendChatRequest(const std::string& jsonBody)
     pCtx->pAiChat = this;
     pCtx->pClient = pClient;
 
+    CLogger::GetInstance().Debug(_T("[AI] Calling PostAsync...\n"));
+    
     pClient->PostAsync(
         WORK_URL,
         jsonBody,
