@@ -2,7 +2,8 @@
 #include <fstream>
 #include <iterator>
 #include "AiChat.h"
-#include "HttpClientCurl.h"   // 原: #include "HttpClient.h"
+#include "HttpClient.h"   // 
+//#include "HttpClientCurl.h"   // 原: #include "HttpClient.h"
 #include "cJSON.h"
 #include "Utils.h"
 #include "Logger.h"
@@ -21,7 +22,7 @@
 
 struct AsyncContext {
     AiChat* pAiChat;
-    CHttpClientCurl* pClient;
+    CHttpClient* pClient;
 };
 
 static bool IsFinishReasonToolCalls(cJSON* choice)
@@ -77,7 +78,7 @@ static std::string CallLocalTool(const char* functionName, const std::string& ar
     CString toolUrl(LOCAL_TOOL_URL_PREFIX);
     toolUrl += CString(functionName);
 
-    CHttpClientCurl toolClient;
+    CHttpClient toolClient;
     toolClient.Initialize();   // 幂等,引用计数
     toolClient.SetHeader(_T("Content-Type"), _T("application/json"));
 
@@ -108,7 +109,7 @@ void OnHttpResponse(BOOL bSuccess, const std::string& strResponse,
     AsyncContext* pCtx  = (AsyncContext*)pUserData;
     if (pCtx  != NULL)
     {
-        CHttpClientCurl* pClient = pCtx->pClient;
+        CHttpClient* pClient = pCtx->pClient;
 		
         if (bSuccess)
         {
@@ -156,8 +157,8 @@ void AiChat::SendChatRequest(const std::string& jsonBody)
 
     CString authorization;
     authorization.Format(_T("Bearer %s"), DASHSCOPE_API_KEY);
-    CHttpClientCurl* pClient = new CHttpClientCurl();
-    pClient->Initialize();  
+    CHttpClient* pClient = new CHttpClient();
+    //pClient->Initialize();  
     pClient->SetHeader(_T("Content-Type"), _T("application/json"));
     pClient->SetHeader(_T("Authorization"), authorization);
 
