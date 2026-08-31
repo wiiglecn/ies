@@ -310,8 +310,13 @@ void AiChat::ProcessToolResponse(const std::string& strResponse)
                     time_t rawtime;
                     struct tm timeinfo;
                     time(&rawtime);
+#ifdef _CAD2005
+					struct tm* pTmp = localtime(&rawtime);
+					if (pTmp != NULL)
+						timeinfo = *pTmp;   // 从静态缓冲区拷贝到本地变量
+#else
                     localtime_s(&timeinfo, &rawtime);
-                    
+#endif
                     char timeBuffer[15];
                     strftime(timeBuffer, sizeof(timeBuffer), "%Y%m%d%H%M%S", &timeinfo);
 
@@ -354,7 +359,13 @@ void AiChat::ProcessToolResponse(const std::string& strResponse)
                         else
                         {
                             char szToolCallId[32];
-                            sprintf_s(szToolCallId, sizeof(szToolCallId), "call_%s_%03d", timeBuffer, j + 1);
+#ifdef _CAD2005
+							_snprintf(szToolCallId, sizeof(szToolCallId) - 1, "call_%s_%03d", timeBuffer, j + 1);
+							szToolCallId[sizeof(szToolCallId) - 1] = '\0';   // _snprintf 截断时不保证补 '\0'
+#else
+							sprintf_s(szToolCallId, sizeof(szToolCallId), "call_%s_%03d", timeBuffer, j + 1);
+#endif
+                            
                             cJSON_AddStringToObject(toolMsg, "tool_call_id", szToolCallId);
                         }
 

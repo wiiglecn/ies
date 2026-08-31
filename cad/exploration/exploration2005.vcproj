@@ -1,582 +1,341 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding = "UTF-8"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="7.00"
 	Name="exploration"
 	ProjectGUID="{4774A453-18F5-42BB-A61C-98D1B145D943}"
-	RootNamespace="exploration"
-	Keyword="MFCProj"
-	>
+	Keyword="MFCProj">
 	<Platforms>
 		<Platform
-			Name="Win32"
-		/>
+			Name="Win32"/>
 	</Platforms>
-	<ToolFiles>
-	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="Debug2005"
 			IntermediateDirectory="Debug2005"
 			ConfigurationType="2"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="2"
 			UseOfATL="2"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-				CommandLine=""
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-				CommandLine=""
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions=""
-				MkTypLibCompatible="false"
-				TargetEnvironment="1"
-				GenerateStublessProxies="true"
-				GenerateTypeLibrary="true"
-				TypeLibraryName="$(IntDir)/AsdkCustPalette.tlb"
-				HeaderFileName="$(InputName).h"
-				DLLDataFileName=""
-				InterfaceIdentifierFileName="CustPalette_i.c"
-				ProxyFileName="CustPalette_p.c"
-			/>
+			CharacterSet="2">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\include;..\inc\2005;.\include"
 				AdditionalUsingDirectories=""
 				PreprocessorDefinitions="_CAD2005;WIN32;_DEBUG;_WINDOWS;_AFXEXT"
-				StringPooling="false"
-				MinimalRebuild="true"
+				StringPooling="FALSE"
+				MinimalRebuild="TRUE"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="2"
-				BufferSecurityCheck="true"
-				TreatWChar_tAsBuiltInType="true"
-				ForceConformanceInForLoopScope="true"
-				RuntimeTypeInfo="true"
+				BufferSecurityCheck="TRUE"
+				TreatWChar_tAsBuiltInType="TRUE"
+				ForceConformanceInForLoopScope="TRUE"
+				RuntimeTypeInfo="TRUE"
 				UsePrecompiledHeader="0"
 				WarningLevel="1"
-				Detect64BitPortabilityProblems="false"
-				DebugInformationFormat="4"
-			/>
+				Detect64BitPortabilityProblems="FALSE"
+				DebugInformationFormat="4"/>
 			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions=""
-				Culture="1033"
-				AdditionalIncludeDirectories="$(IntDir)"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
+				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="rxapi.lib  acdb16.lib  acge16.lib acgiapi.lib achapi16.lib acISMobj16.lib acad.lib acedapi.lib adui16.lib acui16.lib Oleacc.lib mongoose.lib crypt32.lib"
 				OutputFile="$(outdir)/KsExploration.arx"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib;..\lib\2005"
-				LinkDLL="true"
+				LinkDLL="TRUE"
 				ModuleDefinitionFile="..\inc\2005\AcRxDefault.def"
-				GenerateDebugInformation="true"
+				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)/CustPalette.pdb"
 				SubSystem="2"
 				ImportLibrary="$(OutDir)/CustPalette.lib"
-				TargetMachine="1"
-			/>
+				TargetMachine="1"/>
 			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
-			/>
+				Name="VCMIDLTool"
+				PreprocessorDefinitions=""
+				MkTypLibCompatible="FALSE"
+				TargetEnvironment="1"
+				GenerateStublessProxies="TRUE"
+				GenerateTypeLibrary="TRUE"
+				TypeLibraryName="$(IntDir)/AsdkCustPalette.tlb"
+				HeaderFileName="$(InputName).h"
+				DLLDataFileName=""
+				InterfaceIdentifierFileName="CustPalette_i.c"
+				ProxyFileName="CustPalette_p.c"/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.html&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.css&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.js&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\chat.bin&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
-			/>
+				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.html&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.css&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.js&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D &quot;$(ProjectDir)res\chat.bin&quot; &quot;$(OutDir)&quot;
+"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions=""
+				Culture="1033"
+				AdditionalIncludeDirectories="$(IntDir)"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="Release"
 			IntermediateDirectory="Release"
 			ConfigurationType="2"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="2"
 			UseOfATL="2"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				MkTypLibCompatible="false"
-				TargetEnvironment="1"
-				GenerateStublessProxies="true"
-				GenerateTypeLibrary="true"
-				TypeLibraryName="$(IntDir)/AsdkCustPalette.tlb"
-				HeaderFileName="$(InputName).h"
-				DLLDataFileName=""
-				InterfaceIdentifierFileName="CustPalette_i.c"
-				ProxyFileName="CustPalette_p.c"
-			/>
+			CharacterSet="1">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				AdditionalIncludeDirectories="..\include;.\include;..\inc\2005"
 				AdditionalUsingDirectories=""
-				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG;CUSTPALETTE_MODULE;UNICODE;_UNICODE;_AFXEXT;_ACRXAPP;_CRT_SECURE_NO_DEPRECATE"
-				StringPooling="true"
-				MinimalRebuild="false"
+				PreprocessorDefinitions="_CAD2005;WIN32;_WINDOWS;NDEBUG;CUSTPALETTE_MODULE;UNICODE;_UNICODE;_AFXEXT;_ACRXAPP;_CRT_SECURE_NO_DEPRECATE"
+				StringPooling="TRUE"
+				MinimalRebuild="FALSE"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
-				BufferSecurityCheck="true"
-				TreatWChar_tAsBuiltInType="true"
-				ForceConformanceInForLoopScope="true"
-				RuntimeTypeInfo="true"
+				BufferSecurityCheck="TRUE"
+				TreatWChar_tAsBuiltInType="TRUE"
+				ForceConformanceInForLoopScope="TRUE"
+				RuntimeTypeInfo="TRUE"
 				UsePrecompiledHeader="0"
 				WarningLevel="1"
-				Detect64BitPortabilityProblems="false"
-				DebugInformationFormat="0"
-			/>
+				Detect64BitPortabilityProblems="FALSE"
+				DebugInformationFormat="0"/>
 			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
-				AdditionalIncludeDirectories="$(IntDir)"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
+				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="rxapi.lib  acdb16.lib  acge16.lib acgiapi.lib achapi16.lib acISMobj16.lib acad.lib acedapi.lib adui16.lib acui16.lib Oleacc.lib mongoose.lib crypt32.lib"
 				OutputFile="$(outdir)/KsExploration.arx"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib;..\lib\2005"
-				LinkDLL="true"
+				LinkDLL="TRUE"
 				ModuleDefinitionFile="..\inc\2005\AcRxDefault.def"
-				GenerateDebugInformation="false"
+				GenerateDebugInformation="FALSE"
 				ProgramDatabaseFile=""
 				SubSystem="2"
 				ImportLibrary="$(OutDir)/CustPalette.lib"
-				TargetMachine="1"
-			/>
+				TargetMachine="1"/>
 			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
-			/>
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="FALSE"
+				TargetEnvironment="1"
+				GenerateStublessProxies="TRUE"
+				GenerateTypeLibrary="TRUE"
+				TypeLibraryName="$(IntDir)/AsdkCustPalette.tlb"
+				HeaderFileName="$(InputName).h"
+				DLLDataFileName=""
+				InterfaceIdentifierFileName="CustPalette_i.c"
+				ProxyFileName="CustPalette_p.c"/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.html&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.css&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.js&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\chat.bin&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;"
-			/>
+				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.html&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.css&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.js&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D &quot;$(ProjectDir)res\chat.bin&quot; &quot;$(OutDir)&quot;
+"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+				AdditionalIncludeDirectories="$(IntDir)"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
 		</Configuration>
 	</Configurations>
-	<References>
-	</References>
 	<Files>
 		<Filter
 			Name="Source Files"
-			Filter="cpp;c;cc;cxx;def;idl;odl"
-			>
+			Filter="cpp;c;cc;cxx;def;idl;odl">
 			<File
-				RelativePath=".\src\AiApiRequest.cpp"
-				>
+				RelativePath=".\src\AiApiRequest.cpp">
 			</File>
 			<File
-				RelativePath=".\src\AiApiServer.cpp"
-				>
+				RelativePath=".\src\AiApiServer.cpp">
 			</File>
 			<File
-				RelativePath=".\src\AiChat.cpp"
-				>
+				RelativePath=".\src\AiChat.cpp">
 			</File>
 			<File
-				RelativePath=".\src\BaseMarker.cpp"
-				>
+				RelativePath=".\src\BaseMarker.cpp">
 			</File>
 			<File
-				RelativePath=".\src\CircleFilter.cpp"
-				>
+				RelativePath=".\src\CPalette.cpp">
 			</File>
 			<File
-				RelativePath=".\src\cJSON.c"
-				>
+				RelativePath=".\src\CPalette_cmd.cpp">
 			</File>
 			<File
-				RelativePath=".\src\CPalette.cpp"
-				>
+				RelativePath=".\src\CircleFilter.cpp">
 			</File>
 			<File
-				RelativePath=".\src\CPalette_cmd.cpp"
-				>
+				RelativePath=".\src\HtmlPaletteView.cpp">
 			</File>
 			<File
-				RelativePath=".\src\CustPalette.cpp"
-				>
+				RelativePath=".\src\HttpClient.cpp">
 			</File>
 			<File
-				RelativePath=".\CustPalette.idl"
-				>
+				RelativePath=".\src\LineHolePlacer.cpp">
 			</File>
 			<File
-				RelativePath=".\src\DWGPreview.cpp"
-				>
+				RelativePath=".\src\LineJig.cpp">
 			</File>
 			<File
-				RelativePath=".\src\HtmlPaletteView.cpp"
-				>
+				RelativePath=".\src\Logger.cpp">
 			</File>
 			<File
-				RelativePath=".\src\HttpClient.cpp"
-				>
+				RelativePath="src\Palette2005.cpp">
 			</File>
 			<File
-				RelativePath=".\src\HttpClientCurl.cpp"
-				>
+				RelativePath=".\src\PaletteCleanup.cpp">
 			</File>
 			<File
-				RelativePath=".\src\InspData.cpp"
-				>
+				RelativePath=".\src\PaletteSet.cpp">
 			</File>
 			<File
-				RelativePath=".\src\InspPalette.cpp"
-				>
+				RelativePath=".\src\PolylineMarker.cpp">
 			</File>
 			<File
-				RelativePath=".\src\LineHolePlacer.cpp"
-				>
+				RelativePath=".\src\PreSelectScale.cpp">
 			</File>
 			<File
-				RelativePath=".\src\LineJig.cpp"
-				>
+				RelativePath=".\src\StdAfx.cpp">
 			</File>
 			<File
-				RelativePath=".\src\Logger.cpp"
-				>
+				RelativePath=".\src\Utils.cpp">
 			</File>
 			<File
-				RelativePath=".\src\MySafeHtmlView.cpp"
-				>
+				RelativePath=".\src\cJSON.c">
 			</File>
 			<File
-				RelativePath=".\src\Palette.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\PaletteCleanup.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\PaletteSet.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\PolylineMarker.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\PreSelectScale.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\rxdebug.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\StdAfx.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Utils.cpp"
-				>
+				RelativePath="src\rxdebug2005.cpp">
 			</File>
 		</Filter>
 		<Filter
 			Name="Include Files"
-			Filter="h;hh;hxx"
-			>
+			Filter="h;hh;hxx">
 			<File
-				RelativePath=".\include\AiApiRequest.h"
-				>
+				RelativePath=".\include\AiApiRequest.h">
 			</File>
 			<File
-				RelativePath=".\include\AiApiServer.h"
-				>
+				RelativePath=".\include\AiApiServer.h">
 			</File>
 			<File
-				RelativePath=".\include\AiChat.h"
-				>
+				RelativePath=".\include\AiChat.h">
 			</File>
 			<File
-				RelativePath=".\include\BaseMarker.h"
-				>
+				RelativePath=".\include\BaseMarker.h">
 			</File>
 			<File
-				RelativePath=".\include\CircleFilter.h"
-				>
+				RelativePath=".\include\CPalette.h">
 			</File>
 			<File
-				RelativePath=".\include\cJSON.h"
-				>
+				RelativePath=".\include\CircleFilter.h">
 			</File>
 			<File
-				RelativePath=".\include\CPalette.h"
-				>
+				RelativePath=".\CustPalette.h">
 			</File>
 			<File
-				RelativePath=".\include\declare.h"
-				>
+				RelativePath=".\include\HtmlPaletteView.h">
 			</File>
 			<File
-				RelativePath=".\include\DWGPreview.h"
-				>
+				RelativePath=".\include\HttpClient.h">
 			</File>
 			<File
-				RelativePath=".\include\HtmlPaletteView.h"
-				>
+				RelativePath=".\include\LineHolePlacer.h">
 			</File>
 			<File
-				RelativePath=".\include\HttpClient.h"
-				>
+				RelativePath=".\include\LineJig.h">
 			</File>
 			<File
-				RelativePath=".\include\HttpClientCurl.h"
-				>
+				RelativePath=".\include\Logger.h">
 			</File>
 			<File
-				RelativePath=".\include\InspData.h"
-				>
+				RelativePath=".\include\PaletteCleanup.h">
 			</File>
 			<File
-				RelativePath=".\include\InspPalette.h"
-				>
+				RelativePath=".\include\PaletteSet.h">
 			</File>
 			<File
-				RelativePath=".\include\LineHolePlacer.h"
-				>
+				RelativePath=".\include\PolylineMarker.h">
 			</File>
 			<File
-				RelativePath=".\include\LineJig.h"
-				>
+				RelativePath=".\include\PreSelectScale.h">
 			</File>
 			<File
-				RelativePath=".\include\Logger.h"
-				>
+				RelativePath=".\include\StdAfx.h">
 			</File>
 			<File
-				RelativePath=".\include\MySafeHtmlView.h"
-				>
+				RelativePath=".\include\StdAfx2005.h">
 			</File>
 			<File
-				RelativePath=".\include\PaletteCleanup.h"
-				>
+				RelativePath=".\include\Utils.h">
 			</File>
 			<File
-				RelativePath=".\include\PaletteSet.h"
-				>
+				RelativePath=".\include\cJSON.h">
 			</File>
 			<File
-				RelativePath=".\include\PolylineMarker.h"
-				>
+				RelativePath=".\include\declare.h">
 			</File>
 			<File
-				RelativePath=".\include\PreSelectScale.h"
-				>
+				RelativePath=".\include\resource.h">
 			</File>
 			<File
-				RelativePath=".\include\resource.h"
-				>
-			</File>
-			<File
-				RelativePath=".\include\rxdebug.h"
-				>
-			</File>
-			<File
-				RelativePath=".\include\StdAfx.h"
-				>
-			</File>
-			<File
-				RelativePath=".\include\StdAfx2005.h"
-				>
-			</File>
-			<File
-				RelativePath=".\include\Utils.h"
-				>
+				RelativePath="include\rxdebug2005.h">
 			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
-			Filter="rc;ico;bmp;cur;jpg;gif"
-			>
+			Filter="rc;ico;bmp;cur;jpg;gif">
 			<File
-				RelativePath=".\CustPalette.rc"
-				>
+				RelativePath=".\CustPalette.rc">
 			</File>
 		</Filter>
 		<Filter
 			Name="Miscellaneous Files"
-			Filter="reg;rgs;mak;clw;vsdir;vsz;css;inf;vcproj;csproj"
-			>
+			Filter="reg;rgs;mak;clw;vsdir;vsz;css;inf;vcproj;csproj">
 			<File
-				RelativePath=".\CustPalette.rgs"
-				>
+				RelativePath=".\CustPalette.rgs">
 			</File>
 			<File
-				RelativePath=".\DWGPreview.rgs"
-				>
+				RelativePath=".\DWGPreview.rgs">
 			</File>
 			<File
-				RelativePath=".\InspData1.rgs"
-				>
+				RelativePath=".\InspData1.rgs">
 			</File>
 		</Filter>
 		<Filter
-			Name="tools"
-			>
-			<File
-				RelativePath=".\tools\AcadFrameHook.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\AcadFrameHook.h"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolAnnotation.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolAnnotation.h"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolBlock.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolBlock.h"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolDraw.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolDraw.h"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolDrawBase.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolDrawBase.h"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolEntity.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolEntity.h"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolGlobal.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolGlobal.h"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolLayer.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolLayer.h"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolView.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\tools\ToolView.h"
-				>
-			</File>
+			Name="tools">
 		</Filter>
 		<Filter
-			Name="static"
-			>
+			Name="static">
 			<File
 				RelativePath=".\res\PalettePage.html"
-				DeploymentContent="true"
-				>
+				DeploymentContent="TRUE">
 			</File>
 			<File
 				RelativePath=".\res\tools.json"
-				DeploymentContent="true"
-				>
+				DeploymentContent="TRUE">
 			</File>
 		</Filter>
 	</Files>

@@ -67,130 +67,7 @@ void CLogger::SetLevel(LogLevel nLevel)
     m_nLevel = nLevel;
 }
 
-void CLogger::Log(LogLevel nLevel, const TCHAR* pszFmt, ...)
-{ 
-    if (nLevel < m_nLevel)
-    {
-        return;
-    }
 
-    CSingleLock lock(&m_cs, TRUE);
-
-    // 检查是否需要切换日期文件
-    CheckAndRotateFile();
-
-    if (!m_ofs.is_open())
-    {
-        return;
-    }
-
-    // 格式化用户消息
-    TCHAR szBuffer[4096] = {0};
-    va_list args;
-    va_start(args, pszFmt);
-
-#if defined(_UNICODE) || defined(UNICODE)
-    _vstprintf_s(szBuffer, 4096, pszFmt, args);
-#else
-    _vstprintf(szBuffer, pszFmt, args);
-#endif
-
-    va_end(args);
-
-    // 写入时间戳和级别
-    CString strTime = GetCurrentTimeString();
-    CString strLine;
-    strLine.Format(_T("[%s] [%s] %s\n"),
-                   strTime,
-                   LevelToString(nLevel),
-                   szBuffer);
-
-    // 写入文件（UTF-8 格式）
-	m_ofs << CUtils::CStringToUTF8(strLine);
-    m_ofs.flush();
-
-    // 同时输出到调试窗口
-    OutputDebugString(strLine);
-
-    // 控制台输出也可以选做
-    // _tprintf(strLine);
-}
-
-void CLogger::Debug(const TCHAR* pszFmt, ...)
-{
-    if (LOG_LEVEL_DEBUG < m_nLevel)
-        return;
-
-    va_list args;
-    va_start(args, pszFmt);
-
-    TCHAR szBuffer[4096] = {0};
-#if defined(_UNICODE) || defined(UNICODE)
-    _vstprintf_s(szBuffer, 4096, pszFmt, args);
-#else
-    _vstprintf(szBuffer, pszFmt, args);
-#endif
-    va_end(args);
-
-    Log(LOG_LEVEL_DEBUG, _T("%s"), szBuffer);
-}
-
-void CLogger::Info(const TCHAR* pszFmt, ...)
-{
-    if (LOG_LEVEL_INFO < m_nLevel)
-        return;
-
-    va_list args;
-    va_start(args, pszFmt);
-
-    TCHAR szBuffer[4096] = {0};
-#if defined(_UNICODE) || defined(UNICODE)
-    _vstprintf_s(szBuffer, 4096, pszFmt, args);
-#else
-    _vstprintf(szBuffer, pszFmt, args);
-#endif
-    va_end(args);
-
-    Log(LOG_LEVEL_INFO, _T("%s"), szBuffer);
-}
-
-void CLogger::Warning(const TCHAR* pszFmt, ...)
-{
-    if (LOG_LEVEL_WARNING < m_nLevel)
-        return;
-
-    va_list args;
-    va_start(args, pszFmt);
-
-    TCHAR szBuffer[4096] = {0};
-#if defined(_UNICODE) || defined(UNICODE)
-    _vstprintf_s(szBuffer, 4096, pszFmt, args);
-#else
-    _vstprintf(szBuffer, pszFmt, args);
-#endif
-    va_end(args);
-
-    Log(LOG_LEVEL_WARNING, _T("%s"), szBuffer);
-}
-
-void CLogger::Error(const TCHAR* pszFmt, ...)
-{
-    if (LOG_LEVEL_ERROR < m_nLevel)
-        return;
-
-    va_list args;
-    va_start(args, pszFmt);
-
-    TCHAR szBuffer[4096] = {0};
-#if defined(_UNICODE) || defined(UNICODE)
-    _vstprintf_s(szBuffer, 4096, pszFmt, args);
-#else
-    _vstprintf(szBuffer, pszFmt, args);
-#endif
-    va_end(args);
-
-    Log(LOG_LEVEL_ERROR, _T("%s"), szBuffer);
-}
 
 void CLogger::CheckAndRotateFile()
 {
@@ -374,7 +251,11 @@ void CLogger::Log(LogLevel nLevel, const char* pszFmt, ...)
     char szBuffer[4096] = { 0 };
     va_list args;
     va_start(args, pszFmt);
+#ifdef _CAD2005
+	CUtils::safeVsnprintfVC7(szBuffer, sizeof(szBuffer), pszFmt, args);
+#else
     vsnprintf_s(szBuffer, 4096, _TRUNCATE, pszFmt, args);
+#endif
     va_end(args);
 
     LogUtf8(nLevel, szBuffer);
@@ -388,7 +269,11 @@ void CLogger::Debug(const char* pszFmt, ...)
     char szBuffer[4096] = { 0 };
     va_list args;
     va_start(args, pszFmt);
-    _vsnprintf(szBuffer, 4095, pszFmt, args);
+#ifdef _CAD2005
+	CUtils::safeVsnprintfVC7(szBuffer, sizeof(szBuffer), pszFmt, args);
+#else
+    vsnprintf_s(szBuffer, 4096, _TRUNCATE, pszFmt, args);
+#endif
     va_end(args);
 
     LogUtf8(LOG_LEVEL_DEBUG, szBuffer);
@@ -408,7 +293,11 @@ void CLogger::Info(const char* pszFmt, ...)
     char szBuffer[4096] = { 0 };
     va_list args;
     va_start(args, pszFmt);
+#ifdef _CAD2005
+	CUtils::safeVsnprintfVC7(szBuffer, sizeof(szBuffer), pszFmt, args);
+#else
     vsnprintf_s(szBuffer, 4096, _TRUNCATE, pszFmt, args);
+#endif
     va_end(args);
 
     LogUtf8(LOG_LEVEL_INFO, szBuffer);
@@ -422,7 +311,11 @@ void CLogger::Warning(const char* pszFmt, ...)
     char szBuffer[4096] = { 0 };
     va_list args;
     va_start(args, pszFmt);
+#ifdef _CAD2005
+	CUtils::safeVsnprintfVC7(szBuffer, sizeof(szBuffer), pszFmt, args);
+#else
     vsnprintf_s(szBuffer, 4096, _TRUNCATE, pszFmt, args);
+#endif
     va_end(args);
 
     LogUtf8(LOG_LEVEL_WARNING, szBuffer);
@@ -436,8 +329,137 @@ void CLogger::Error(const char* pszFmt, ...)
     char szBuffer[4096] = { 0 };
     va_list args;
     va_start(args, pszFmt);
+#ifdef _CAD2005
+	CUtils::safeVsnprintfVC7(szBuffer, sizeof(szBuffer), pszFmt, args);
+#else
     vsnprintf_s(szBuffer, 4096, _TRUNCATE, pszFmt, args);
+#endif
     va_end(args);
 
     LogUtf8(LOG_LEVEL_ERROR, szBuffer);
 }
+
+#if defined(_UNICODE) || defined(UNICODE)
+
+void CLogger::Log(LogLevel nLevel, const TCHAR* pszFmt, ...)
+{ 
+    if (nLevel < m_nLevel)
+    {
+        return;
+    }
+
+    CSingleLock lock(&m_cs, TRUE);
+
+    // 检查是否需要切换日期文件
+    CheckAndRotateFile();
+
+    if (!m_ofs.is_open())
+    {
+        return;
+    }
+
+    // 格式化用户消息
+    wchar_t szBuffer[4096] = {0};
+    va_list args;
+    va_start(args, pszFmt);
+	_vstprintf_s(szBuffer, 4096, pszFmt, args);
+
+    va_end(args);
+
+    // 写入时间戳和级别
+    CString strTime = GetCurrentTimeString();
+    CString strLine;
+    strLine.Format(_T("[%s] [%s] %s\n"),
+                   strTime,
+                   LevelToString(nLevel),
+                   szBuffer);
+
+    // 写入文件（UTF-8 格式）
+	m_ofs << CUtils::CStringToUTF8(strLine);
+    m_ofs.flush();
+
+    // 同时输出到调试窗口
+    OutputDebugString(strLine);
+
+    // 控制台输出也可以选做
+    // _tprintf(strLine);
+}
+
+void CLogger::Debug(const TCHAR* pszFmt, ...)
+{
+    if (LOG_LEVEL_DEBUG < m_nLevel)
+        return;
+
+    va_list args;
+    va_start(args, pszFmt);
+
+    TCHAR szBuffer[4096] = {0};
+#if defined(_UNICODE) || defined(UNICODE)
+    _vstprintf_s(szBuffer, 4096, pszFmt, args);
+#else
+    _vstprintf(szBuffer, pszFmt, args);
+#endif
+    va_end(args);
+
+    Log(LOG_LEVEL_DEBUG, _T("%s"), szBuffer);
+}
+
+void CLogger::Info(const TCHAR* pszFmt, ...)
+{
+    if (LOG_LEVEL_INFO < m_nLevel)
+        return;
+
+    va_list args;
+    va_start(args, pszFmt);
+
+    TCHAR szBuffer[4096] = {0};
+#if defined(_UNICODE) || defined(UNICODE)
+    _vstprintf_s(szBuffer, 4096, pszFmt, args);
+#else
+    _vstprintf(szBuffer, pszFmt, args);
+#endif
+    va_end(args);
+
+    Log(LOG_LEVEL_INFO, _T("%s"), szBuffer);
+}
+
+void CLogger::Warning(const TCHAR* pszFmt, ...)
+{
+    if (LOG_LEVEL_WARNING < m_nLevel)
+        return;
+
+    va_list args;
+    va_start(args, pszFmt);
+
+    TCHAR szBuffer[4096] = {0};
+#if defined(_UNICODE) || defined(UNICODE)
+    _vstprintf_s(szBuffer, 4096, pszFmt, args);
+#else
+    _vstprintf(szBuffer, pszFmt, args);
+#endif
+    va_end(args);
+
+    Log(LOG_LEVEL_WARNING, _T("%s"), szBuffer);
+}
+
+void CLogger::Error(const TCHAR* pszFmt, ...)
+{
+    if (LOG_LEVEL_ERROR < m_nLevel)
+        return;
+
+    va_list args;
+    va_start(args, pszFmt);
+
+    TCHAR szBuffer[4096] = {0};
+#if defined(_UNICODE) || defined(UNICODE)
+    _vstprintf_s(szBuffer, 4096, pszFmt, args);
+#else
+    _vstprintf(szBuffer, pszFmt, args);
+#endif
+    va_end(args);
+
+    Log(LOG_LEVEL_ERROR, _T("%s"), szBuffer);
+}
+
+
+#endif

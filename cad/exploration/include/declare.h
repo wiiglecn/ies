@@ -97,6 +97,7 @@
 typedef wchar_t KCHAR;
 //#endif
 
+
 class cJSON;
 // Add this struct definition in AiApiRequest.h or a common header
 // In AiApiRequest.h or where the struct is defined

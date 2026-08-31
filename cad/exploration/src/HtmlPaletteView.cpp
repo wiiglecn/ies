@@ -118,7 +118,19 @@ void CHtmlPaletteView::CallJsFunction(LPCTSTR szFuncName, LPCTSTR szArg)
             dispparams.cArgs = 1;
             dispparams.rgvarg = new VARIANT[1];
             dispparams.rgvarg[0].vt = VT_BSTR;
+#ifdef _CAD2005
+			// 1. 声明 USES_CONVERSION 宏，用于支持 ATL 转换栈分配
+            USES_CONVERSION;
+            
+            // 2. 将 LPCTSTR (ANSI) 转换为 wchar_t* (Unicode)
+            // T2W 在多字节模式下等价于 A2W (ANSI to Wide)
+            LPOLESTR wszArg = T2W(szArg);
+            
+            // 3. 使用转换后的宽字符指针分配 BSTR
+            dispparams.rgvarg[0].bstrVal = SysAllocString(wszArg);
+#else
             dispparams.rgvarg[0].bstrVal = SysAllocString(szArg);
+#endif
             dispparams.cNamedArgs = 0;
 
             EXCEPINFO excepInfo;
@@ -133,6 +145,7 @@ void CHtmlPaletteView::CallJsFunction(LPCTSTR szFuncName, LPCTSTR szArg)
                 pWindow->Invoke(dispID, IID_NULL, LOCALE_SYSTEM_DEFAULT, DISPATCH_METHOD, &dispparams, &varResult, &excepInfo, NULL);
             }
 
+			SysFreeString(dispparams.rgvarg[0].bstrVal);
             delete[] dispparams.rgvarg;
             pWindow->Release();
         }

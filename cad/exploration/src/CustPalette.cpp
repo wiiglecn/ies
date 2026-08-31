@@ -24,9 +24,9 @@
 //-----------------------------------------------------------------------------
 #include "StdAfx.h"
 
-#if defined(_DEBUG) && !defined(AC_FULL_DEBUG)
-#error _DEBUG should not be defined except in internal Adesk debug builds
-#endif
+//#if defined(_DEBUG) && !defined(AC_FULL_DEBUG)
+//#error _DEBUG should not be defined except in internal Adesk debug builds
+//#endif
 
 #include "resource.h"
 #include <initguid.h>

@@ -127,7 +127,11 @@ void CDataPalette::OnSetActive()
 int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
 	CLogger& logger = CLogger::GetInstance();
+#ifdef _CAD2005
+	logger.SetLevel(LOG_LEVEL_DEBUG);
+#else
 	logger.SetLevel(LogLevel::LOG_LEVEL_DEBUG);
+#endif
 	logger.Init(_T("ks_"));
 
 	hServer=new AiApiRequest();
@@ -289,9 +293,13 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 
         // 1. Parse the incoming JSON string
         // Convert CString/TCHAR* to UTF-8 char* for cJSON if necessary.
+#ifdef _CAD2005
+		cJSON* pIncomingJson = cJSON_Parse(szParam);
+#else
         CStringA utf8Param(CW2A(szParam, CP_UTF8));
         
         cJSON* pIncomingJson = cJSON_Parse(utf8Param.GetString());
+#endif
         if (!pIncomingJson) {
             // Invalid JSON in szParam
             CUtils::acutPrintf(_T("Error: Failed to parse JSON.\n"));

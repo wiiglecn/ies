@@ -71,6 +71,10 @@
 #include <afxcmn.h>         // MFC support for Windows Common Controls
 #endif // _AFX_NO_AFXCMN_SUPPORT
 
+#include <afxhtml.h>       // CHtmlView —— 必须在 _DEBUG 被 undef 的区域内首次包含
+#include <mshtml.h>        // IHTMLDocument2 / IHTMLWindow2 等，与 HtmlPaletteView.h 保持一致
+#include <afxmt.h>
+
 // AutoCAD MFC Extensions:
 #include "adui.h"
 #include "acui.h"
@@ -88,7 +92,7 @@
 
 
 extern HINSTANCE _hdllInstance ;
-#include "rxdebug.h"
+#include "rxdebug2005.h"
 // RX Includes
 #include "acdb.h"               // acdb definitions
 #include "rxregsvc.h"           // ARX linker

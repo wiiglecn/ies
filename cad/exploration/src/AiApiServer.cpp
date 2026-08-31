@@ -144,7 +144,14 @@ void AiApiServer::HandleHttpRequest(struct mg_connection* nc, struct mg_http_mes
                wUri.c_str());
     
     // Routing logic
+#ifdef _CAD2005
+	RouteKey key;
+	key.method = method;
+	key.uri = uri;
+	key.user_data = NULL;
+#else
     RouteKey key = { method, uri, NULL };
+#endif
     std::map<RouteKey, ApiHandlerFunc>::iterator it = m_routes.find(key);
     
     if (it != m_routes.end()) {
@@ -182,7 +189,14 @@ void AiApiServer::RegisterRoute(const std::string& method,
                                  ApiHandlerFunc handler,
                                 void* user_data)
 {
+#ifdef _CAD2005
+	RouteKey key;
+	key.method = method;
+	key.uri = uri;
+	key.user_data = NULL;
+#else
     RouteKey key = { method, uri, user_data };
+#endif
     m_routes[key] = handler;
 }
 

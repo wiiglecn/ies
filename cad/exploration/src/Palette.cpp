@@ -24,16 +24,16 @@
 // Palette.cpp : Initialization functions
 #include "StdAfx.h"
 
-#if defined(_DEBUG) && !defined(AC_FULL_DEBUG)
-#error _DEBUG should not be defined except in internal Adesk debug builds
-#endif
+//#if defined(_DEBUG) && !defined(AC_FULL_DEBUG)
+//#error _DEBUG should not be defined except in internal Adesk debug builds
+//#endif
 
 #include "resource.h"
 #include "PaletteSet.h"
 #include "CPalette.h"
 //#include "InspPalette.h"
 #include "Utils.h"
-#include "../tools/ToolGlobal.h"
+//#include "../tools/ToolGlobal.h"
 //#include "../tools/AcadFrameHook.h"
 
 // Global Palette Set Instance
@@ -41,6 +41,8 @@ CMyPaletteSet  *pPaletteSet=NULL;
 //CAcadFrameHook *pHook=NULL;
 
 HINSTANCE _hdllInstance =NULL ;
+
+
 // Forward declaration of DllMain
 extern BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved);
 
@@ -66,7 +68,10 @@ acrxEntryPoint(AcRx::AppMsgCode msg, void* pkt)
 {
 	switch (msg) {
 	case AcRx::kInitAppMsg:
+//#ifdef _CAD2005
+//#else
 		DllMain(_hdllInstance, DLL_PROCESS_ATTACH, NULL);
+//#endif
 		// Comment out the following line if your
 		// application should be locked into memory
 		acrxDynamicLinker->unlockApplication(pkt);
@@ -74,7 +79,10 @@ acrxEntryPoint(AcRx::AppMsgCode msg, void* pkt)
 		InitApplication();
 		break;
 	case AcRx::kUnloadAppMsg:
+//#ifdef _CAD2005
+//#else
 		DllMain(_hdllInstance, DLL_PROCESS_DETACH, NULL);
+//#endif
 		UnloadApplication();
 		break;
 	}
@@ -94,7 +102,7 @@ void paletteShow()
 	}
 
 	// If paletteset not created, create new palette set
-	CDataPalette *pPalette1;
+	
 	//CInspPalette *pPalette2;
 
 	pPaletteSet = new CMyPaletteSet;
@@ -111,6 +119,7 @@ void paletteShow()
 
 
 	// Instantiate Palettes
+	CDataPalette *pPalette1;
 	pPalette1 = new CDataPalette();  // data palette
 
 	//-------------Palette1-----------------------------------------
@@ -165,11 +174,14 @@ void InitApplication()
 	// Add a command to show the paletteset
 	AddCommand(_T("ASDK"), _T("SLSHOW"), _T("SLSHOW"), ACRX_CMD_MODAL, paletteShow);
 	AddCommand(_T("ASDK"), _T("SLHIDE"), _T("SLHIDE"), ACRX_CMD_MODAL, paletteHide);
-	AddCommand(_T("ASDK"), _T("SLCMD"), _T("SLCMD"), ACRX_CMD_MODAL, ToolGlobal::CMD);
+	//AddCommand(_T("ASDK"), _T("SLCMD"), _T("SLCMD"), ACRX_CMD_MODAL, ToolGlobal::CMD);
 
+#ifdef _CAD2005
+#else
 	// Register the COM Server upon loading
 	if ( FAILED(::DllRegisterServer ()) )
 		CUtils::acutPrintf (_T("Failed to register COM server.\n"));
+#endif
 
 	// 延迟 2000 毫秒（2秒）自动显示工具条，确保 AutoCAD 环境准备完毕
     SetTimer(NULL, 1, 2000, PaletteShowTimerProc);
@@ -252,9 +264,9 @@ void AddCommand(const TCHAR* cmdGroup, const TCHAR* cmdInt, const TCHAR* cmdLoc,
             WideCharToMultiByte(CP_ACP, 0, cmdInt, -1, szCmdInt, 256, NULL, NULL);
             WideCharToMultiByte(CP_ACP, 0, cmdLoc, -1, szCmdLoc, 256, NULL, NULL);
         #else
-            strcpy_s(szCmdGroup, cmdGroup);
-            strcpy_s(szCmdInt, cmdInt);
-            strcpy_s(szCmdLoc, cmdLoc);
+            strcpy(szCmdGroup, cmdGroup);
+            strcpy(szCmdInt, cmdInt);
+            strcpy(szCmdLoc, cmdLoc);
         #endif
 
         if (idLocal != -1) {

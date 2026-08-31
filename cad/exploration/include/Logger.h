@@ -4,19 +4,21 @@
 #include <fstream>
 #include <string>
 
-
 // 日志级别枚举
 enum LogLevel
 {
-    LOG_LEVEL_DEBUG = 0,
-    LOG_LEVEL_INFO,
-    LOG_LEVEL_WARNING,
-    LOG_LEVEL_ERROR
+	LOG_LEVEL_DEBUG = 0,
+	LOG_LEVEL_INFO,
+	LOG_LEVEL_WARNING,
+	LOG_LEVEL_ERROR
 };
+
 
 class CLogger
 {
 public:
+	
+
     // 获取单例实例
     static CLogger& GetInstance();
 
@@ -28,19 +30,27 @@ public:
     void SetLevel(LogLevel nLevel);
 
     // 写日志
-    void Log(LogLevel nLevel, const TCHAR* pszFmt, ...);
+    
     void Log(LogLevel nLevel, const char* pszFmt, ...); // 新增重载
 
     // 便捷方法
-    void Debug(const TCHAR* pszFmt, ...);
+    
     void Debug(const char* pszFmt, ...); // 新增重载
 	void Debug(const std::string& s);
-    void Info(const TCHAR* pszFmt, ...);
+    
     void Info(const char* pszFmt, ...); // 新增重载
-    void Warning(const TCHAR* pszFmt, ...);
+    
     void Warning(const char* pszFmt, ...); // 新增重载
-    void Error(const TCHAR* pszFmt, ...);
+    
     void Error(const char* pszFmt, ...); // 新增重载
+
+#if defined(_UNICODE) || defined(UNICODE)
+	void Log(LogLevel nLevel, const TCHAR* pszFmt, ...);
+	void Debug(const TCHAR* pszFmt, ...);
+	void Info(const TCHAR* pszFmt, ...);
+	void Warning(const TCHAR* pszFmt, ...);
+	void Error(const TCHAR* pszFmt, ...);
+#endif
 
 private:
     CLogger(void);

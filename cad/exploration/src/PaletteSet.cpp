@@ -25,9 +25,9 @@
 //-----------------------------------------------------------------------------
 #include "StdAfx.h"
 
-#if defined(_DEBUG) && !defined(AC_FULL_DEBUG)
-#error _DEBUG should not be defined except in internal Adesk debug builds
-#endif
+//#if defined(_DEBUG) && !defined(AC_FULL_DEBUG)
+//#error _DEBUG should not be defined except in internal Adesk debug builds
+//#endif
 
 
 
@@ -116,24 +116,42 @@ void CMyPaletteSet::LoadPaletteSet()
 
 	// Get the file where the palette set's properties are saved
 	const ACHAR *pRoam;
-	TCHAR paletteBuffer[MAX_PATH];
+	ACHAR paletteBuffer[MAX_PATH];
 	Acad::ErrorStatus bResult = acdbHostApplicationServices()->getRoamableRootFolder(pRoam);
 	if (bResult != Acad::eOk) {
 		CUtils::acutPrintf(_T("[DEBUG] getRoamableRootFolder: Failed to get Roamable Root Folder. Result: %d \n"), bResult);
 		
 		return;
 	}
-#ifdef _CAD2005
-	MultiByteToWideChar(CP_ACP, 0, pRoam, -1, paletteBuffer, MAX_PATH);
-#else
-	_tcscpy(paletteBuffer, pRoam);
-#endif
-	_tcscat(paletteBuffer, KSPALETTESET_FILENAME);
-	// Print the buffer
-    CUtils::acutPrintf(_T("[DEBUG] LoadPaletteSet: Target file path: %s \n"), paletteBuffer);
+// 2. 获取字符串长度
+    // _tcslen 会根据 _UNICODE 是否定义，自动映射为 strlen 或 wcslen
+    size_t lenRoam = _tcslen(pRoam);
+    
+    // 获取常量字符串长度
+    // 注意：KSPALETTESET_FILENAME 必须是用 _T() 或 L""/"" 正确定义的 ACHAR 兼容字符串
+    size_t lenConst = _tcslen(KSPALETTESET_FILENAME);
+
+    // 3. 缓冲区溢出检查
+    // MAX_PATH 通常是 260
+    // 需要空间: lenRoam + lenConst + 1 (结尾的 \0)
+    if (lenRoam + lenConst + 1 > MAX_PATH)
+    {
+        // 处理错误：缓冲区不足，可以选择截断或返回空
+        _tcscpy(paletteBuffer, _T(""));
+        return;
+    }
+
+    // 4. 执行拷贝和拼接
+    // _tcscpy 映射为 strcpy 或 wcscpy
+    _tcscpy(paletteBuffer, pRoam);
+
+    // _tcscat 映射为 strcat 或 wcscat
+    _tcscat(paletteBuffer, KSPALETTESET_FILENAME);
+
+    CUtils::acutPrintf(_T("[DEBUG] LoadPaletteSet: Target file path: %s \n"), pRoam);
 
 	// Read file content
-	FILE* fp = _tfopen(paletteBuffer, _T("rb")); // Use binary mode for reading
+	FILE* fp = _tfopen(pRoam, _T("rb")); // Use binary mode for reading
 	if (!fp) {
 		// File does not exist or cannot be opened
 		return;
@@ -193,7 +211,7 @@ void CMyPaletteSet::SavePaletteSet()
     // Get the file where the palette set's properties are saved
     // const TCHAR *pRoam;
     
-    TCHAR paletteBuffer[MAX_PATH];
+    ACHAR paletteBuffer[MAX_PATH];
     const ACHAR *pRoam;
     CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Getting Roamable Root Folder... \n"));
     // 直接接收返回的指针，不需要传入参数
@@ -212,11 +230,8 @@ void CMyPaletteSet::SavePaletteSet()
 		CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Failed to get Roamable Root Folder. \n"));
 		return;
 	}
-#ifdef _CAD2005
-	MultiByteToWideChar(CP_ACP, 0, pRoam, -1, paletteBuffer, MAX_PATH);
-#else
+
 	_tcscpy(paletteBuffer, pRoam);
-#endif
     _tcscat(paletteBuffer, KSPALETTESET_FILENAME);
     CUtils::acutPrintf(_T("[DEBUG] SavePaletteSet: Target file path: %s \n"), paletteBuffer);
 

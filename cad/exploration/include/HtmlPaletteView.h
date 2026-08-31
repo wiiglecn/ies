@@ -2,7 +2,7 @@
 #pragma once
 #include <afxhtml.h>
 #include <mshtml.h>
-#include "MySafeHtmlView.h"
+//#include "MySafeHtmlView.h"
 
 // Forward Declaration
 class CDataPalette;
