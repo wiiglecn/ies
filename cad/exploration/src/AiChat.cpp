@@ -2,7 +2,7 @@
 #include <fstream>
 #include <iterator>
 #include "AiChat.h"
-#include "HttpClient.h"
+#include "HttpClientCurl.h"   // 原: #include "HttpClient.h"
 #include "cJSON.h"
 #include "Utils.h"
 #include "Logger.h"
@@ -21,7 +21,7 @@
 
 struct AsyncContext {
     AiChat* pAiChat;
-    CHttpClient* pClient;
+    CHttpClientCurl* pClient;
 };
 
 static bool IsFinishReasonToolCalls(cJSON* choice)
@@ -77,7 +77,8 @@ static std::string CallLocalTool(const char* functionName, const std::string& ar
     CString toolUrl(LOCAL_TOOL_URL_PREFIX);
     toolUrl += CString(functionName);
 
-    CHttpClient toolClient;
+    CHttpClientCurl toolClient;
+    toolClient.Initialize();   // 幂等,引用计数
     toolClient.SetHeader(_T("Content-Type"), _T("application/json"));
 
     std::string toolResponse;
@@ -107,7 +108,7 @@ void OnHttpResponse(BOOL bSuccess, const std::string& strResponse,
     AsyncContext* pCtx  = (AsyncContext*)pUserData;
     if (pCtx  != NULL)
     {
-        CHttpClient* pClient = pCtx->pClient;
+        CHttpClientCurl* pClient = pCtx->pClient;
 		
         if (bSuccess)
         {
@@ -121,6 +122,7 @@ void OnHttpResponse(BOOL bSuccess, const std::string& strResponse,
 			pCtx->pAiChat->SendError();
         }
 
+        pClient->Cleanup();   // 新增: 释放全局引用(与 Initialize 配对)
         delete pClient;
         delete pCtx;
     }
@@ -154,7 +156,8 @@ void AiChat::SendChatRequest(const std::string& jsonBody)
 
     CString authorization;
     authorization.Format(_T("Bearer %s"), DASHSCOPE_API_KEY);
-    CHttpClient* pClient = new CHttpClient();
+    CHttpClientCurl* pClient = new CHttpClientCurl();
+    pClient->Initialize();  
     pClient->SetHeader(_T("Content-Type"), _T("application/json"));
     pClient->SetHeader(_T("Authorization"), authorization);
 
@@ -182,7 +185,7 @@ void AiChat::Execute(CString& message)
 		std::string chat_prefix = CUtils::DecryptFileWithPassword(strUrl.GetString(), CHAT_KEY);
 
         m_root = cJSON_CreateObject();
-        cJSON_AddStringToObject(m_root, "model", "qwen3.5-plus");
+        cJSON_AddStringToObject(m_root, "model", "qwen3.5-flash");
 
         m_messages = cJSON_CreateArray();
 

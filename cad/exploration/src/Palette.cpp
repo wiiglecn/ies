@@ -178,9 +178,11 @@ void InitApplication()
 
 #ifdef _CAD2005
 #else
+
 	// Register the COM Server upon loading
-	if ( FAILED(::DllRegisterServer ()) )
-		CUtils::acutPrintf (_T("Failed to register COM server.\n"));
+	 /*HRESULT hr = ::DllRegisterServer();
+	 if ( FAILED(hr) )
+	 	CUtils::acutPrintf(_T("Failed to register COM server. hr=0x%08lX\n"), hr);*/
 #endif
 
 	// 延迟 2000 毫秒（2秒）自动显示工具条，确保 AutoCAD 环境准备完毕

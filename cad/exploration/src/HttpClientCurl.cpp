@@ -113,8 +113,8 @@ static struct curl_slist* CurlBuildHeaderList(const std::map<CString, CString>& 
 
 CHttpClientCurl::CHttpClientCurl()
     : m_dwConnectTimeout(60000)
-    , m_dwSendTimeout(30000)
-    , m_dwReceiveTimeout(30000)
+    , m_dwSendTimeout(60000)
+    , m_dwReceiveTimeout(60000)
     , m_dwTotalTimeout(0)
     , m_bVerifyPeer(FALSE)
     , m_bVerifyHost(FALSE)

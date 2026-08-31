@@ -250,12 +250,12 @@ void CUtils::TCharToUtf8(const TCHAR* tStr, char* utf8Str, int utf8Size)
     if (!tStr || !utf8Str || utf8Size <= 0)
     {
         if (utf8Str && utf8Size > 0)
-            utf8Str = '\0';
+            utf8Str[0] = '\0';
         return;
     }
 
     // 初始化输出缓冲区
-    utf8Str = '\0';
+    utf8Str[0] = '\0';
 
 #ifdef _UNICODE
     // ---------------------------------------------------------

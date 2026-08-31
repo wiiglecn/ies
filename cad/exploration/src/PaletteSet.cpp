@@ -148,10 +148,10 @@ void CMyPaletteSet::LoadPaletteSet()
     // _tcscat Ó³ÉäÎª strcat »ò wcscat
     _tcscat(paletteBuffer, KSPALETTESET_FILENAME);
 
-    CUtils::acutPrintf(_T("[DEBUG] LoadPaletteSet: Target file path: %s \n"), pRoam);
+    CUtils::acutPrintf(_T("[DEBUG] LoadPaletteSet: Target file path: %s \n"), paletteBuffer);
 
 	// Read file content
-	FILE* fp = _tfopen(pRoam, _T("rb")); // Use binary mode for reading
+	FILE* fp = _tfopen(paletteBuffer, _T("rb")); // Use binary mode for reading
 	if (!fp) {
 		// File does not exist or cannot be opened
 		return;
