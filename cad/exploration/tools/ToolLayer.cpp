@@ -30,7 +30,7 @@ void ToolLayer::create_layer(AiToolCommandData* data)
 
     ACHAR layerName[256] = { 0 };
 #ifdef _CAD2005
-	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+	strcpy(layerName, nameItem->valuestring);
 #else
 	if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName)))
     {
@@ -202,7 +202,11 @@ void ToolLayer::query_all_layers(AiToolCommandData* data)
 					Adesk::UInt8 g = color.green();
 					Adesk::UInt8 b = color.blue();
 					char hexColor[8];
+#ifdef _CAD2005
+					sprintf(hexColor, "#%02X%02X%02X", r, g, b);
+#else
 					sprintf_s(hexColor, "#%02X%02X%02X", r, g, b);
+#endif
 
                     cJSON_AddNumberToObject(pJsonItem, "color", colorIndex);
 					cJSON_AddStringToObject(pJsonItem, "hex", hexColor);
@@ -255,7 +259,7 @@ void ToolLayer::query_layer(AiToolCommandData* data) {
 
     ACHAR layerName[256] = { 0 };
 #ifdef _CAD2005
-	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+	strcpy(layerName, nameItem->valuestring);
 #else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
         CUtils::acutPrintf(_T("[ERROR] query_layer: failed to convert layer name.\n"));
@@ -288,8 +292,11 @@ void ToolLayer::query_layer(AiToolCommandData* data) {
 				Adesk::UInt8 g = color.green();
 				Adesk::UInt8 b = color.blue();
 				char hexColor[8];
+#ifdef _CAD2005
+				sprintf(hexColor, "#%02X%02X%02X", r, g, b);
+#else
 				sprintf_s(hexColor, "#%02X%02X%02X", r, g, b);
-
+#endif
                 cJSON_AddNumberToObject(data->resultJson, "color", colorIndex);
 				cJSON_AddStringToObject(data->resultJson, "hex", hexColor);
 
@@ -347,7 +354,7 @@ void ToolLayer::set_current_layer(AiToolCommandData* data) {
 
     ACHAR layerName[256] = { 0 };
 #ifdef _CAD2005
-	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+	strcpy(layerName, nameItem->valuestring);
 #else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
         CUtils::acutPrintf(_T("[ERROR] set_current_layer: failed to convert layer name.\n"));
@@ -399,8 +406,11 @@ void ToolLayer::get_current_layer_color(AiToolCommandData* data) {
         Adesk::UInt8 g = color.green();
         Adesk::UInt8 b = color.blue();
         char hexColor[8];
+#ifdef _CAD2005
+		sprintf(hexColor, "#%02X%02X%02X", r, g, b);
+#else
         sprintf_s(hexColor, "#%02X%02X%02X", r, g, b);
-
+#endif
         data->resultJson = cJSON_CreateObject();
         cJSON_AddNumberToObject(data->resultJson, "color", colorIndex);
         cJSON_AddStringToObject(data->resultJson, "hex", hexColor);
@@ -425,7 +435,7 @@ void ToolLayer::layer_set_properties(AiToolCommandData* data) {
 
     ACHAR layerName[256] = { 0 };
 #ifdef _CAD2005
-	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+	strcpy(layerName, nameItem->valuestring);
 #else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
         CUtils::acutPrintf(_T("[ERROR] layer_set_properties: failed to convert layer name.\n"));
@@ -474,7 +484,7 @@ void ToolLayer::layer_set_properties(AiToolCommandData* data) {
     if (linetypeItem && cJSON_IsString(linetypeItem)) {
         ACHAR ltName[256] = { 0 };
 #ifdef _CAD2005
-		strcpy_s(ltName, sizeof(ltName), linetypeItem->valuestring);
+		strcpy(ltName, linetypeItem->valuestring);
 #else
 		CUtils::utf8ToTChar(linetypeItem->valuestring, ltName, ARRAYSIZE(ltName));
 #endif
@@ -520,7 +530,7 @@ void ToolLayer::layer_freeze(AiToolCommandData* data) {
 
     ACHAR layerName[256] = { 0 };
 #ifdef _CAD2005
-	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+	strcpy(layerName, nameItem->valuestring);
 #else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
         CUtils::acutPrintf(_T("[ERROR] layer_freeze: failed to convert layer name.\n"));
@@ -567,7 +577,7 @@ void ToolLayer::layer_thaw(AiToolCommandData* data) {
 
     ACHAR layerName[256] = { 0 };
 #ifdef _CAD2005
-	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+	strcpy(layerName, nameItem->valuestring);
 #else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
         CUtils::acutPrintf(_T("[ERROR] layer_thaw: failed to convert layer name.\n"));
@@ -614,7 +624,7 @@ void ToolLayer::layer_lock(AiToolCommandData* data) {
 
     ACHAR layerName[256] = { 0 };
 #ifdef _CAD2005
-	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+	strcpy(layerName, nameItem->valuestring);
 #else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
         CUtils::acutPrintf(_T("[ERROR] layer_lock: failed to convert layer name.\n"));
@@ -661,7 +671,7 @@ void ToolLayer::layer_unlock(AiToolCommandData* data) {
 
     ACHAR layerName[256] = { 0 };
 #ifdef _CAD2005
-	strcpy_s(layerName, sizeof(layerName), nameItem->valuestring);
+	strcpy(layerName, nameItem->valuestring);
 #else
     if (!CUtils::utf8ToTChar(nameItem->valuestring, layerName, ARRAYSIZE(layerName))) {
         CUtils::acutPrintf(_T("[ERROR] layer_unlock: failed to convert layer name.\n"));

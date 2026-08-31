@@ -84,7 +84,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rxapi.lib acdb17.lib acge17.lib acgiapi.lib achapi17.lib acISMobj17.lib acad.lib acedapi.lib adui17.lib acui17.lib axdb.lib Oleacc.lib mongoose.lib crypt32.lib"
+				AdditionalDependencies="rxapi.lib acdb17.lib acge17.lib acgiapi.lib achapi17.lib acISMobj17.lib acad.lib acedapi.lib adui17.lib acui17.lib axdb.lib Oleacc.lib mongoose.lib crypt32.lib libcurl.lib"
 				OutputFile="$(outdir)/KsExploration.arx"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib;..\lib\2007"
@@ -285,6 +285,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\HttpClientCurl.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\LineHolePlacer.cpp"
 				>
 			</File>
@@ -379,6 +383,10 @@
 			</File>
 			<File
 				RelativePath=".\include\HttpClient.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\HttpClientCurl.h"
 				>
 			</File>
 			<File

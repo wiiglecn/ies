@@ -46,7 +46,7 @@ void ToolBlock::block_list(AiToolCommandData* data)
 			if (pBTR->getName(pName) == Acad::eOk && pName != NULL) {
 				char utf8Name[256] = { 0 };
 #ifdef _CAD2005
-				strcpy_s(utf8Name, sizeof(utf8Name), pName);
+				strcpy(utf8Name, pName);
 #else
 				CUtils::TCharToUtf8(pName, utf8Name, sizeof(utf8Name));
 #endif
@@ -103,7 +103,7 @@ void ToolBlock::block_insert(AiToolCommandData* data)
 
 	ACHAR blockName[256] = { 0 };
 #ifdef _CAD2005
-	strcpy_s(blockName, sizeof(blockName), nameItem->valuestring);
+	strcpy(blockName,  nameItem->valuestring);
 #else
 	CUtils::utf8ToTChar(nameItem->valuestring, blockName, ARRAYSIZE(blockName));
 #endif
@@ -173,7 +173,7 @@ void ToolBlock::block_insert_with_attributes(AiToolCommandData* data)
 
 	ACHAR blockName[256] = { 0 };
 #ifdef _CAD2005
-	strcpy_s(blockName, sizeof(blockName), nameItem->valuestring);
+	strcpy(blockName, nameItem->valuestring);
 #else
 	CUtils::utf8ToTChar(nameItem->valuestring, blockName, ARRAYSIZE(blockName));
 #endif
@@ -387,7 +387,7 @@ void ToolBlock::block_update_attributes(AiToolCommandData* data)
 				if (valItem && cJSON_IsString(valItem)) {
 					ACHAR valStr[512] = { 0 };
 #ifdef _CAD2005
-					strcpy_s(valStr, sizeof(valStr), valItem->valuestring);
+					strcpy(valStr, valItem->valuestring);
 #else
 					CUtils::utf8ToTChar(valItem->valuestring, valStr, ARRAYSIZE(valStr));
 #endif
@@ -418,7 +418,7 @@ void ToolBlock::block_define(AiToolCommandData* data)
 
 	ACHAR blockName[256] = { 0 };
 #ifdef _CAD2005
-	strcpy_s(blockName, sizeof(blockName), nameItem->valuestring);
+	strcpy(blockName, nameItem->valuestring);
 #else
 	CUtils::utf8ToTChar(nameItem->valuestring, blockName, ARRAYSIZE(blockName));
 #endif

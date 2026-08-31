@@ -368,7 +368,7 @@ void ToolEntity::entity_set_color(AiToolCommandData* data) {
     cJSON* pResultArray = cJSON_CreateArray();
 
     // 收集需要处理的 handle 列表
-    std::vector<std::pair<AcDbObjectId, std::string>> targets;
+    std::vector<std::pair<AcDbObjectId, std::string> > targets;
 
     // 1. 优先检查 "handles" 数组
     cJSON* handlesArray = cJSON_GetObjectItem(data->jsonRoot, "handles");

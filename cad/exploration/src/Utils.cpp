@@ -137,12 +137,12 @@ bool CUtils::utf8ToTChar(const char* utf8, TCHAR* outBuf, int bufLen)
     if (!utf8 || !outBuf || bufLen <= 0)
     {
         if (outBuf && bufLen > 0)
-            outBuf = _T('\0');
+            outBuf[0] = _T('\0');
         return false;
     }
 
     // 初始化输出缓冲区为空
-    outBuf = _T('\0');
+    outBuf[0] = _T('\0');
 
 #ifdef _UNICODE
     // ---------------------------------------------------------

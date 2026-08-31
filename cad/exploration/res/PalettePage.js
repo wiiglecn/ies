@@ -323,15 +323,26 @@ function toggleGroup(headerElement) {
         content = content.nextSibling;
     }
     
-    if (content) {
-        if (content.className.indexOf('collapsed') === -1) {
-            content.className += ' collapsed';
-        } else {
-            content.className = content.className.replace(' collapsed', '');
+    if (!content) return;
+
+    // 记录当前组是否处于折叠状态
+    var isCollapsed = content.className.indexOf('collapsed') !== -1;
+
+    // 手风琴模式：先折叠所有组
+    var allContents = getElementsByClass('group-content', document, 'div');
+    for (var i = 0; i < allContents.length; i++) {
+        if (allContents[i].className.indexOf('collapsed') === -1) {
+            allContents[i].className += ' collapsed';
         }
-        // Recalculate layout after toggle
-        setTimeout(resizeLayout, 100);
     }
+
+    // 如果点击的是原本折叠的组，则展开它（原本展开的组保持折叠）
+    if (isCollapsed) {
+        content.className = content.className.replace(' collapsed', '');
+    }
+
+    // Recalculate layout after toggle
+    setTimeout(resizeLayout, 100);
 }
 
 function callCppMessage() {

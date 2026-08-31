@@ -326,6 +326,60 @@ xcopy /Y /D &quot;$(ProjectDir)res\chat.bin&quot; &quot;$(OutDir)&quot;
 		</Filter>
 		<Filter
 			Name="tools">
+			<File
+				RelativePath="tools\ToolAnnotation.cpp">
+			</File>
+			<File
+				RelativePath="tools\ToolAnnotation.h">
+			</File>
+			<File
+				RelativePath="tools\ToolBlock.cpp">
+			</File>
+			<File
+				RelativePath="tools\ToolBlock.h">
+			</File>
+			<File
+				RelativePath="tools\ToolDraw.cpp">
+			</File>
+			<File
+				RelativePath="tools\ToolDraw.h">
+			</File>
+			<File
+				RelativePath="tools\ToolDrawBase.cpp">
+			</File>
+			<File
+				RelativePath="tools\ToolDrawBase.h">
+			</File>
+			<File
+				RelativePath="tools\ToolEntity.cpp">
+			</File>
+			<File
+				RelativePath="tools\ToolEntity.h">
+			</File>
+			<File
+				RelativePath="tools\ToolGlobal.cpp">
+			</File>
+			<File
+				RelativePath="tools\ToolGlobal.h">
+			</File>
+			<File
+				RelativePath="tools\ToolLayer.cpp">
+			</File>
+			<File
+				RelativePath="tools\ToolLayer.h">
+			</File>
+			<File
+				RelativePath="tools\ToolStyle.cpp">
+			</File>
+			<File
+				RelativePath="tools\ToolStyle.h">
+			</File>
+			<File
+				RelativePath="tools\ToolView.cpp">
+			</File>
+			<File
+				RelativePath="tools\ToolView.h">
+			</File>
 		</Filter>
 		<Filter
 			Name="static">

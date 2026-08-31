@@ -33,7 +33,7 @@
 #include "CPalette.h"
 //#include "InspPalette.h"
 #include "Utils.h"
-//#include "../tools/ToolGlobal.h"
+#include "../tools/ToolGlobal.h"
 //#include "../tools/AcadFrameHook.h"
 
 // Global Palette Set Instance
@@ -174,7 +174,7 @@ void InitApplication()
 	// Add a command to show the paletteset
 	AddCommand(_T("ASDK"), _T("SLSHOW"), _T("SLSHOW"), ACRX_CMD_MODAL, paletteShow);
 	AddCommand(_T("ASDK"), _T("SLHIDE"), _T("SLHIDE"), ACRX_CMD_MODAL, paletteHide);
-	//AddCommand(_T("ASDK"), _T("SLCMD"), _T("SLCMD"), ACRX_CMD_MODAL, ToolGlobal::CMD);
+	AddCommand(_T("ASDK"), _T("SLCMD"), _T("SLCMD"), ACRX_CMD_MODAL, ToolGlobal::CMD);
 
 #ifdef _CAD2005
 #else

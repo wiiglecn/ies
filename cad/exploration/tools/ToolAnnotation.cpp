@@ -280,6 +280,7 @@ void ToolAnnotation::create_leader(AiToolCommandData* data)
 
 	if (textItem && cJSON_IsString(textItem)) {
 		TCHAR textStr[512] = { 0 };
+
 		if (CUtils::utf8ToTChar(textItem->valuestring, textStr, ARRAYSIZE(textStr))) {
 			AcDbMText* pMText = new AcDbMText();
 			pMText->setContents(textStr);

@@ -98,7 +98,11 @@ void ToolGlobal::CMD()
 			if (argItem && cJSON_IsString(argItem)) {
 				CUtils::utf8ToTChar(argItem->valuestring, argStr, ARRAYSIZE(argStr));
 			} else if (argItem && cJSON_IsNumber(argItem)) {
+#ifdef _CAD2005
+				_stprintf(argStr, _T("%f"), argItem->valuedouble);
+#else
 				_stprintf_s(argStr, _T("%f"), argItem->valuedouble);
+#endif
 			} else {
 				continue;
 			}

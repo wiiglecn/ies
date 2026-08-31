@@ -54,8 +54,14 @@ void ToolDraw::create_line(AiToolCommandData* data)
     TCHAR pt2Str[64];
 
     // Format as "x,y"
+#ifdef _CAD2005
+	_stprintf(pt1Str, _T("%f,%f"), x1, y1);
+	_stprintf(pt2Str, _T("%f,%f"), x2, y2);
+#else
     _stprintf_s(pt1Str, _T("%f,%f"), x1, y1);
     _stprintf_s(pt2Str, _T("%f,%f"), x2, y2);
+#endif
+
 
 	int ret = this->actionBefore();
 	if (ret) return;
@@ -596,7 +602,11 @@ void ToolDraw::create_hatch(AiToolCommandData* data)
     if (patternItem && cJSON_IsString(patternItem)) {
         CUtils::utf8ToTChar(patternItem->valuestring, patternStr, ARRAYSIZE(patternStr));
     } else {
+#ifdef _CAD2005
+		_tcscpy(patternStr, _T("SOLID"));
+#else
         _tcscpy_s(patternStr, _T("SOLID"));
+#endif
     }
     pHatch->setPattern(AcDbHatch::kPreDefined, patternStr);
     
