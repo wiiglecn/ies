@@ -9,3 +9,8 @@ bak
 *.suo
 *_i.c
 *_i.p
+.vscode
+__pycache__
+~$*
+*.bak
+*.dwl
