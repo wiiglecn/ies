@@ -270,6 +270,13 @@ CJSON_PUBLIC(void) cJSON_Delete(cJSON *item)
             global_hooks.deallocate(item->string);
             item->string = NULL;
         }
+		/* 新增：释放原始 JSON 数字字符串 */
+        if (item->valueString != NULL)
+        {
+            global_hooks.deallocate(item->valueString);
+            item->valueString = NULL;
+        }
+
         global_hooks.deallocate(item);
         item = next;
     }
@@ -399,11 +406,39 @@ loop_end:
         item->valueint = (int)number;
     }
 
+    /*
+     * 保存原始 JSON 数字字符串
+     *
+     * 注意：
+     * number_c_string 此时可能已经把 '.' 替换成了
+     * 当前 locale 的 decimal_point。
+     *
+     * 所以这里不能直接保存 number_c_string。
+     *
+     * 应该重新从 input_buffer 中复制原始文本。
+     */
+    item->valueString =
+        (char *)input_buffer->hooks.allocate(number_string_length + 1);
+
+    if (item->valueString == NULL)
+    {
+        input_buffer->hooks.deallocate(number_c_string);
+        return false;
+    }
+
+    memcpy(item->valueString,
+           buffer_at_offset(input_buffer),
+           number_string_length);
+
+    item->valueString[number_string_length] = '\0';
+
     item->type = cJSON_Number;
 
-    input_buffer->offset += (size_t)(after_end - number_c_string);
-    /* free the temporary buffer */
+    input_buffer->offset +=
+        (size_t)(after_end - number_c_string);
+
     input_buffer->hooks.deallocate(number_c_string);
+
     return true;
 }
 

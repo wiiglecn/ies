@@ -475,3 +475,28 @@ void CUtils::safeVsnprintfVC7(char* szBuffer, size_t bufferSize, const char* psz
     szBuffer[bufferSize - 1] = '\0'; 
 }
 #endif
+
+//-----------------------------------------------------------------------------
+// 块名中的非法字符（AutoCAD 符号表命名限制）
+bool CUtils::IsIllegalBlockNameChar(ACHAR ch)
+{
+    //  > / \ " : ; ? * | = ' 以及控制字符
+    if (ch < 0x20) return true;
+    const ACHAR* pIllegal = _T(">/\\\":;?*|='");
+    while (*pIllegal)
+    {
+        if (ch == *pIllegal) return true;
+        ++pIllegal;
+    }
+    return false;
+}
+
+//-----------------------------------------------------------------------------
+// 简单字符串拷贝（避免 VC8 安全 CRT 警告）
+void CUtils::SafeCopy(ACHAR* pszDst, int nDstCount, const ACHAR* pszSrc, int nCount)
+{
+    int i = 0;
+    for (; i <  nCount && i < nDstCount - 1; ++i)
+        pszDst[i] = pszSrc[i];
+    pszDst[i] = _T('\0');
+}

@@ -11,8 +11,8 @@ protected:
     ToolDrawBase(void);
     virtual ~ToolDrawBase(void);
 
-    int actionBefore();
-    int actionEnd();
+    virtual int actionBefore();
+    virtual int actionEnd();
     void appendHandleToResult(AcDbObjectId entityId, AiToolCommandData* data);
     AcDbObjectId GetIdFromHandle(cJSON* json, const char* key, AcDbDatabase* pDb);
     

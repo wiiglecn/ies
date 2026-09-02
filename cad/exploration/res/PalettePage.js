@@ -625,3 +625,13 @@ function checkEnter(event) {
         sendChat();
     }
 }
+// ==== 功能菜单 ====
+function onMenuCmd(cmd) {
+    if (window.external) {
+        try {
+            window.external.OnJsCommand(cmd, "");
+        } catch (e) {
+            alert("调用 " + cmd + " 失败: " + e.message);
+        }
+    }
+}

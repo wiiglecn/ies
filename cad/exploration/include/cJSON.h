@@ -118,6 +118,9 @@ typedef struct cJSON
     /* The item's number, if type==cJSON_Number */
     double valuedouble;
 
+	/* Original JSON number string, e.g. "3.5200" */
+	char *valueString;
+
     /* The item's name string, if this item is the child of, or is in the list of subitems of an object. */
     char *string;
 } cJSON;

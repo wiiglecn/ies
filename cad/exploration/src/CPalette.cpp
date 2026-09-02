@@ -39,7 +39,7 @@
 #include "CircleFilter.h"
 #include "PreSelectScale.h"
 
-
+#include "../features/CreateColumnView.h"
 
 
 
@@ -388,6 +388,14 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 		scaleObj.ExecuteModelScale();
 		acedPostCommandPrompt(); 
 
+    }
+
+	else if (_tcscmp(szCommand, _T("CreateColumnView")) == 0)
+    {
+		CUtils::FocusAcadDrawing();
+		CCreateColumnView view;
+		view.Execute();
+		acedPostCommandPrompt(); 
     }
 
 	

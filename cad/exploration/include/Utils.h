@@ -34,6 +34,8 @@ public:
                                        bool bWrapUpInactiveDoc = false,
                                        bool bEchoString = true);  
 	static int  acutPrintf (const ACHAR *format, ...);
+	static bool IsIllegalBlockNameChar(ACHAR ch);
+	static void SafeCopy(ACHAR* pszDst, int nDstCount, const ACHAR* pszSrc, int nCount);
 #ifdef _CAD2005
 	static void safeVsnprintfVC7(char* szBuffer, size_t bufferSize, const char* pszFmt, va_list args);
 #endif

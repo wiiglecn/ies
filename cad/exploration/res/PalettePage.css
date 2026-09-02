@@ -228,3 +228,46 @@ input[type="text"]:focus {
 .hidden{
     display: none;
 }
+/* --- 功能菜单 磁贴样式 --- */
+.menu-grid {
+    text-align: center;
+}
+
+.menu-item {
+    display: inline-block;
+    width: 70px;
+    margin: 3px;
+    padding: 8px 4px 6px 4px;
+    border: 1px solid #d6d6d6;
+    background-color: #fafafa;
+    text-align: center;
+    cursor: pointer;
+    vertical-align: top;
+    *display: inline; /* 老版本 IE 兼容 */
+    zoom: 1;
+}
+
+.menu-item:hover {
+    background-color: #e6f3ff;
+    border-color: #007acc;
+}
+
+.menu-item:active {
+    background-color: #cce6ff;
+    border-color: #005f9e;
+}
+
+.menu-icon {
+    display: block;
+    font-size: 18px;
+    line-height: 26px;
+    color: #007acc;
+    font-family: "Segoe UI Symbol", "Arial Unicode MS", Arial, sans-serif;
+}
+
+.menu-text {
+    display: block;
+    margin-top: 3px;
+    color: #333;
+    font-size: 12px;
+}
