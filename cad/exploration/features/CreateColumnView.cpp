@@ -66,15 +66,6 @@ bool CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath,
         acutPrintf(_T("\n[DWG导入] 错误：文件路径为空。"));
         return false;
     }
-
-    // 1. 检查文件是否存在
-    DWORD dwAttr = GetFileAttributesW(pszDwgPath);
-    if (dwAttr == INVALID_FILE_ATTRIBUTES || (dwAttr & FILE_ATTRIBUTE_DIRECTORY) != 0)
-    {
-        acutPrintf(_T("\n[DWG导入] 错误：文件不存在：%s"), pszDwgPath);
-        return false;
-    }
-
     // 2. 把外部 DWG 读入内存侧数据库（side database）
     //    参数：buildDefaultSymbolTable=false, noDocument=true
 	Acad::ErrorStatus es;
@@ -118,7 +109,7 @@ bool CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath,
             // 拼接 szBlockName + "_" + szArrName
             // 长度预算：GetUniqueBlockName 之后最多再追加 "_999"（4字符+NUL），
             // 所以总长控制在 250 以内
-            int base = (int)wcslen(szBlockName);
+            int base = (int)_tcslen(szBlockName);
             int maxArr = 250 - base - 1;      // 减 1 是给 '_' 占位
             if (maxArr > 0)
             {
@@ -243,14 +234,14 @@ bool CCreateColumnView::GetUniqueBlockName(AcDbDatabase* pDb, ACHAR* pszName, in
     {
         if (i == 0)
         {
-            CUtils::SafeCopy(szTry, 256, pszName, (int)wcslen(pszName));
+            CUtils::SafeCopy(szTry, 256, pszName, (int)_tcslen(pszName));
         }
         else
         {
             ACHAR szNum[16];
             int m = 0, v = i;
             do { szNum[m++] = (ACHAR)(_T('0') + (v % 10)); v /= 10; } while (v > 0);
-            int base = (int)wcslen(pszName);
+            int base = (int)_tcslen(pszName);
             int j = 0;
             ACHAR szBuf[256];
             CUtils::SafeCopy(szBuf, 256, pszName, base);
@@ -264,10 +255,11 @@ bool CCreateColumnView::GetUniqueBlockName(AcDbDatabase* pDb, ACHAR* pszName, in
         if (pBlkTbl->getAt(szTry, existingId) != Acad::eOk)   // 不存在 → 可用
         {
             pBlkTbl->close();
-            CUtils::SafeCopy(pszName, nNameCount, szTry, (int)wcslen(szTry));
+            CUtils::SafeCopy(pszName, nNameCount, szTry, (int)_tcslen(szTry));
             return true;
         }
     }
+
     pBlkTbl->close();
     return false;
 }
@@ -278,8 +270,11 @@ void CCreateColumnView::Execute()
 	CString strUrl;
 	strUrl = strFilePath + _T("/project/钻探编录表.json");
 	CString cadBlockUrl;
-	cadBlockUrl = strFilePath + _T("/support/2007/钻孔柱状图.dwg");
-
+#ifdef _CAD2005
+	cadBlockUrl = strFilePath + _T("support/2005/钻孔柱状图.dwg");
+#else
+	cadBlockUrl = strFilePath + _T("support/2007/钻孔柱状图.dwg");
+#endif
     if (!PathFileExists(cadBlockUrl))
     {
         // 存在（文件或目录均可，配合 PathIsDirectory 区分）
@@ -330,6 +325,24 @@ void CCreateColumnView::Execute()
     cJSON* item = NULL;
     AcGePoint3d ptInsert;
 	double space = 222.6865;
+
+
+	double contentHeight = 212.0;
+	double headerHeight = 28.0;
+	double gridHeight = contentHeight - headerHeight;
+	double gridWidth = 176.0;
+
+	double offsetX = 27.0;
+    double offsetY = 17.0;
+	
+	double space_no = 8.0475;
+	double space_mc = 14.4856;
+	double space_sd = 12.0713;
+	double space_chat = 14.4856;
+	double space_desc = 45.6296;
+	double space_last = 16.0951;
+
+
 
 
     cJSON_ArrayForEach(item, s_pJsonData) {
@@ -409,7 +422,75 @@ void CCreateColumnView::Execute()
             mapVals.SetAt(_T("[coordinate_y]"), val);
 
             ImportDwgAsBlock(cadBlockUrl.GetString(),ptInsert, mapVals, arrayName);
-            
+
+			//数据行
+			int dataRow = rowSize - 8;
+			int realHeight;
+			if (dataRow>=5){
+				realHeight = gridHeight;
+			}else{
+				realHeight = gridHeight/(dataRow+1)*dataRow;
+			}
+            //在这里计算每行的高度
+            // 数据行：第 7 行 ~ 倒数第二行(rowSize-2)；col1=自，col2=至
+            double totalDepth = 1.0;
+            cJSON* lastRowJson = cJSON_GetArrayItem(item, rowSize - 2);   // 倒数第二行=最深一行
+            if (lastRowJson != NULL)
+            {
+                cJSON* cTo = cJSON_GetArrayItem(lastRowJson, 2);          // “至”=终孔深度
+                if (cTo != NULL && cJSON_IsNumber(cTo))
+                    totalDepth = cTo->valuedouble;                        // ★算术必须用 valuedouble
+            }
+            if (totalDepth <= 0.0) totalDepth = 1.0;                      // 防除零
+
+            double scale = realHeight / totalDepth;                       // 深度→图面比例
+            double yTop  = ptInsert.y + offsetY + gridHeight;             // 格顶=深度0（孔口）
+            double prevBottom = 0.0;                                      // 上一行底部深度
+
+
+			
+            for (int i = 0; i < dataRow; ++i)
+            {
+                cJSON* rowJson = cJSON_GetArrayItem(item, 7 + i);
+                double toDepth = prevBottom;
+                if (rowJson != NULL)
+                {
+                    cJSON* cTo = cJSON_GetArrayItem(rowJson, 2);          // 当前行“至”
+                    if (cTo != NULL && cJSON_IsNumber(cTo))
+                        toDepth = cTo->valuedouble;
+                }
+                double thick   = toDepth - prevBottom;                    // 与上一行比较→实际层厚
+                double hDraw   = thick * scale;                           // 该行图面实际高度
+                double yBottom = yTop - toDepth * scale;                  // 该行底部Y
+                CUtils::acutPrintf(_T("[行%d] 至=%.2f 层厚=%.2f 图面高=%.3f 底部Y=%.3f\n"),
+                                i, toDepth, thick, hDraw, yBottom);
+                prevBottom = toDepth;
+                // TODO: 用 hDraw / yBottom 画表格线、定位文字、压盖 hatch……
+
+				//底部横线：起点=该行底部左端角点，向右延伸 gridWidth
+                AcGePoint3d ptDraw(ptInsert);
+                ptDraw.x += offsetX;
+				//ptDraw.y += offsetY;
+                ptDraw.y = yBottom;                 // ★ yBottom 已是绝对Y，直接赋值（不要 += offsetY 再 += yBottom）
+
+                CUtils::acutPrintf(_T("开始 x=%.2f y=%.2f \n"),
+                                ptDraw.x, ptDraw.y);
+
+                AcGePoint3d ptEnd(ptDraw);
+                ptEnd.x  += gridWidth;               // 向右延伸一个表格宽度
+
+                AcDbLine* pLine = new AcDbLine(ptDraw, ptEnd);
+                // pLine->setDatabaseDefaults();     // 可选：随当前图层/颜色默认值
+
+                AcDbObjectId lineId = AcDbObjectId::kNull;
+                Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
+                if (es == Acad::eOk)
+                    pLine->close();                  // 入库成功 → close（不能 delete）
+                else
+                    delete pLine;                    // 入库失败 → 未入库，只能 delete
+				
+            }
+
 			ptInsert.x += space;
 			break;
         }
@@ -418,6 +499,8 @@ void CCreateColumnView::Execute()
 	
 
 	this->actionEnd();
+
+	this->regen();
 	
 }
 
@@ -561,3 +644,5 @@ CString CCreateColumnView::MTextToPlain(const ACHAR* s)
     }
     return out;
 }
+
+

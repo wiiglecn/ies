@@ -71,6 +71,7 @@ xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.js&quot; &quot;$(OutDir)&quot;
 xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;
 xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;
 xcopy /Y /D &quot;$(ProjectDir)res\chat.bin&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&quot;
 "/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
@@ -390,6 +391,16 @@ xcopy /Y /D &quot;$(ProjectDir)res\chat.bin&quot; &quot;$(OutDir)&quot;
 			<File
 				RelativePath=".\res\tools.json"
 				DeploymentContent="TRUE">
+			</File>
+		</Filter>
+		<Filter
+			Name="features"
+			Filter="">
+			<File
+				RelativePath="features\CreateColumnView.cpp">
+			</File>
+			<File
+				RelativePath="features\CreateColumnView.h">
 			</File>
 		</Filter>
 	</Files>

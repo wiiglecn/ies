@@ -6,13 +6,15 @@ class ToolDrawBase
 {
 public:
     void regen();
+
+	virtual int actionBefore();
+    virtual int actionEnd();
 	
 protected:
     ToolDrawBase(void);
     virtual ~ToolDrawBase(void);
 
-    virtual int actionBefore();
-    virtual int actionEnd();
+    
     void appendHandleToResult(AcDbObjectId entityId, AiToolCommandData* data);
     AcDbObjectId GetIdFromHandle(cJSON* json, const char* key, AcDbDatabase* pDb);
     

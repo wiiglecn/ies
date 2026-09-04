@@ -40,7 +40,7 @@
 #include "PreSelectScale.h"
 
 #include "../features/CreateColumnView.h"
-
+#include "../features/PatHatchLoader.h"
 
 
 //-----------------------------------------------------------------------------
@@ -388,6 +388,13 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 		scaleObj.ExecuteModelScale();
 		acedPostCommandPrompt(); 
 
+    }
+
+	else if (_tcscmp(szCommand, _T("ImportData")) == 0)
+    {
+		CUtils::FocusAcadDrawing();
+		PatHatchLoader_Demo();
+		acedPostCommandPrompt(); 
     }
 
 	else if (_tcscmp(szCommand, _T("CreateColumnView")) == 0)

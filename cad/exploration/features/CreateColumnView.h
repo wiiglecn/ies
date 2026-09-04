@@ -41,4 +41,6 @@ private:
     void CollectTexts(AcDbObjectId blkDefId, CMapStringToString& mapVals, int depth = 0);
     // MText 内容去掉格式码（\P、\f..; 等），转纯文本
     CString MTextToPlain(const ACHAR* s);
+
+	void CreateHeader(const AcGePoint3d& ptInsert);
 };

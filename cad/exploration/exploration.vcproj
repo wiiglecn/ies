@@ -599,6 +599,14 @@
 				RelativePath=".\features\CreateColumnView.h"
 				>
 			</File>
+			<File
+				RelativePath=".\features\PatHatchLoader.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\features\PatHatchLoader.h"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>
