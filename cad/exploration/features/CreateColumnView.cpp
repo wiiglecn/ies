@@ -38,54 +38,44 @@ static const FieldMap s_fieldMap[] = {
     { _T("[mapping]"),  -1,  -1, JV_STRING, _T("") },
     { _T("[check]"),  -1,  -1, JV_STRING, _T("") },
 };
-CCreateColumnView::CCreateColumnView():ToolDrawBase(),pExtDb(NULL)
+CCreateColumnView::CCreateColumnView():ToolDrawBase()
 {
     
 }
 
 CCreateColumnView::~CCreateColumnView()
 {
+     ClearExtDbCache();   // 防御性释放
 }
 
 
 //-----------------------------------------------------------------------------
-bool CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath,
+AcDbObjectId CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath,
                                     const AcGePoint3d& ptInsert,
-									CMapStringToString& mapVals,
-									const char* arrayName,
+									const ACHAR* arrayName,
                                     double dScale,
                                     double dRotation,
-                                    const ACHAR* pszLayer,
-                                    AcDbObjectId* pBlkRefId)
+                                    const ACHAR* pszLayer)
 {
-    if (pBlkRefId != NULL)
-        *pBlkRefId = AcDbObjectId::kNull;
 
     if (pszDwgPath == NULL || pszDwgPath[0] == _T('\0'))
     {
         acutPrintf(_T("\n[DWG导入] 错误：文件路径为空。"));
-        return false;
+		return AcDbObjectId::kNull;
     }
     // 2. 把外部 DWG 读入内存侧数据库（side database）
     //    参数：buildDefaultSymbolTable=false, noDocument=true
 	Acad::ErrorStatus es;
-	if (pExtDb == NULL){
-		pExtDb = new AcDbDatabase(false, true);
-		es = pExtDb->readDwgFile(pszDwgPath);
-		if (es != Acad::eOk)
-		{
-			acutPrintf(_T("\n[DWG导入] 错误：读取 DWG 失败(错误码 %d)：%s"), (int)es, pszDwgPath);
-			delete pExtDb;
-			pExtDb = NULL;
-			return false;
-		}
-	}
+	// 2. 按路径获取（或缓存）外部数据库
+    AcDbDatabase* pExtDb = GetExtDb(pszDwgPath);   // 局部变量，遮蔽旧成员
+    if (pExtDb == NULL)
+        return false;
     // 3. 当前工作数据库
     AcDbDatabase* pCurDb = this->pDb;
     if (pCurDb == NULL)
     {
         acutPrintf(_T("\n[DWG导入] 错误：无法获取当前工作数据库。"));
-        return false;
+        return AcDbObjectId::kNull;
     }
 
     // 4. 用文件名作为块名（重名时自动加 _1、_2 后缀）
@@ -95,7 +85,7 @@ bool CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath,
     {
         // arrayName 来自 cJSON，是 UTF-8 编码，先转成 TCHAR
         ACHAR szArrName[256];
-        CUtils::utf8ToTChar(arrayName, szArrName, 256);
+		CUtils::SafeCopy(szArrName, 256, arrayName, (int)_tcslen(arrayName));
 
         // arrayName 来自 JSON 键名，可能含块名非法字符，替换为 '_'
         for (ACHAR* p = szArrName; *p != _T('\0'); ++p)
@@ -152,7 +142,7 @@ bool CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath,
 
 		//存在则跳过
 		pBlkTbl->close();
-		return false;
+		return blkDefId;
     }
     pBlkTbl->close();
 
@@ -164,11 +154,10 @@ bool CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath,
         {
             CUtils::acutPrintf(_T("\n[DWG导入] 错误：导入块定义失败(错误码 %d)，块名：%s"),
                 (int)es, szBlockName);
-            return false;
+            return blkDefId;
         }
 
         // 6. 插入块参照 —— ★ 仅新建块执行，已存在块完全跳过（坐标/图层都不动）
-        AcDbBlockTableRecord* pModelSpace = this->pModelSpace;
         AcDbBlockReference* pBlkRef = new AcDbBlockReference;
         pBlkRef->setBlockTableRecord(blkDefId);
         pBlkRef->setPosition(ptInsert);
@@ -183,18 +172,14 @@ bool CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath,
         {
             CUtils::acutPrintf(_T("\n[DWG导入] 错误：添加块参照失败(错误码 %d)。"), (int)es);
             delete pBlkRef;          // 未入库，delete（不能 close）
-            return false;
+            return blkDefId;
         }
         pBlkRef->close();
-        if (pBlkRefId != NULL)
-            *pBlkRefId = refId;
         CUtils::acutPrintf(_T("\n[DWG导入] 成功：块 \"%s\" 已插入到 (%.3f, %.3f, %.3f)。"),
             szBlockName, ptInsert.x, ptInsert.y, ptInsert.z);
     }
 
-    // 7. 遍历块内文本 —— ★ 两条路都执行
-    CollectTexts(blkDefId, mapVals, 0);
-    return true;
+    return blkDefId;
 }
 
 //-----------------------------------------------------------------------------
@@ -270,12 +255,14 @@ void CCreateColumnView::Execute()
 	CString strUrl;
 	strUrl = strFilePath + _T("/project/钻探编录表.json");
 	CString cadBlockUrl;
-#ifdef _CAD2005
-	cadBlockUrl = strFilePath + _T("support/2005/钻孔柱状图.dwg");
-#else
-	cadBlockUrl = strFilePath + _T("support/2007/钻孔柱状图.dwg");
-#endif
-    if (!PathFileExists(cadBlockUrl))
+	cadBlockUrl.Format(_T("support/%s/钻孔柱状图.dwg"), CADYEAR);
+	cadBlockUrl = strFilePath + cadBlockUrl;
+	CString cadNoBlockUrl;
+	cadNoBlockUrl.Format(_T("support/%s/序号.dwg"), CADYEAR);
+	cadNoBlockUrl = strFilePath + cadNoBlockUrl;
+
+    if (!PathFileExists(cadBlockUrl)
+		|| !PathFileExists(cadNoBlockUrl))
     {
         // 存在（文件或目录均可，配合 PathIsDirectory 区分）
         CUtils::acutPrintf(_T("[CAD ERROR] cad文件不存在! %s\n"), cadBlockUrl.GetString());
@@ -331,9 +318,11 @@ void CCreateColumnView::Execute()
 	double headerHeight = 28.0;
 	double gridHeight = contentHeight - headerHeight;
 	double gridWidth = 176.0;
+	double lastWidth = 45.0665;
 
 	double offsetX = 27.0;
     double offsetY = 17.0;
+
 	
 	double space_no = 8.0475;
 	double space_mc = 14.4856;
@@ -344,13 +333,17 @@ void CCreateColumnView::Execute()
 
 
 
+	ACHAR* pszStyleName = _T("成果图表体");
 
     cJSON_ArrayForEach(item, s_pJsonData) {
         // 处理每个属性
         if (cJSON_IsArray(item)) {
-            const char* arrayName = (item->string != NULL) ? item->string : "(匿名数组)";
+            const char* blockName = (item->string != NULL) ? item->string : "(匿名数组)";
             CUtils::acutPrintf(_T("[数组] %hs，共 %d 个元素\n"),
-                            arrayName, cJSON_GetArraySize(item));
+                            blockName, cJSON_GetArraySize(item));
+
+			ACHAR arrayName[256] = { 0 };
+			CUtils::utf8ToTChar(blockName, arrayName, ARRAYSIZE(arrayName));
 
 			CMapStringToString mapVals;
             const int rowSize   = cJSON_GetArraySize(item);
@@ -359,10 +352,9 @@ void CCreateColumnView::Execute()
             for (int i = 0; i < MAP_COUNT; ++i)
             {
                 const FieldMap& fm = s_fieldMap[i];
-				if(fm.fieldName == _T("[elevation]")){
+				/*if(fm.fieldName == _T("[elevation]")){
 					CUtils::acutPrintf(_T("[elevation]"));
-
-				}
+				}*/
                 if (fm.row >= rowSize || fm.row < 0)
                 {
                     mapVals.SetAt(fm.fieldName, fm.defaultVal);
@@ -421,7 +413,11 @@ void CCreateColumnView::Execute()
             val = _T("y=") + val;
             mapVals.SetAt(_T("[coordinate_y]"), val);
 
-            ImportDwgAsBlock(cadBlockUrl.GetString(),ptInsert, mapVals, arrayName);
+            AcDbObjectId blkDefId = ImportDwgAsBlock(cadBlockUrl.GetString(),ptInsert, arrayName);
+			if (blkDefId != AcDbObjectId::kNull){
+				CollectTexts(blkDefId, mapVals, 0);
+			}
+			
 
 			//数据行
 			int dataRow = rowSize - 8;
@@ -448,7 +444,10 @@ void CCreateColumnView::Execute()
             double prevBottom = 0.0;                                      // 上一行底部深度
 
 
+            mapVals.Lookup(_T("[elevation]"), val);
+			double elevation = CUtils::CStringToDouble(val);	//高程
 			
+
             for (int i = 0; i < dataRow; ++i)
             {
                 cJSON* rowJson = cJSON_GetArrayItem(item, 7 + i);
@@ -477,7 +476,7 @@ void CCreateColumnView::Execute()
                                 ptDraw.x, ptDraw.y);
 
                 AcGePoint3d ptEnd(ptDraw);
-                ptEnd.x  += gridWidth;               // 向右延伸一个表格宽度
+                ptEnd.x  += gridWidth - lastWidth;               // 向右延伸一个表格宽度
 
                 AcDbLine* pLine = new AcDbLine(ptDraw, ptEnd);
                 // pLine->setDatabaseDefaults();     // 可选：随当前图层/颜色默认值
@@ -488,7 +487,88 @@ void CCreateColumnView::Execute()
                     pLine->close();                  // 入库成功 → close（不能 delete）
                 else
                     delete pLine;                    // 入库失败 → 未入库，只能 delete
-				
+
+				//添加序号
+				AcGePoint3d ptDrawXh(ptDraw);
+				ptDrawXh.x += space_no/2;
+				ptDrawXh.y += hDraw/2;
+
+				CString no_name;
+				no_name.Format(_T("%s_%d"), arrayName,i);
+
+				AcDbObjectId blkDefId_xh = ImportDwgAsBlock(cadNoBlockUrl.GetString(),ptDrawXh, no_name.GetString());
+				if (blkDefId_xh != AcDbObjectId::kNull){
+					cJSON* cIndex = cJSON_GetArrayItem(rowJson, 0);          // 当前列“索引”
+					if (cIndex != NULL && cJSON_IsString(cIndex)){
+                        std::vector<CString> arrSeg;
+                        if (CUtils::SplitUtf8(cIndex->valuestring, '-', arrSeg) > 0)
+                        {
+                            ChangeNo(blkDefId_xh, (ACHAR*)arrSeg[0].GetString());   // "1-0-0" → "1"
+                        }
+					}
+				}
+
+				//添加土层文字
+				{
+                    cJSON* cSoi  = cJSON_GetArrayItem(rowJson, 3);          // 当前列“土层文字”
+					if (cSoi != NULL && cJSON_IsString(cSoi)){
+                        std::vector<CString> arrSeg;
+                        if (CUtils::SplitUtf8(cSoi->valuestring, '-', arrSeg) > 0)
+                        {
+							AcGePoint3d ptDrawSoi(ptDraw);
+							ptDrawSoi.x += space_no + space_mc/2;
+							ptDrawSoi.y += hDraw/2;
+							CUtils::AddDbText(pModelSpace,(ACHAR*)arrSeg[1].GetString(),ptDrawSoi,2.1,pszStyleName,DbTextHAlign::DBTA_CENTER);
+                        }
+                    }
+				}
+
+				//添加高程，深度，厚度
+				{
+					//高程
+					AcGePoint3d ptDraw_elevation(ptDraw);
+					ptDraw_elevation.x += space_no + space_mc + space_sd + space_sd/2;
+					ptDraw_elevation.y += 3;
+					double elevation_cur = elevation - toDepth;
+	
+					CString str;
+					str.Format(_T("%.2f"), elevation_cur);
+					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_elevation,2.1,pszStyleName,DbTextHAlign::DBTA_CENTER);
+
+
+					//深度
+					AcGePoint3d ptDraw_depth(ptDraw);
+					ptDraw_depth.x += space_no + space_mc + space_sd * 2 + space_sd/2;
+					ptDraw_depth.y += 3;
+	
+					str.Format(_T("%.2f"), toDepth);
+					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_depth,2.1,pszStyleName,DbTextHAlign::DBTA_CENTER);
+
+
+					//厚度
+					AcGePoint3d ptDraw_thick(ptDraw);
+					ptDraw_thick.x += space_no + space_mc + space_sd * 3 + space_sd/2;
+					ptDraw_thick.y += 3;
+	
+					str.Format(_T("%.2f"), thick);
+					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_thick,2.1,pszStyleName,DbTextHAlign::DBTA_CENTER);
+				}
+
+				{
+					//土层描述
+					cJSON* cDesc  = cJSON_GetArrayItem(rowJson, 8);
+
+					ACHAR desc[256] = { 0 };
+					CUtils::utf8ToTChar(cDesc->valuestring, desc, ARRAYSIZE(desc));
+
+					AcGePoint3d ptDraw_desc(ptDraw);
+					ptDraw_desc.x += space_no + space_mc + space_sd * 4 + space_chat;
+					ptDraw_desc.y += hDraw;
+
+					CUtils::AddDbMText(pModelSpace,desc,ptDraw_desc,2.1,space_desc,pszStyleName);
+				}
+
+
             }
 
 			ptInsert.x += space;
@@ -506,8 +586,6 @@ void CCreateColumnView::Execute()
 
 int CCreateColumnView::actionEnd()
 {
-	if (pExtDb)
-		delete pExtDb;
 	return ToolDrawBase::actionEnd();
 }
 void CCreateColumnView::CollectTexts(AcDbObjectId blkDefId, CMapStringToString& mapVals, int depth)
@@ -646,3 +724,68 @@ CString CCreateColumnView::MTextToPlain(const ACHAR* s)
 }
 
 
+AcDbDatabase* CCreateColumnView::GetExtDb(const ACHAR* pszDwgPath)
+{
+    CString key = CUtils::NormalizeDwgPath(pszDwgPath);
+
+    // 1) 命中缓存直接返回
+    std::map<CString, AcDbDatabase*>::iterator it = m_extDbCache.find(key);
+    if (it != m_extDbCache.end())
+        return it->second;
+
+    // 2) 未命中：读入新 side database
+    AcDbDatabase* pNewDb = new AcDbDatabase(false, true);
+    Acad::ErrorStatus es = pNewDb->readDwgFile(key);
+    if (es != Acad::eOk)
+    {
+        acutPrintf(_T("\n[DWG导入] 错误：读取 DWG 失败(错误码 %d)：%s"), (int)es, pszDwgPath);
+        delete pNewDb;
+        return NULL;
+    }
+    // 可选：释放文件句柄但保留内存中的库，模板 DWG 不会被锁住
+    // pNewDb->closeInput(true);
+
+    m_extDbCache.insert(std::make_pair(key, pNewDb));
+    return pNewDb;
+}
+
+void CCreateColumnView::ClearExtDbCache()
+{
+    std::map<CString, AcDbDatabase*>::iterator it;
+    for (it = m_extDbCache.begin(); it != m_extDbCache.end(); ++it)
+        delete it->second;
+    m_extDbCache.clear();
+}
+
+void CCreateColumnView::ChangeNo(AcDbObjectId blkDefId,ACHAR* no)
+{
+	AcDbBlockTableRecord* pBTR = NULL;
+    if (acdbOpenObject(pBTR, blkDefId, AcDb::kForRead) != Acad::eOk)
+        return;
+
+    AcDbBlockTableRecordIterator* pIter = NULL;
+    if (pBTR->newIterator(pIter) == Acad::eOk)
+    {
+        for (; !pIter->done(); pIter->step())
+        {
+            AcDbEntity* pEnt = NULL;
+            if (pIter->getEntity(pEnt, AcDb::kForRead) != Acad::eOk)
+                continue;
+
+            //--- 1) 单行文本 ---
+            AcDbText* pText = AcDbText::cast(pEnt);
+			CString s(pText->textString());          // 指针归实体所有，先拷贝
+			if (s == _T("1")){
+				if (pEnt->upgradeOpen() == Acad::eOk)   // 读 → 写
+                {
+                    pText->setTextString(no);
+				}
+				pEnt->close();
+				break;
+			}
+			pEnt->close();
+		}
+		delete pIter;
+	}
+	pBTR->close();
+}

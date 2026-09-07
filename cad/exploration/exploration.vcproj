@@ -370,10 +370,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\CreateColumnView.h"
-				>
-			</File>
-			<File
 				RelativePath=".\CustPalette.h"
 				>
 			</File>

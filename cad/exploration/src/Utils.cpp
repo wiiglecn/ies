@@ -500,3 +500,178 @@ void CUtils::SafeCopy(ACHAR* pszDst, int nDstCount, const ACHAR* pszSrc, int nCo
         pszDst[i] = pszSrc[i];
     pszDst[i] = _T('\0');
 }
+// 路径归一化：统一大小写和分隔符，否则 "a/dwg" 和 "A\dwg" 会被当成两个键
+CString CUtils::NormalizeDwgPath(const ACHAR* pszDwgPath)
+{
+    CString s(pszDwgPath);
+    s.MakeLower();                 // Windows 路径不区分大小写（中文不受影响）
+    s.Replace(_T('/'), _T('\\'));  // Execute() 里用 '/'，readDwgFile 里可能是 '\'
+    return s;
+}
+
+void CUtils::IntToAChar(int nValue, ACHAR* pszBuf, int nBufCount)
+{
+    if (pszBuf == NULL || nBufCount <= 0)
+        return;
+
+#ifdef _CAD2005
+    _stprintf(pszBuf, _T("%d"), nValue);
+#else
+    _stprintf_s(pszBuf, nBufCount, _T("%d"), nValue);
+#endif
+}
+int CUtils::SplitUtf8(const char* utf8Str, char sep, std::vector<CString>& outArr)
+{
+    outArr.clear();
+    if (utf8Str == NULL)
+        return 0;
+
+    const char* p = utf8Str;
+    for (;;)
+    {
+        const char* pSep = strchr(p, sep);
+        size_t nLen = (pSep != NULL) ? (size_t)(pSep - p) : strlen(p);
+
+        // 拷到局部缓冲并保证 NUL 结尾（utf8ToTChar 的要求）
+        char szSeg[256];
+        if (nLen >= sizeof(szSeg))
+            nLen = sizeof(szSeg) - 1;
+        memcpy(szSeg, p, nLen);
+        szSeg[nLen] = '\0';
+
+        TCHAR buf[512];
+        CUtils::utf8ToTChar(szSeg, buf, ARRAYSIZE(buf));
+        outArr.push_back(CString(buf));
+
+        if (pSep == NULL)
+            break;
+        p = pSep + 1;
+    }
+    return (int)outArr.size();
+}
+// 按名称查文字样式 ID（找不到返回 kNull）
+AcDbObjectId CUtils::FindTextStyle(const ACHAR* pszStyleName)
+{
+    AcDbObjectId styleId = AcDbObjectId::kNull;
+    AcDbTextStyleTable* pTsTbl = NULL;
+    if (acdbHostApplicationServices()->workingDatabase()
+            ->getTextStyleTable(pTsTbl, AcDb::kForRead) == Acad::eOk)
+    {
+        pTsTbl->getAt(pszStyleName, styleId);
+        pTsTbl->close();
+    }
+    return styleId;
+}
+
+// 在指定位置创建单行文本并设置样式
+AcDbObjectId CUtils::AddDbText(AcDbBlockTableRecord* container, const ACHAR* pszText, const AcGePoint3d& pt,
+                               double dHeight, const ACHAR* pszStyleName, DbTextHAlign hAlign)
+{
+    AcDbText* pText = new AcDbText;
+    pText->setPosition(pt);
+    pText->setTextString(pszText);
+    pText->setRotation(0.0);
+
+    if (pszStyleName != NULL)
+    {
+        AcDbObjectId styleId = FindTextStyle(pszStyleName);
+        if (!styleId.isNull())
+            pText->setTextStyle(styleId);
+    }
+    pText->setHeight(dHeight);
+
+    // ★ 对齐：先设模式，再设对齐点（顺序不能反）
+    switch (hAlign)
+    {
+    case DBTA_CENTER:
+        pText->setHorizontalMode(AcDb::kTextMid);
+        break;
+    case DBTA_RIGHT:
+        pText->setHorizontalMode(AcDb::kTextRight);
+        break;
+    case DBTA_LEFT:
+    default:
+        pText->setHorizontalMode(AcDb::kTextLeft);
+        break;
+    }
+    pText->setAlignmentPoint(pt);   // 左对齐时被忽略（用 position），其他模式接管定位
+
+    AcDbObjectId textId = AcDbObjectId::kNull;
+    Acad::ErrorStatus es = container->appendAcDbEntity(textId, pText);
+    if (es == Acad::eOk)
+        pText->close();
+    else
+        delete pText;
+    return textId;
+}
+double CUtils::getTextWidth(AcDbText* pText)
+{
+    if (!pText) return 0.0;
+
+    AcDbExtents extents;
+    // 调用单参数版本
+    Acad::ErrorStatus es = pText->getGeomExtents(extents);
+    
+    if (es == Acad::eOk)
+    {
+        // 从 AcDbExtents 对象中获取最小点和最大点
+        AcGePoint3d minPt = extents.minPoint();
+        AcGePoint3d maxPt = extents.maxPoint();
+        
+        // 计算宽度 (X轴方向的差值)
+        // 注意：这是世界坐标系下的包围盒宽度
+        return maxPt.x - minPt.x;
+    }
+    return 0.0;
+}
+double CUtils::CStringToDouble(const CString& str)
+{
+    if (str.IsEmpty())
+        return 0.0;
+
+    // _tstof 会自动根据 Unicode/ANSI 设置选择正确的函数
+    // 在 ANSI 模式下等价于 atof(str)
+    // 在 Unicode 模式下等价于 _wtof(str)
+    return _tstof(str);
+}
+AcDbObjectId CUtils::AddDbMText(AcDbBlockTableRecord* container, const ACHAR* pszText, const AcGePoint3d& pt,
+                                double dHeight, double dWidth,const ACHAR* pszStyleName,
+                                AcDbMText::AttachmentPoint attach)
+{
+    if (container == NULL)
+        return AcDbObjectId::kNull;
+
+    AcDbMText* pMText = new AcDbMText;
+    pMText->setLocation(pt);
+
+    // 样式：先设样式再设高度（样式里的固定字高会覆盖）
+    if (pszStyleName != NULL)
+    {
+        AcDbObjectId styleId = FindTextStyle(pszStyleName);
+        if (!styleId.isNull())
+            pMText->setTextStyle(styleId);
+    }
+    pMText->setTextHeight(dHeight);
+
+    // 内容：MText 把 \n 当普通字符，换行必须是 \P —— 先替换，JSON 里的真实换行才能生效
+    CString sContents(pszText != NULL ? pszText : _T(""));
+    sContents.Replace(_T("\r\n"), _T("\\P"));
+    sContents.Replace(_T("\n"), _T("\\P"));
+    sContents.Replace(_T("\r"), _T("\\P"));
+    pMText->setContents(sContents.GetString());
+
+    // ★ 宽度必须在 setContents 之后设：设置宽度会触发重新排版折行
+    if (dWidth > 0.0)
+        pMText->setWidth(dWidth);
+
+    pMText->setAttachment(attach);     // location 指文本框的哪个角/边
+    pMText->setRotation(0.0);
+
+    AcDbObjectId textId = AcDbObjectId::kNull;
+    Acad::ErrorStatus es = container->appendAcDbEntity(textId, pMText);
+    if (es == Acad::eOk)
+        pMText->close();               // 项目约定：入库成功 close，失败 delete
+    else
+        delete pMText;
+    return textId;
+}

@@ -13,8 +13,13 @@ public:
 	void Execute();
 	virtual int actionEnd();
 private:
-	AcDbDatabase* pExtDb;
-
+	// 按归一化路径缓存 side database（不同 DWG 路径 → 不同库）
+    std::map<CString, AcDbDatabase*> m_extDbCache;
+    // 取（无则读入）路径对应的外部库；失败返回 NULL
+    AcDbDatabase* GetExtDb(const ACHAR* pszDwgPath);
+    // 释放全部缓存库
+    void ClearExtDbCache();
+    
 	//-------------------------------------------------------------------------
     // pszDwgPath  : DWG 文件完整路径
     // ptInsert    : 插入点（当前图形 WCS 坐标）
@@ -24,14 +29,12 @@ private:
     // pBlkRefId   : [输出] 成功时返回块参照 ObjectId，可为 NULL
     // 返回        : true 成功 / false 失败（失败原因打印到命令行）
     //-------------------------------------------------------------------------
-    bool ImportDwgAsBlock(const ACHAR* pszDwgPath,
+    AcDbObjectId ImportDwgAsBlock(const ACHAR* pszDwgPath,
                                  const AcGePoint3d& ptInsert,
-								 CMapStringToString& mapVals,
-								 const char* arrayName,
+								 const ACHAR* arrayName,
                                  double dScale = 1.0,
                                  double dRotation = 0.0,
-                                 const ACHAR* pszLayer = NULL,
-                                 AcDbObjectId* pBlkRefId = NULL);
+                                 const ACHAR* pszLayer = NULL);
 	// 从文件路径提取合法块名（去目录、去扩展名、替换非法字符）
     void MakeBlockName(const ACHAR* pszDwgPath, ACHAR* pszName, int nNameCount);
 
@@ -43,4 +46,6 @@ private:
     CString MTextToPlain(const ACHAR* s);
 
 	void CreateHeader(const AcGePoint3d& ptInsert);
+	// 改变序号
+    void ChangeNo(AcDbObjectId blkDefId,ACHAR* no);
 };
