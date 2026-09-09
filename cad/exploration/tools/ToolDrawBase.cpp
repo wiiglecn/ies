@@ -122,3 +122,15 @@ AcDbObjectId ToolDrawBase::GetIdFromHandle(cJSON* json, const char* key, AcDbDat
     pDb->getAcDbObjectId(objId, Adesk::kFalse, dbHandle);
     return objId;
 }
+void ToolDrawBase::setDocument(AcApDocument* pDocSrc)
+{
+    this->pDoc = pDocSrc;
+}
+void ToolDrawBase::setModelSpace(AcDbBlockTableRecord* pModelSpaceSrc)
+{
+    this->pModelSpace = pModelSpaceSrc;
+}
+void ToolDrawBase::setDatabase(AcDbDatabase* pDbSrc)
+{
+    this->pDb = pDbSrc;
+}

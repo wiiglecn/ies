@@ -8,6 +8,7 @@
 #include "cJSON.h"
 #include "utils.h"
 #include "CreateColumnView.h"
+#include "PatHatchLoader.h"
 
 // 值类型（也可以直接用 int 0/1，枚举可读性更好）
 enum JsonValType { JV_STRING, JV_NUMBER };
@@ -20,6 +21,16 @@ struct FieldMap
     JsonValType  type;        // 取值方式
     const TCHAR* defaultVal; // 默认值（可为 NULL）
 };
+// 标贯统计结果项（按杆长分组）
+struct SPT_STAT
+{
+    double rodLength;    // 杆长（分组键）
+    double minVal;       // 组内最小值
+    double maxVal;       // 组内最大值
+    int    totalCount;   // 组内统计数汇总
+    SPT_STAT() : rodLength(0), minVal(0), maxVal(0), totalCount(0) {}
+};
+
 // 映射表：声明成文件级 static，写在 CollectTexts/Execute 之前
 static const FieldMap s_fieldMap[] = {
     { _T("[page_no]"),   -1,  -1, JV_STRING, _T("1") },
@@ -253,13 +264,16 @@ void CCreateColumnView::Execute()
 	CString strFilePath = CUtils::GetArxFolder();
 	strFilePath.Replace(_T("\\"), _T("/"));
 	CString strUrl;
-	strUrl = strFilePath + _T("/project/钻探编录表.json");
+	strUrl = strFilePath + _T("project/钻探编录表.json");
 	CString cadBlockUrl;
 	cadBlockUrl.Format(_T("support/%s/钻孔柱状图.dwg"), CADYEAR);
 	cadBlockUrl = strFilePath + cadBlockUrl;
 	CString cadNoBlockUrl;
 	cadNoBlockUrl.Format(_T("support/%s/序号.dwg"), CADYEAR);
 	cadNoBlockUrl = strFilePath + cadNoBlockUrl;
+    CString cadPatUrl = CUtils::GetArxFolder() + _T("support\\pat");
+    CString cadSoilConfigUrl= strFilePath + _T("support/pat_define.json");
+    
 
     if (!PathFileExists(cadBlockUrl)
 		|| !PathFileExists(cadNoBlockUrl))
@@ -269,43 +283,20 @@ void CCreateColumnView::Execute()
 		return;
     }
 
-	// Read file content
-	FILE* fp = _tfopen(strUrl.GetString(), _T("rb")); // Use binary mode for reading
-	if (!fp) {
-		// File does not exist or cannot be opened
-		CUtils::acutPrintf(_T("[CAD ERROR] 没有导入数据，请先完成数据导入! %s\n"), strUrl.GetString());
-		return;
-	}
-
-	// Seek to end to get file size
-	fseek(fp, 0, SEEK_END);
-	long fileSize = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-
-	if (fileSize <= 0) {
-		fclose(fp);
-		return;
-	}
-
-	// Allocate buffer and read file
-	char* fileContent = (char*)malloc(fileSize + 1);
-	if (!fileContent) {
-		fclose(fp);
-		return;
-	}
-
-	size_t readSize = fread(fileContent, 1, fileSize, fp);
-	fileContent[readSize] = '\0';
-	fclose(fp);
-
-	// Parse JSON
-	cJSON* s_pJsonData = cJSON_Parse(fileContent);
-	free(fileContent);
-
+	// 解析 JSON（失败时内部已打印错误，这里保留原有业务提示）
+    cJSON* s_pJsonData = CUtils::LoadJsonFile(strUrl.GetString());   // 静默模式
     if (s_pJsonData == NULL) {
-        CUtils::acutPrintf(_T("[CAD ERROR] JSON 解析失败: %s\n"), strUrl.GetString());
+        CUtils::acutPrintf(_T("[CAD ERROR] 没有导入数据，请先完成数据导入! %s\n"), strUrl.GetString());
         return;
     }
+
+    // 解析 JSON（失败时内部已打印错误，这里保留原有业务提示）
+    cJSON* s_patConfigData = CUtils::LoadJsonFile(cadSoilConfigUrl.GetString());   // 静默模式
+    if (s_patConfigData == NULL) {
+        CUtils::acutPrintf(_T("[CAD ERROR] 没有pat配置文件，请检查！ %s\n"), cadSoilConfigUrl.GetString());
+        return;
+    }
+
     int ret = this->actionBefore();
 	if (ret) return;
 
@@ -331,9 +322,14 @@ void CCreateColumnView::Execute()
 	double space_desc = 45.6296;
 	double space_last = 16.0951;
 
-
+    double dWidthFactor = 0.6;
 
 	ACHAR* pszStyleName = _T("成果图表体");
+    PatHatchLoader patLoader;
+	patLoader.setDocument(pDoc);
+	patLoader.setModelSpace(pModelSpace);
+	patLoader.setDatabase(pDb);
+    patLoader.RegisterPatFile(cadPatUrl);
 
     cJSON_ArrayForEach(item, s_pJsonData) {
         // 处理每个属性
@@ -345,9 +341,22 @@ void CCreateColumnView::Execute()
 			ACHAR arrayName[256] = { 0 };
 			CUtils::utf8ToTChar(blockName, arrayName, ARRAYSIZE(arrayName));
 
+			/*if (_tcscmp(arrayName, _T("ZK15")) != 0){
+				ptInsert.x += space;
+				break;
+			}*/
+
+			/*if (_tcscmp(arrayName, _T("ZK11")) != 0){
+				ptInsert.x += space;
+				continue;
+			}*/
+
 			CMapStringToString mapVals;
             const int rowSize   = cJSON_GetArraySize(item);
             const int MAP_COUNT = (int)(sizeof(s_fieldMap) / sizeof(s_fieldMap[0]));
+
+            // 标贯统计容器：按杆长分组（单孔范围）
+            std::vector<SPT_STAT> sptStats;
 
             for (int i = 0; i < MAP_COUNT; ++i)
             {
@@ -430,12 +439,19 @@ void CCreateColumnView::Execute()
             //在这里计算每行的高度
             // 数据行：第 7 行 ~ 倒数第二行(rowSize-2)；col1=自，col2=至
             double totalDepth = 1.0;
-            cJSON* lastRowJson = cJSON_GetArrayItem(item, rowSize - 2);   // 倒数第二行=最深一行
-            if (lastRowJson != NULL)
+            // 末尾可能有连续空行：从倒数第二行向上找第一个“至”有效的行
+            for (int r = rowSize - 2; r >= 7; --r)
             {
-                cJSON* cTo = cJSON_GetArrayItem(lastRowJson, 2);          // “至”=终孔深度
-                if (cTo != NULL && cJSON_IsNumber(cTo))
-                    totalDepth = cTo->valuedouble;                        // ★算术必须用 valuedouble
+                cJSON* rowTry = cJSON_GetArrayItem(item, r);
+                if (rowTry == NULL)
+                    continue;                                   // 空行 → 继续向上
+                cJSON* cTo = cJSON_GetArrayItem(rowTry, 2);     // “至”=终孔深度
+                if (cTo != NULL && cJSON_IsNumber(cTo) && cTo->valuedouble > 0.0)
+                {
+                    totalDepth = cTo->valuedouble;              // ★算术必须用 valuedouble
+                    break;
+                }
+                dataRow--;
             }
             if (totalDepth <= 0.0) totalDepth = 1.0;                      // 防除零
 
@@ -457,7 +473,12 @@ void CCreateColumnView::Execute()
                     cJSON* cTo = cJSON_GetArrayItem(rowJson, 2);          // 当前行“至”
                     if (cTo != NULL && cJSON_IsNumber(cTo))
                         toDepth = cTo->valuedouble;
-                }
+					else
+						continue;
+				}else{
+					//有可能为空行
+					continue;
+				}
                 double thick   = toDepth - prevBottom;                    // 与上一行比较→实际层厚
                 double hDraw   = thick * scale;                           // 该行图面实际高度
                 double yBottom = yTop - toDepth * scale;                  // 该行底部Y
@@ -508,6 +529,7 @@ void CCreateColumnView::Execute()
 					}
 				}
 
+                CString soilPatName;
 				//添加土层文字
 				{
                     cJSON* cSoi  = cJSON_GetArrayItem(rowJson, 3);          // 当前列“土层文字”
@@ -515,10 +537,13 @@ void CCreateColumnView::Execute()
                         std::vector<CString> arrSeg;
                         if (CUtils::SplitUtf8(cSoi->valuestring, '-', arrSeg) > 0)
                         {
+                            soilPatName=arrSeg[1].GetString();
+
 							AcGePoint3d ptDrawSoi(ptDraw);
 							ptDrawSoi.x += space_no + space_mc/2;
 							ptDrawSoi.y += hDraw/2;
-							CUtils::AddDbText(pModelSpace,(ACHAR*)arrSeg[1].GetString(),ptDrawSoi,2.1,pszStyleName,DbTextHAlign::DBTA_CENTER);
+							CUtils::AddDbText(pModelSpace,(ACHAR*)arrSeg[1].GetString(),
+                            ptDrawSoi,2.1,pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
                         }
                     }
 				}
@@ -533,7 +558,8 @@ void CCreateColumnView::Execute()
 	
 					CString str;
 					str.Format(_T("%.2f"), elevation_cur);
-					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_elevation,2.1,pszStyleName,DbTextHAlign::DBTA_CENTER);
+					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_elevation,
+                    2.1,pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
 
 
 					//深度
@@ -542,7 +568,8 @@ void CCreateColumnView::Execute()
 					ptDraw_depth.y += 3;
 	
 					str.Format(_T("%.2f"), toDepth);
-					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_depth,2.1,pszStyleName,DbTextHAlign::DBTA_CENTER);
+					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_depth,2.1,
+                    pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
 
 
 					//厚度
@@ -551,7 +578,8 @@ void CCreateColumnView::Execute()
 					ptDraw_thick.y += 3;
 	
 					str.Format(_T("%.2f"), thick);
-					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_thick,2.1,pszStyleName,DbTextHAlign::DBTA_CENTER);
+					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_thick,2.1,
+                    pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
 				}
 
 				{
@@ -562,24 +590,297 @@ void CCreateColumnView::Execute()
 					CUtils::utf8ToTChar(cDesc->valuestring, desc, ARRAYSIZE(desc));
 
 					AcGePoint3d ptDraw_desc(ptDraw);
-					ptDraw_desc.x += space_no + space_mc + space_sd * 4 + space_chat;
-					ptDraw_desc.y += hDraw;
+					ptDraw_desc.x += space_no + space_mc + space_sd * 4 + space_chat+1.0;
+					ptDraw_desc.y += hDraw-0.7;
 
-					CUtils::AddDbMText(pModelSpace,desc,ptDraw_desc,2.1,space_desc,pszStyleName);
+					CUtils::AddDbMText(pModelSpace,desc,ptDraw_desc,2.1,space_desc-1.0,pszStyleName);
 				}
 
+                if (!soilPatName.IsEmpty()){
+                    //填充土层图案
+                    double soilLeft = ptDraw.x + space_no + space_mc + space_sd * 4;
+                    AcGePoint2dArray rect;                         
+                    rect.append(AcGePoint2d(soilLeft,   ptDraw.y));
+                    rect.append(AcGePoint2d(soilLeft+space_chat,  ptDraw.y));
+                    rect.append(AcGePoint2d(soilLeft+space_chat, ptDraw.y + hDraw));
+                    rect.append(AcGePoint2d(soilLeft,  ptDraw.y + hDraw));
+                    rect.append(AcGePoint2d(soilLeft,   ptDraw.y));
 
+                    AcGeDoubleArray bulges;
+                    for (int b = 0; b < rect.length(); ++b)     // 变量改名 b，避免遮蔽外层行循环的 i
+                        bulges.append(0.0);
+
+                    // 岩性名 → 图例名：如 "耕土" → "gt"
+                    TCHAR patName[128] = { 0 };
+                    if (CUtils::FindPatNameBySoilName(s_patConfigData, soilPatName.GetString(),
+                                              patName, ARRAYSIZE(patName)))
+                    {
+                        AcDbObjectId hatchId = AcDbObjectId::kNull;
+                        Acad::ErrorStatus es = patLoader.CreateHatchByName(
+                            patName, rect, bulges, 0.5, 0.0, NULL, hatchId);
+                        if (es != Acad::eOk)
+                            CUtils::acutPrintf(_T("[CAD WARN] 填充失败(%d)：岩性 \"%s\" 图例 \"%s\"\n"),
+                                (int)es, soilPatName.GetString(), patName);
+                    }
+                    else
+                    {
+                        CUtils::acutPrintf(_T("[CAD WARN] pat_define.json 未找到岩性 \"%s\" 的图例名称，跳过填充\n"),
+                            soilPatName.GetString());
+                    }
+                }
+
+				//取样
+				{
+					cJSON* cSampling_no  = cJSON_GetArrayItem(rowJson, 13);
+					cJSON* cSampling_num  = cJSON_GetArrayItem(rowJson, 14);
+
+					if (cSampling_no != NULL && cJSON_IsString(cSampling_no)
+						&& cSampling_num != NULL && cJSON_IsString(cSampling_num)){
+
+						std::vector<CString> arrSeg;
+                        if (CUtils::SplitUtf8(cSampling_num->valuestring, '-', arrSeg) > 0)
+                        {
+							double depth_sampling = CUtils::CStringToDouble(arrSeg[1]);
+
+							AcGePoint3d ptDraw_sampling(ptDraw);
+							ptDraw_sampling.x += space_no + space_mc + space_sd * 4 + space_chat + space_desc;
+							ptDraw_sampling.y = yTop - depth_sampling * scale;
+
+							AcGePoint3d ptDraw_sampling_end(ptDraw_sampling);
+							ptDraw_sampling_end.x  +=space_chat;               // 向右延伸一个表格宽度
+
+							AcDbLine* pLine = new AcDbLine(ptDraw_sampling, ptDraw_sampling_end);
+
+							AcDbObjectId lineId = AcDbObjectId::kNull;
+							Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
+							if (es == Acad::eOk)
+								pLine->close();                  // 入库成功 → close（不能 delete）
+							else
+								delete pLine;                    // 入库失败 → 未入库，只能 delete
+
+							ACHAR sampling_txt[256] = { 0 };
+							CUtils::utf8ToTChar(cSampling_no->valuestring, sampling_txt, ARRAYSIZE(sampling_txt));
+
+							//取样编号
+							AcGePoint3d ptDraw_sampling_txt_no(ptDraw_sampling);
+							ptDraw_sampling_txt_no.x += space_chat/2;
+							ptDraw_sampling_txt_no.y += 2.5;
+
+							CUtils::AddDbText(pModelSpace,sampling_txt,ptDraw_sampling_txt_no,
+                                2.1,pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+
+
+							//取样数值
+							CUtils::utf8ToTChar(cSampling_num->valuestring, sampling_txt, ARRAYSIZE(sampling_txt));
+
+							AcGePoint3d ptDraw_sampling_txt(ptDraw_sampling);
+							ptDraw_sampling_txt.x += space_chat/2;
+							ptDraw_sampling_txt.y -=2.5;
+
+							CUtils::AddDbText(pModelSpace,sampling_txt,ptDraw_sampling_txt,
+                                2.1,pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+
+                        }
+					}
+				}
+				
+				//统计标贯
+				{
+					cJSON* cStandard_type  = cJSON_GetArrayItem(rowJson, 15);
+
+                    if (cStandard_type != NULL && cJSON_IsString(cStandard_type))
+                    {
+                        // JSON 值是 UTF-8，转 TCHAR 后再与字面量比较
+                        TCHAR szType[64] = { 0 };
+                        CUtils::utf8ToTChar(cStandard_type->valuestring, szType, ARRAYSIZE(szType));
+
+                        if (_tcscmp(szType, _T("标贯")) == 0)
+                        {
+                            cJSON* cStandard_rod_length  = cJSON_GetArrayItem(rowJson, 18);
+
+                            cJSON* cStandard_rod_min  = cJSON_GetArrayItem(rowJson, 16);
+                            cJSON* cStandard_rod_max  = cJSON_GetArrayItem(rowJson, 17);
+                            cJSON* cStandard_rod_count  = cJSON_GetArrayItem(rowJson, 19);
+
+                            double rodLength = CUtils::JsonValToDouble(cStandard_rod_length);
+                            double rodMin    = CUtils::JsonValToDouble(cStandard_rod_min);
+                            double rodMax    = CUtils::JsonValToDouble(cStandard_rod_max);
+                            int    rodCount  = (int)(CUtils::JsonValToDouble(cStandard_rod_count) + 0.5);
+
+                            // 归并到杆长相同的已有分组（浮点容差比较）
+                            bool bFound = false;
+                            for (size_t k = 0; k < sptStats.size(); ++k)
+                            {
+                                double d = sptStats[k].rodLength - rodLength;
+                                if (d < 0) d = -d;
+                                if (d < 0.001)
+                                {
+                                    if (rodMin < sptStats[k].minVal) sptStats[k].minVal = rodMin;
+                                    if (rodMax > sptStats[k].maxVal) sptStats[k].maxVal = rodMax;
+                                    sptStats[k].totalCount += rodCount;
+                                    bFound = true;
+                                    break;
+                                }
+                            }
+                            if (!bFound)      // 新杆长 → 新建分组
+                            {
+                                SPT_STAT st;
+                                st.rodLength  = rodLength;
+                                st.minVal     = rodMin;
+                                st.maxVal     = rodMax;
+                                st.totalCount = rodCount;
+                                sptStats.push_back(st);
+                            }
+                        }
+                    }
+				}
+
+                //统计动探
+                {
+                    cJSON* cDT_type  = cJSON_GetArrayItem(rowJson, 15);
+
+                    if (cDT_type != NULL && cJSON_IsString(cDT_type))
+                    {
+                        // JSON 值是 UTF-8，转 TCHAR 后再与字面量比较
+                        TCHAR szType[64] = { 0 };
+                        CUtils::utf8ToTChar(cDT_type->valuestring, szType, ARRAYSIZE(szType));
+
+                        if (_tcscmp(szType, _T("重型动探")) == 0)
+                        {
+                            cJSON* cDT_min  = cJSON_GetArrayItem(rowJson, 16);
+                            cJSON* cDT_max  = cJSON_GetArrayItem(rowJson, 17);
+                            cJSON* cDT_desc  = cJSON_GetArrayItem(rowJson, 19);
+
+                            double dtMin    = CUtils::JsonValToDouble(cDT_min);
+                            double dtMax    = CUtils::JsonValToDouble(cDT_max);
+
+                            AcGePoint3d ptDraw_Dt(ptDraw);
+                            ptDraw_Dt.x += space_no + space_mc + space_sd * 4 + space_chat + space_desc + space_chat*2;
+                            ptDraw_Dt.y = yTop - dtMax * scale;
+
+                            AcGePoint3d ptDraw_Dt_end(ptDraw_Dt);
+                            ptDraw_Dt_end.x  +=space_last;               // 向右延伸一个表格宽度
+
+                            AcDbLine* pLine = new AcDbLine(ptDraw_Dt, ptDraw_Dt_end);
+
+                            AcDbObjectId lineId = AcDbObjectId::kNull;
+                            Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
+                            if (es == Acad::eOk)
+                                pLine->close();                  
+                            else
+                                delete pLine;      
+
+                            ACHAR desc_txt[256] = { 0 };
+							CUtils::utf8ToTChar(cDT_desc->valuestring, desc_txt, ARRAYSIZE(desc_txt));
+
+                            //动探击数
+                            AcGePoint3d ptDraw_dt_head(ptDraw_Dt);
+							ptDraw_dt_head.x +=0.2;
+							AcDbObjectId objId = CUtils::AddDbMText(pModelSpace,desc_txt,ptDraw_dt_head,2.1,4,pszStyleName);
+							AcDbEntity* entity_desc = CUtils::OpenEntityById(objId);
+							double width_desc,height_desc;
+							CUtils::GetEntExtent(entity_desc,width_desc,height_desc);
+
+                            ptDraw_dt_head.y += height_desc;
+							ptDraw_dt_head.y -=2.1;
+                            CUtils::AddDbText(pModelSpace,_T("N"),ptDraw_dt_head,2.1,
+                                pszStyleName,DbTextHAlign::DBTA_LEFT,dWidthFactor);
+                            ptDraw_dt_head.x = ptDraw_Dt.x + 0.9;
+                            CUtils::AddDbText(pModelSpace,_T("63.5"),ptDraw_dt_head,1.4,
+                                pszStyleName,DbTextHAlign::DBTA_LEFT,dWidthFactor);
+                            ptDraw_dt_head.x = ptDraw_Dt.x + 3.2;
+                            CUtils::AddDbText(pModelSpace,_T("="),ptDraw_dt_head,2.1,
+                                pszStyleName,DbTextHAlign::DBTA_LEFT,dWidthFactor);
+                            ptDraw_dt_head.x = ptDraw_Dt.x + 4.2;
+							AcDbMText* pText = AcDbMText::cast(entity_desc);
+							if (pText != NULL)
+                            {
+                                if (pText->upgradeOpen() == Acad::eOk)        // 读 → 写
+                                {
+                                    AcGePoint3d ptLoc = pText->location();     // 取当前附着点
+                                    ptLoc.x = ptDraw_dt_head.x;                
+									ptLoc.y += height_desc;                
+                                    pText->setLocation(ptLoc);
+                                }
+                                pText->close();   // entity_desc 与 pText 是同一对象，close 一次即可
+                            }
+
+                            //最小值-最大值
+                            CString dt_txt;
+                            dt_txt.Format(_T("%.2f-%.2f"), dtMin, dtMax);
+
+                            AcGePoint3d ptDraw_dt_len(ptDraw_Dt);
+                            ptDraw_dt_len.x += space_last/2;
+                            ptDraw_dt_len.y -=2.1;
+
+                            CUtils::AddDbText(pModelSpace,dt_txt,ptDraw_dt_len,2.1,
+                                pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+
+                        }
+                    }
+					
+                }
             }
 
+			//标贯击数
+            for (size_t k = 0; k < sptStats.size(); ++k)
+            {
+                const SPT_STAT& st = sptStats[k];
+                CUtils::acutPrintf(_T("[标贯统计] 杆长=%.2f  最小值=%.1f  最大值=%.1f  统计数=%d\n"),
+                    st.rodLength, st.minVal, st.maxVal, st.totalCount);
+
+				AcGePoint3d ptDraw_Standard(ptInsert);
+				ptDraw_Standard.x += offsetX + space_no + space_mc + space_sd * 4 + space_chat + space_desc + space_chat;
+				ptDraw_Standard.y = yTop - st.maxVal * scale;
+
+				AcGePoint3d ptDraw_Standard_end(ptDraw_Standard);
+				ptDraw_Standard_end.x  +=space_chat;               // 向右延伸一个表格宽度
+
+				AcDbLine* pLine = new AcDbLine(ptDraw_Standard, ptDraw_Standard_end);
+
+				AcDbObjectId lineId = AcDbObjectId::kNull;
+				Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
+				if (es == Acad::eOk)
+					pLine->close();                  // 入库成功 → close（不能 delete）
+				else
+					delete pLine;                    // 入库失败 → 未入库，只能 delete
+
+				CString standard_txt;
+				standard_txt.Format(_T("=%d"), st.totalCount);
+
+				//杆长
+				AcGePoint3d ptDraw_standard_head(ptDraw_Standard);
+				ptDraw_standard_head.x += space_chat/2;
+				ptDraw_standard_head.y += 2.1;
+
+				CUtils::AddDbText(pModelSpace,standard_txt,ptDraw_standard_head,2.1,
+                    pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+
+
+				//最小值-最大值
+				standard_txt.Format(_T("%.2f-%.2f"), st.minVal, st.maxVal);
+
+				AcGePoint3d ptDraw_standard_len(ptDraw_Standard);
+				ptDraw_standard_len.x += space_chat/2;
+				ptDraw_standard_len.y -=2.1;
+
+				CUtils::AddDbText(pModelSpace,standard_txt,ptDraw_standard_len,2.1,
+                    pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+            }
+
+			//动探击数
+
+
 			ptInsert.x += space;
-			break;
+
+			/*if (_tcscmp(arrayName, _T("ZK3")) == 0){
+				break;
+			}*/
+			//break;
         }
     }
 
-	
-
 	this->actionEnd();
-
 	this->regen();
 	
 }

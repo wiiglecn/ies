@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include "cJSON.h"
 
 #ifdef _CAD2005
 	// ---- VC7 (VS2002) 的旧 SDK 头文件缺少以下常量，手动补上（与新版 wincrypt.h 完全一致）----
@@ -565,7 +566,7 @@ AcDbObjectId CUtils::FindTextStyle(const ACHAR* pszStyleName)
 
 // 在指定位置创建单行文本并设置样式
 AcDbObjectId CUtils::AddDbText(AcDbBlockTableRecord* container, const ACHAR* pszText, const AcGePoint3d& pt,
-                               double dHeight, const ACHAR* pszStyleName, DbTextHAlign hAlign)
+                               double dHeight, const ACHAR* pszStyleName, DbTextHAlign hAlign,double dWidthFactor)
 {
     AcDbText* pText = new AcDbText;
     pText->setPosition(pt);
@@ -579,6 +580,7 @@ AcDbObjectId CUtils::AddDbText(AcDbBlockTableRecord* container, const ACHAR* psz
             pText->setTextStyle(styleId);
     }
     pText->setHeight(dHeight);
+    pText->setWidthFactor(dWidthFactor);  
 
     // ★ 对齐：先设模式，再设对齐点（顺序不能反）
     switch (hAlign)
@@ -604,25 +606,24 @@ AcDbObjectId CUtils::AddDbText(AcDbBlockTableRecord* container, const ACHAR* psz
         delete pText;
     return textId;
 }
-double CUtils::getTextWidth(AcDbText* pText)
+// 获取实体几何包围盒的宽和高（世界坐标系下的包围盒尺寸）
+bool CUtils::GetEntExtent(AcDbEntity* pEnt, double& dWidth, double& dHeight)
 {
-    if (!pText) return 0.0;
+    dWidth  = 0.0;
+    dHeight = 0.0;
+    if (pEnt == NULL)
+        return false;
 
     AcDbExtents extents;
-    // 调用单参数版本
-    Acad::ErrorStatus es = pText->getGeomExtents(extents);
-    
-    if (es == Acad::eOk)
-    {
-        // 从 AcDbExtents 对象中获取最小点和最大点
-        AcGePoint3d minPt = extents.minPoint();
-        AcGePoint3d maxPt = extents.maxPoint();
-        
-        // 计算宽度 (X轴方向的差值)
-        // 注意：这是世界坐标系下的包围盒宽度
-        return maxPt.x - minPt.x;
-    }
-    return 0.0;
+    Acad::ErrorStatus es = pEnt->getGeomExtents(extents);
+    if (es != Acad::eOk)
+        return false;
+
+    AcGePoint3d minPt = extents.minPoint();
+    AcGePoint3d maxPt = extents.maxPoint();
+    dWidth  = maxPt.x - minPt.x;
+    dHeight = maxPt.y - minPt.y;
+    return true;
 }
 double CUtils::CStringToDouble(const CString& str)
 {
@@ -674,4 +675,110 @@ AcDbObjectId CUtils::AddDbMText(AcDbBlockTableRecord* container, const ACHAR* ps
     else
         delete pMText;
     return textId;
+}
+// 读取整个文件内容并以 cJSON 解析；任何一步失败返回 NULL
+cJSON* CUtils::LoadJsonFile(const TCHAR* pszFilePath, bool bSilent)
+{
+    if (pszFilePath == NULL || pszFilePath[0] == _T('\0'))
+        return NULL;
+
+    // Read file content
+    FILE* fp = _tfopen(pszFilePath, _T("rb"));   // 二进制模式，避免文本模式改动内容
+    if (!fp) {
+        if (!bSilent)
+            CUtils::acutPrintf(_T("[CAD ERROR] 无法打开文件: %s\n"), pszFilePath);
+        return NULL;
+    }
+
+    // Seek to end to get file size
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    if (fileSize <= 0) {
+        fclose(fp);
+        return NULL;
+    }
+
+    // Allocate buffer and read file
+    char* fileContent = (char*)malloc(fileSize + 1);
+    if (!fileContent) {
+        fclose(fp);
+        return NULL;
+    }
+
+    size_t readSize = fread(fileContent, 1, fileSize, fp);
+    fileContent[readSize] = '\0';
+    fclose(fp);
+
+    // Parse JSON
+    cJSON* pJson = cJSON_Parse(fileContent);
+    free(fileContent);
+
+    if (pJson == NULL && !bSilent) {
+        CUtils::acutPrintf(_T("[CAD ERROR] JSON 解析失败: %s\n"), pszFilePath);
+        const char* errPtr = cJSON_GetErrorPtr();
+        if (errPtr != NULL)
+            CUtils::acutPrintf(_T("[CAD ERROR] JSON 出错位置附近: %hs\n"), errPtr);
+    }
+    return pJson;
+}
+bool CUtils::FindPatNameBySoilName(cJSON* pPatConfig, const TCHAR* pszSoilName,
+                                  TCHAR* pszPatName, int nBufCount)
+{
+    if (pPatConfig == NULL || pszSoilName == NULL || pszPatName == NULL || nBufCount <= 0)
+        return false;
+    pszPatName[0] = _T('\0');
+
+    // 查找键（岩性名）转 UTF-8，用于与 JSON 值做字节比较
+    char utf8Name[256] = { 0 };
+    TCharToUtf8(pszSoilName, utf8Name, sizeof(utf8Name));
+
+    // 两个中文键名也转成 UTF-8
+    char utf8KeyName[64], utf8KeyPat[64];
+    TCharToUtf8(_T("岩性名称"), utf8KeyName, sizeof(utf8KeyName));
+    TCharToUtf8(_T("图例名称"), utf8KeyPat, sizeof(utf8KeyPat));
+
+    cJSON* patRow = NULL;
+    cJSON_ArrayForEach(patRow, pPatConfig)
+    {
+        cJSON* jName = cJSON_GetObjectItem(patRow, utf8KeyName);
+        if (jName == NULL || !cJSON_IsString(jName))
+            continue;
+        if (strcmp(jName->valuestring, utf8Name) != 0)      // UTF-8 字节精确比较
+            continue;
+
+        cJSON* jPat = cJSON_GetObjectItem(patRow, utf8KeyPat);
+        if (jPat != NULL && cJSON_IsString(jPat))
+            utf8ToTChar(jPat->valuestring, pszPatName, nBufCount);  // "gt": UTF-8 → TCHAR
+        return (pszPatName[0] != _T('\0'));
+    }
+    return false;
+}
+// JSON 数值兼容读取：number 直接取；字符串转 double 后取（标贯各列可能是数字或字符串）
+double CUtils::JsonValToDouble(cJSON* node)
+{
+    if (node == NULL)
+        return 0.0;
+    if (cJSON_IsNumber(node))
+        return node->valuedouble;
+    if (cJSON_IsString(node) && node->valuestring != NULL)
+    {
+        TCHAR buf[128] = { 0 };
+        utf8ToTChar(node->valuestring, buf, ARRAYSIZE(buf));
+        return CStringToDouble(buf);
+    }
+    return 0.0;
+}
+// 按 id 打开实体；acdbOpenAcDbEntity 自带类型校验（非 AcDbEntity 会失败）
+AcDbEntity* CUtils::OpenEntityById(const AcDbObjectId& id, AcDb::OpenMode openMode)
+{
+    if (id.isNull())
+        return NULL;
+
+    AcDbEntity* pEnt = NULL;
+    Acad::ErrorStatus es = acdbOpenAcDbEntity(pEnt, id, openMode);
+    if (es != Acad::eOk || pEnt == NULL)
+        return NULL;
+    return pEnt;
 }

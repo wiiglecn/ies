@@ -56,13 +56,23 @@ public:
 	static AcDbObjectId FindTextStyle(const ACHAR* pszStyleName);
 	static AcDbObjectId AddDbText(AcDbBlockTableRecord* container,const ACHAR* pszText, const AcGePoint3d& pt,
 						double dHeight, const ACHAR* pszStyleName,
-                              DbTextHAlign hAlign = DBTA_LEFT);   // 默认值只能写在头文件
-	static double getTextWidth(AcDbText* pText);
+                              DbTextHAlign hAlign = DBTA_LEFT,double dWidthFactor = 1.0);   // 默认值只能写在头文件
+	    // 获取实体几何包围盒的宽和高（世界坐标系）；失败返回 false，宽高置 0
+    static bool GetEntExtent(AcDbEntity* pEnt, double& dWidth, double& dHeight);
 	static double CStringToDouble(const CString& str);
 	// 创建多行文本：dWidth <= 0 表示不自动折行；attach 为九宫格附着点（默认左上）
 	static AcDbObjectId AddDbMText(AcDbBlockTableRecord* container, const ACHAR* pszText, const AcGePoint3d& pt,
                                double dHeight, double dWidth,const ACHAR* pszStyleName = NULL,
                                AcDbMText::AttachmentPoint attach = AcDbMText::kTopLeft);
+	// 读取整个文件并解析为 JSON；失败返回 NULL（bSilent=true 时不打印错误，由调用方自行提示）
+    static cJSON* LoadJsonFile(const TCHAR* pszFilePath, bool bSilent = true);
+	static bool FindPatNameBySoilName(cJSON* pPatConfig, const TCHAR* pszSoilName,
+                                  TCHAR* pszPatName, int nBufCount);
+	static double JsonValToDouble(cJSON* node);
+	    // 按 id 打开实体并返回指针；失败返回 NULL（id 为空 / 已删除 / 类型不是实体）
+    // ★ 所有权归 CAD：调用方用完必须 pEnt->close()，不能 delete
+    static AcDbEntity* OpenEntityById(const AcDbObjectId& id,
+                                      AcDb::OpenMode openMode = AcDb::kForRead);
 #ifdef _CAD2005
 	static void safeVsnprintfVC7(char* szBuffer, size_t bufferSize, const char* pszFmt, va_list args);
 #endif

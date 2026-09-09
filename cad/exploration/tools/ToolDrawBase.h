@@ -9,7 +9,11 @@ public:
 
 	virtual int actionBefore();
     virtual int actionEnd();
+
 	
+	void setDocument(AcApDocument* pDocSrc);
+    void setModelSpace(AcDbBlockTableRecord* pModelSpaceSrc);
+    void setDatabase(AcDbDatabase* pDbSrc);
 protected:
     ToolDrawBase(void);
     virtual ~ToolDrawBase(void);
