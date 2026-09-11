@@ -79,7 +79,8 @@ int ToolDrawBase::actionBefore()
 }
 int ToolDrawBase::actionEnd()
 {
-	this->pModelSpace->close();
+	if (pModelSpace != NULL)
+		pModelSpace->close();
 	acDocManager->unlockDocument(this->pDoc);
 	return 0;
 }

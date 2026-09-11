@@ -29,6 +29,8 @@ enum DbTextHAlign
 
 class CUtils
 {
+protected:
+	static cJSON* s_pJsonConfig;  // 静态成员变量，用于存储 JSON 配置
 public:
 	CUtils(void);
 public:
@@ -73,6 +75,10 @@ public:
     // ★ 所有权归 CAD：调用方用完必须 pEnt->close()，不能 delete
     static AcDbEntity* OpenEntityById(const AcDbObjectId& id,
                                       AcDb::OpenMode openMode = AcDb::kForRead);
+
+	static cJSON* GetJsonConfigDirect();
+	static cJSON* GetJsonConfig();
+	static void FreeJsonConfig();
 #ifdef _CAD2005
 	static void safeVsnprintfVC7(char* szBuffer, size_t bufferSize, const char* pszFmt, va_list args);
 #endif

@@ -271,3 +271,47 @@ input[type="text"]:focus {
     color: #333;
     font-size: 12px;
 }
+/* --- 基础数据 二级菜单 --- */
+/* 修正1：放开菜单组的 overflow，否则弹出的二级菜单会被裁剪 */
+#group-menu .group-content {
+    overflow: visible;
+}
+/* 修正2：IE7 下后面的 group-box(position:relative) 会盖住弹出菜单 */
+#group-menu {
+    z-index: 10;
+}
+
+.menu-item-wrapper {
+    display: inline-block;
+    vertical-align: top;
+    position: relative;   /* 二级菜单的定位参照 */
+    margin: 3px;          /* 外边距移到 wrapper 上 */
+    *display: inline;     /* IE7 inline-block hack，与 .menu-item 相同 */
+    zoom: 1;
+}
+.menu-item-wrapper .menu-item {
+    margin: 0;            /* 避免与 wrapper 边距叠加产生缝隙 */
+}
+
+.submenu {
+    display: none;
+    position: absolute;
+    top: 100%;            /* 紧贴磁贴下边缘，无缝隙 */
+    left: 0;
+    z-index: 100;
+    width: 96px;          /* IE7 下用固定宽度，不用 min-width */
+    background-color: #ffffff;
+    border: 1px solid #007acc;
+}
+.submenu-item {
+    padding: 6px 10px;
+    color: #333;
+    font-size: 12px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.submenu-item:hover {
+    background-color: #e6f3ff;
+    color: #007acc;
+}

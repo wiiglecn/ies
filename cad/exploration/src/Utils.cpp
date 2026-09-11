@@ -23,6 +23,9 @@
 	#endif
 #endif
 
+// Initialize static member
+cJSON* CUtils::s_pJsonConfig = NULL;
+
 CUtils::CUtils(void)
 {
 }
@@ -41,9 +44,10 @@ void CUtils::FocusAcadDrawing()
     else 
     {
         // Fallback: If dwg view is not available, try the main frame
-        if (acedGetAcadFrame())
-            ::SetFocus(acedGetAcadFrame()->m_hWnd);
+        /*if (acedGetAcadFrame())
+            ::SetFocus(acedGetAcadFrame()->m_hWnd);*/
     }
+		
 }
 bool CUtils::IsCircleExisting(const AcGePoint3d& center)
 {
@@ -781,4 +785,53 @@ AcDbEntity* CUtils::OpenEntityById(const AcDbObjectId& id, AcDb::OpenMode openMo
     if (es != Acad::eOk || pEnt == NULL)
         return NULL;
     return pEnt;
+}
+
+
+// Static accessor implementation
+cJSON* CUtils::GetJsonConfig()
+{
+    // 1. Initialize if NULL
+    if (!s_pJsonConfig) {
+        s_pJsonConfig = cJSON_CreateObject();
+    }else{
+        return s_pJsonConfig;
+    }
+
+    // 2. Check if 'profile' object exists, if not, create it and set defaults
+    cJSON* profile = cJSON_GetObjectItem(s_pJsonConfig, "profile");
+    
+    if (!profile || !cJSON_IsObject(profile)) {
+        // Create the profile object
+        profile = cJSON_AddObjectToObject(s_pJsonConfig, "profile");
+        
+        // Add default values
+        // Note: cJSON_AddStringToObject creates a copy of the string
+        cJSON_AddStringToObject(profile, "hole_diameter", "2");
+        cJSON_AddStringToObject(profile, HOLE_DIAMETER_ZK, "130");
+    } else {
+        // 3. Optional: Check if specific keys inside 'profile' are missing
+        // If you want to ensure hole_diameter exists even if 'profile' exists but is empty
+        cJSON* holeDiameter = cJSON_GetObjectItem(profile, "hole_diameter");
+        if (!holeDiameter || !cJSON_IsString(holeDiameter)) {
+            cJSON_AddStringToObject(profile, "hole_diameter", "2");
+        }
+        cJSON* holeDiameterZK = cJSON_GetObjectItem(profile, HOLE_DIAMETER_ZK);
+        if (!holeDiameterZK || !cJSON_IsString(holeDiameterZK)) {
+            cJSON_AddStringToObject(profile, HOLE_DIAMETER_ZK, "130");
+        }
+    }
+
+    return s_pJsonConfig;
+}
+void CUtils::FreeJsonConfig()
+{
+	if (s_pJsonConfig) {
+		cJSON_Delete(s_pJsonConfig);
+		s_pJsonConfig = NULL;
+	}
+}
+cJSON* CUtils::GetJsonConfigDirect()
+{
+    return s_pJsonConfig;
 }

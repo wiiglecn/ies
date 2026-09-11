@@ -43,7 +43,6 @@ protected:
 	virtual void GetMinimumSize(CSize& size);
 	virtual void GetMaximumSize(CSize& size);
 	virtual BOOL PreTranslateMessage(MSG *pMsg);
-	static cJSON* s_pJsonConfig;
 protected:
 	DECLARE_MESSAGE_MAP()
 public:
@@ -53,7 +52,5 @@ public:
 	void LoadPaletteSet();
 	static void SavePaletteSet();
 
-	static cJSON* GetJsonConfig();
-	static void FreeJsonConfig();
 };
 

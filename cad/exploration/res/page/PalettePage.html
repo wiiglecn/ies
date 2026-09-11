@@ -5,6 +5,7 @@
     <title>昇龙助手</title>
     <link type="text/css" rel="stylesheet" href="PalettePage.css">
     <script src="PalettePage.js"></script>
+    <script src="PalettePageMenu.js"></script>
 </head>
 <body scroll="no" onload="init()" >
     <!-- oncontextmenu="return false;" -->
@@ -32,6 +33,18 @@
                         <span class="menu-icon">&#9601;&#9605;&#9608;</span>
                         <span class="menu-text">柱状图</span>
                     </div>
+                    <div class="menu-item-wrapper" id="basicDataMenu"
+                        onmouseover="onSubMenuMouseOver()" onmouseout="onSubMenuMouseOut()">
+                        <div class="menu-item" onclick="toggleBasicDataMenu()" title="基础数据">
+                            <span class="menu-icon">&#9638;</span>
+                            <span class="menu-text">基础数据</span>
+                        </div>
+                        <div class="submenu" id="basicDataSubmenu">
+                            <div class="submenu-item" onclick="onBasicDataCmd('HoleDiameter')" title="孔直径">孔直径</div>
+                            <div class="submenu-item" onclick="onBasicDataCmd('Drafting')" title="制图人">制图人</div>
+                            <div class="submenu-item" onclick="onBasicDataCmd('Proofread')" title="校对人">校对人</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -42,12 +55,6 @@
             勘探常用功能
         </div>
         <div class="group-content">
-            <table class="property-table">
-                <tr>
-                    <td class="label-cell">孔直径(m):</td>
-                    <td class="input-cell"><input type="text" id="hole_diameter" onchange="onProfileChange(this)" /></td>
-                </tr>
-            </table>
             
             <div class="button-row-center">
                 <button class="icon-btn" onclick="onSelectBlock()" title="选择多段线或者块，如果是块则块内的多段线则作为参照物进行计算">&#9678;</button>
@@ -65,7 +72,6 @@
             AI 智能
         </div>
         <div class="group-content">
-            
             <!-- Chat Display Area -->
             <div id="ai-chat-container" class="chat-container">
                 <div class="chat-message ai">昇龙助手: 您好! 今天我能帮助您做点什么吗?</div>

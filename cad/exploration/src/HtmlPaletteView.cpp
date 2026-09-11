@@ -160,7 +160,7 @@ void CHtmlPaletteView::InitializeBrowser()
 
      // 4. Construct the file:/// URL
     CString strUrl;
-    strUrl.Format(_T("file:///%sPalettePage.html"), strFilePath);
+    strUrl.Format(_T("file:///%spage/PalettePage.html"), strFilePath);
 
     // 6. Navigate
     CUtils::acutPrintf(_T("[•NÁú] Loading from: %s\n"), strUrl);

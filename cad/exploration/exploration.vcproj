@@ -119,7 +119,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.html&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.css&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.js&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
+				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D /E /I &quot;$(ProjectDir)res\page&quot; &quot;$(OutDir)\page&quot;&#x0D;&#x0A;xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -556,11 +556,6 @@
 			Name="static"
 			>
 			<File
-				RelativePath=".\res\PalettePage.html"
-				DeploymentContent="true"
-				>
-			</File>
-			<File
 				RelativePath=".\res\tools.json"
 				DeploymentContent="true"
 				>
@@ -569,6 +564,14 @@
 		<Filter
 			Name="features"
 			>
+			<File
+				RelativePath=".\features\BaseDataSet.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\features\BaseDataSet.h"
+				>
+			</File>
 			<File
 				RelativePath=".\features\CreateColumnView.cpp"
 				>

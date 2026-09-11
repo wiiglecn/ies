@@ -192,7 +192,78 @@ AcDbObjectId CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath,
 
     return blkDefId;
 }
+//-----------------------------------------------------------------------------
+// 确保 blockName 块定义存在：已存在直接返回；不存在则从外部 DWG 导入并命名为
+// blockName（不插入块参照）。返回块定义 ObjectId，调用方可用 setBlockTableRecord
+// 在任意位置创建块参照。兼容 ObjectARX 2007 (acdb17)。
+//-----------------------------------------------------------------------------
+AcDbObjectId CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath, const ACHAR* blockName)
+{
+    if (pszDwgPath == NULL || pszDwgPath[0] == _T('\0'))
+    {
+        CUtils::acutPrintf(_T("[DWG导入] 错误：文件路径为空。\n"));
+        return AcDbObjectId::kNull;
+    }
 
+    // 1. 规范化块名：非法字符替换为 '_'；为空则退回用文件名生成
+    ACHAR szBlockName[256];
+    if (blockName != NULL && blockName[0] != _T('\0'))
+    {
+        CUtils::SafeCopy(szBlockName, 256, blockName, (int)_tcslen(blockName));
+        for (ACHAR* p = szBlockName; *p != _T('\0'); ++p)
+        {
+            if (CUtils::IsIllegalBlockNameChar(*p))
+                *p = _T('_');
+        }
+    }
+    else
+    {
+        MakeBlockName(pszDwgPath, szBlockName, 256);
+    }
+
+    if (szBlockName[0] == _T('\0'))
+    {
+        CUtils::acutPrintf(_T("[DWG导入] 错误：块名为空。\n"));
+        return AcDbObjectId::kNull;
+    }
+
+    // 2. 当前工作数据库
+    AcDbDatabase* pCurDb = this->pDb;
+
+    // 3. 块已存在：直接返回已有块定义，不重复导入
+    AcDbBlockTable* pBlkTbl = NULL;
+    if (pCurDb->getBlockTable(pBlkTbl, AcDb::kForRead) != Acad::eOk)
+    {
+        CUtils::acutPrintf(_T("[DWG导入] 错误：无法打开块表。\n"));
+        return AcDbObjectId::kNull;
+    }
+
+    AcDbObjectId blkDefId = AcDbObjectId::kNull;
+    if (pBlkTbl->getAt(szBlockName, blkDefId) == Acad::eOk && !blkDefId.isNull())
+    {
+        pBlkTbl->close();
+        return blkDefId;                      // 已存在：调用方可直接引用
+    }
+    pBlkTbl->close();
+
+    // 4. 不存在：读取外部 DWG 到内存库（side database，带缓存）
+    AcDbDatabase* pExtDb = GetExtDb(pszDwgPath);
+    if (pExtDb == NULL)
+        return AcDbObjectId::kNull;
+
+    // 5. 以 blockName 导入块定义（acdb17 的 insert 重载）
+    Acad::ErrorStatus es = pCurDb->insert(blkDefId, szBlockName, pExtDb, true);
+    if (es != Acad::eOk || blkDefId.isNull())
+    {
+        CUtils::acutPrintf(_T("[DWG导入] 错误：导入块定义失败(错误码 %d)，块名：%s \n"),
+            (int)es, szBlockName);
+        return AcDbObjectId::kNull;
+    }
+
+    // CUtils::acutPrintf(_T("\n[DWG导入] 成功：块 \"%s\" 已导入，可在其他位置创建块参照。"),
+    //     szBlockName);
+    return blkDefId;
+}
 //-----------------------------------------------------------------------------
 void CCreateColumnView::MakeBlockName(const ACHAR* pszDwgPath, ACHAR* pszName, int nNameCount)
 {
@@ -275,6 +346,7 @@ void CCreateColumnView::Execute()
     CString cadSoilConfigUrl= strFilePath + _T("support/pat_define.json");
     
 
+
     if (!PathFileExists(cadBlockUrl)
 		|| !PathFileExists(cadNoBlockUrl))
     {
@@ -298,7 +370,7 @@ void CCreateColumnView::Execute()
     }
 
     int ret = this->actionBefore();
-	if (ret) return;
+	if (ret != 0 ) return;
 
     cJSON* item = NULL;
     AcGePoint3d ptInsert;
@@ -330,6 +402,16 @@ void CCreateColumnView::Execute()
 	patLoader.setModelSpace(pModelSpace);
 	patLoader.setDatabase(pDb);
     patLoader.RegisterPatFile(cadPatUrl);
+
+    cJSON* pRootConfig = CUtils::GetJsonConfig();
+    cJSON* pProfile = cJSON_GetObjectItem(pRootConfig, "profile");
+    CString strDiameter;
+    if (pProfile) {
+        cJSON* hole_diameter_zk = cJSON_GetObjectItem(pProfile, "HOLE_DIAMETER_ZK");
+        if (hole_diameter_zk && cJSON_IsString(hole_diameter_zk)) {
+            strDiameter = hole_diameter_zk->valuestring;
+        }
+    }
 
     cJSON_ArrayForEach(item, s_pJsonData) {
         // 处理每个属性
@@ -421,6 +503,8 @@ void CCreateColumnView::Execute()
             mapVals.Lookup(_T("[coordinate_y]"), val);
             val = _T("y=") + val;
             mapVals.SetAt(_T("[coordinate_y]"), val);
+
+			mapVals.SetAt(_T("[diameter]"), strDiameter);
 
             AcDbObjectId blkDefId = ImportDwgAsBlock(cadBlockUrl.GetString(),ptInsert, arrayName);
 			if (blkDefId != AcDbObjectId::kNull){
@@ -895,7 +979,7 @@ void CCreateColumnView::CollectTexts(AcDbObjectId blkDefId, CMapStringToString& 
         return;
 
     AcDbBlockTableRecord* pBTR = NULL;
-    if (acdbOpenObject(pBTR, blkDefId, AcDb::kForRead) != Acad::eOk)
+    if (acdbOpenObject(pBTR, blkDefId, AcDb::kForWrite) != Acad::eOk)
         return;
 
     AcDbBlockTableRecordIterator* pIter = NULL;
@@ -942,7 +1026,17 @@ void CCreateColumnView::CollectTexts(AcDbObjectId blkDefId, CMapStringToString& 
                         CUtils::acutPrintf(_T("    ? 占位符 %s 在 mapVals 中未找到\n"),
                                         s.GetString());
                     }
+					//制图和校对
+					if (_tcscmp(s, _T("[mapping]")) == 0)
+					{
+						CollectMapping(pBTR,pt,_T("制图人"));
+					}
+					else if (_tcscmp(s, _T("[check]")) == 0)
+					{
+						CollectMapping(pBTR,pt,_T("校对人"));
+					}
                 }
+
 
                 pEnt->close();
                 continue;
@@ -1089,4 +1183,74 @@ void CCreateColumnView::ChangeNo(AcDbObjectId blkDefId,ACHAR* no)
 		delete pIter;
 	}
 	pBTR->close();
+}
+void CCreateColumnView::CollectMapping(AcDbBlockTableRecord* pBTR,AcGePoint3d& pt,TCHAR* blockname)
+{
+	CString strFilePath = CUtils::GetArxFolder();
+	CString cadBlockUrl;
+	cadBlockUrl.Format(_T("support/%s/%s.dwg"), CADYEAR, blockname);
+	cadBlockUrl = strFilePath + cadBlockUrl;
+
+    double widthBlock = 23.0;
+	double widthHeight = 8.0;
+
+	AcDbObjectId block_mapping = ImportDwgAsBlock(cadBlockUrl,blockname);
+	if (block_mapping == AcDbObjectId::kNull)
+        return;
+	//AcDbBlockTableRecord* pBTR_mapping = NULL;
+	//AcGePoint3d basePoint;
+	//if (acdbOpenObject(pBTR_mapping, block_mapping, AcDb::kForRead) == Acad::eOk) {
+	//	// getOrigin() 返回的是块定义的基点（局部坐标）
+	//	basePoint = pBTR_mapping->origin(); 
+	//	pBTR_mapping->close();
+	//}
+
+	// 创建块参照，插入到块内部 pt 位置
+    AcDbBlockReference* pBlkRef = new AcDbBlockReference;
+    pBlkRef->setBlockTableRecord(block_mapping);   // 引用"制图人"块定义
+	AcGePoint3d pos(pt);
+	pos.x +=2.5;
+	pos.y +=2.5;
+    pBlkRef->setPosition(pos);                      // pt 为块定义内部坐标系
+
+    AcDbObjectId refId = AcDbObjectId::kNull;
+    Acad::ErrorStatus es = pBTR->appendAcDbEntity(refId, pBlkRef);
+    if (es != Acad::eOk)
+    {
+        delete pBlkRef;                            // 未入库 → delete
+        CUtils::acutPrintf(_T("[DWG导入] 错误：插入制图人块参照失败(错误码 %d)。\n"), (int)es);
+		return;
+    }
+
+    AcDbExtents ext;
+    es = pBlkRef->getGeomExtents(ext);
+	if (es != Acad::eOk){
+		pBlkRef->close();
+        return;
+	}
+
+    double w = ext.maxPoint().x - ext.minPoint().x;
+    double h = ext.maxPoint().y - ext.minPoint().y;
+    if (w < 0.0001 || h < 0.0001)          // 空块/退化 → 防除零
+	{
+		pBlkRef->close();
+        return;
+	}
+
+    // 2) 目标尺寸 → 缩放系数（非等比，分别拉伸到 23×8）
+    double sx = widthBlock  / w;
+    double sy = widthHeight / h;
+    // 若要等比缩放（不变形），改用： double s = min(sx, sy); sx = sy = s;
+
+    // 3) 插入点补偿：缩放围绕块基点进行，
+    //    让缩放后的包围盒【中心】对齐占位符位置 pt
+   /* AcGePoint3d pos;
+    pos.x = pt.x + w * 0.5 * sx;
+    pos.y = pt.y + h * 0.5 * sy;
+    pos.z = pt.z;*/
+
+	//pBlkRef->setPosition(pos);
+    pBlkRef->setScaleFactors(AcGeScale3d(sx, sy, 1.0));
+    
+	pBlkRef->close();
 }

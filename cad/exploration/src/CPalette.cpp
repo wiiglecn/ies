@@ -41,7 +41,7 @@
 
 #include "../features/CreateColumnView.h"
 #include "../features/PatHatchLoader.h"
-
+#include "../features/BaseDataSet.h"
 
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
@@ -307,7 +307,7 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
         }
 
         // 2. Ensure s_pJsonConfig exists
-        cJSON* pRootConfig = CMyPaletteSet::GetJsonConfig();
+        cJSON* pRootConfig = CUtils::GetJsonConfig();
         if (!pRootConfig) {
             // If config is null, we can't save. 
             CUtils::acutPrintf(_T("Warning: JSON Config is NULL. Cannot save profile.\n"));
@@ -402,6 +402,17 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 		CUtils::FocusAcadDrawing();
 		CCreateColumnView view;
 		view.Execute();
+		acedPostCommandPrompt(); 
+    }
+
+	else if (_tcscmp(szCommand, _T("HoleDiameter")) == 0 
+		|| _tcscmp(szCommand, _T("Drafting")) == 0
+		|| _tcscmp(szCommand, _T("Proofread")) == 0)
+    {
+		CUtils::FocusAcadDrawing();
+		acedPostCommandPrompt(); 
+		CBaseDataSet dataSet;
+		dataSet.Execute(szCommand);
 		acedPostCommandPrompt(); 
     }
 
@@ -514,7 +525,7 @@ void CDataPalette::onPageReady()
     // 为了彻底解决，建议修改 JS 调用方式，或者使用下面的“脚本注入”技巧来测试连通性。
     
     
-    cJSON* pRootConfig = CMyPaletteSet::GetJsonConfig();
+    cJSON* pRootConfig = CUtils::GetJsonConfig();
     CUtils::acutPrintf(_T("\n[DEBUG] GetJsonConfig returned: %p"), pRootConfig);
 
     if (pRootConfig) {
@@ -558,7 +569,7 @@ void CDataPalette::onPageReady()
 }
 void CDataPalette::SetDiameter(CBaseMarker& marker)
 {
-    cJSON* pRootConfig = CMyPaletteSet::GetJsonConfig();
+    cJSON* pRootConfig = CUtils::GetJsonConfig();
     if (pRootConfig) {
         // Check if "profile" attribute exists
         cJSON* pProfile = cJSON_GetObjectItem(pRootConfig, "profile");
