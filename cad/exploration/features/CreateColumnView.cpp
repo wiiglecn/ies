@@ -428,7 +428,7 @@ void CCreateColumnView::Execute()
 				break;
 			}*/
 
-			/*if (_tcscmp(arrayName, _T("ZK11")) != 0){
+			/*if (_tcscmp(arrayName, _T("ZK10")) != 0){
 				ptInsert.x += space;
 				continue;
 			}*/
@@ -548,6 +548,7 @@ void CCreateColumnView::Execute()
 			double elevation = CUtils::CStringToDouble(val);	//高程
 			
 
+			double preTop;
             for (int i = 0; i < dataRow; ++i)
             {
                 cJSON* rowJson = cJSON_GetArrayItem(item, 7 + i);
@@ -581,17 +582,21 @@ void CCreateColumnView::Execute()
                                 ptDraw.x, ptDraw.y);
 
                 AcGePoint3d ptEnd(ptDraw);
-                ptEnd.x  += gridWidth - lastWidth;               // 向右延伸一个表格宽度
+                ptEnd.x  += gridWidth - lastWidth - space_desc;               // 向右延伸一个表格宽度
 
-                AcDbLine* pLine = new AcDbLine(ptDraw, ptEnd);
+                
                 // pLine->setDatabaseDefaults();     // 可选：随当前图层/颜色默认值
-
-                AcDbObjectId lineId = AcDbObjectId::kNull;
-                Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
-                if (es == Acad::eOk)
-                    pLine->close();                  // 入库成功 → close（不能 delete）
-                else
-                    delete pLine;                    // 入库失败 → 未入库，只能 delete
+                
+				{
+					//从头到土层描述的横线
+					AcDbLine* pLine = new AcDbLine(ptDraw, ptEnd);
+					AcDbObjectId lineId = AcDbObjectId::kNull;
+					Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
+					if (es == Acad::eOk)
+						pLine->close();                  // 入库成功 → close（不能 delete）
+					else
+						delete pLine;                    // 入库失败 → 未入库，只能 delete
+				}
 
 				//添加序号
 				AcGePoint3d ptDrawXh(ptDraw);
@@ -668,6 +673,7 @@ void CCreateColumnView::Execute()
 
 				{
 					//土层描述
+					//需要处理超高的问题
 					cJSON* cDesc  = cJSON_GetArrayItem(rowJson, 8);
 
 					ACHAR desc[256] = { 0 };
@@ -675,9 +681,90 @@ void CCreateColumnView::Execute()
 
 					AcGePoint3d ptDraw_desc(ptDraw);
 					ptDraw_desc.x += space_no + space_mc + space_sd * 4 + space_chat+1.0;
-					ptDraw_desc.y += hDraw-0.7;
+					if (i == 0){
+						ptDraw_desc.y += hDraw-0.7;
+					}else{
+						double calcY = ptDraw.y + hDraw - 0.7;
+						if (calcY < preTop){
+							ptDraw_desc.y = calcY;
+						}else{
+							ptDraw_desc.y = preTop - 0.7;
+						}
+					}
+					if (desc[0] != _T('\0')){
+						AcDbObjectId desc_obj = CUtils::AddDbMText(pModelSpace,desc,ptDraw_desc,2.1,space_desc-2.0,pszStyleName);
+						AcDbEntity* pDesc = NULL;
+						if (acdbOpenObject(pDesc, desc_obj, AcDb::kForRead) == Acad::eOk){
+							double w,h;
+							if (CUtils::GetEntExtent(pDesc,w,h)){
+								double calcH = ptDraw_desc.y - h - 1.0;
+								AcGePoint3d ptDraw_start_desc(ptInsert),ptDraw_end_desc;
+								ptDraw_start_desc.x  += offsetX + gridWidth - lastWidth - space_desc;
+								ptDraw_start_desc.y = ptDraw.y;
+								if (calcH < ptDraw.y){
+									//画 \_/线条
+									AcGePoint3d ptDraw_next_1(ptDraw_start_desc);
+									ptDraw_next_1.x +=1.0;
+									ptDraw_next_1.y = calcH;
+									{
+										
+										AcDbLine* pLine = new AcDbLine(ptDraw_start_desc, ptDraw_next_1);
+										AcDbObjectId lineId = AcDbObjectId::kNull;
+										Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
+										if (es == Acad::eOk)
+											pLine->close();                  
+										else
+											delete pLine;    
+									}
+									AcGePoint3d ptDraw_next_2(ptDraw_next_1);
+									ptDraw_next_2.x +=space_desc-2.0;
+									{
+										AcDbLine* pLine = new AcDbLine(ptDraw_next_1, ptDraw_next_2);
+										AcDbObjectId lineId = AcDbObjectId::kNull;
+										Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
+										if (es == Acad::eOk)
+											pLine->close();                  
+										else
+											delete pLine;  
+									}
+									ptDraw_end_desc.x = ptDraw_next_2.x+1.0;
+									ptDraw_end_desc.y = ptDraw_start_desc.y;
+									{
+										AcDbLine* pLine = new AcDbLine(ptDraw_next_2, ptDraw_end_desc);
+										AcDbObjectId lineId = AcDbObjectId::kNull;
+										Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
+										if (es == Acad::eOk)
+											pLine->close();                  
+										else
+											delete pLine; 
+									}
 
-					CUtils::AddDbMText(pModelSpace,desc,ptDraw_desc,2.1,space_desc-1.0,pszStyleName);
+								}else{
+									//直接画直线
+									ptDraw_end_desc.x = ptDraw_start_desc.x+space_desc;
+									ptDraw_end_desc.y = ptDraw_start_desc.y;
+									AcDbLine* pLine = new AcDbLine(ptDraw_start_desc, ptDraw_end_desc);
+
+									AcDbObjectId lineId = AcDbObjectId::kNull;
+									Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
+									if (es == Acad::eOk)
+										pLine->close();                  
+									else
+										delete pLine;                   
+
+								}
+								preTop = calcH;
+							}else{
+								preTop = ptDraw_desc.y;
+							}
+						}else{
+							preTop = ptDraw_desc.y;
+						}
+						
+					}else{
+						preTop = ptDraw_desc.y;
+					}
+
 				}
 
                 if (!soilPatName.IsEmpty()){
