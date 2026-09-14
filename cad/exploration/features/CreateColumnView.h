@@ -57,4 +57,8 @@ private:
 	void CreateHeader(const AcGePoint3d& ptInsert);
 	// ¸Ä±äÐòºÅ
     void ChangeNo(AcDbObjectId blkDefId,ACHAR* no);
+
+private:
+	cJSON* s_pJsonData;
+	cJSON* s_patConfigData;
 };

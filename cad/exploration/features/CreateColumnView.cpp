@@ -51,7 +51,8 @@ static const FieldMap s_fieldMap[] = {
 };
 CCreateColumnView::CCreateColumnView():ToolDrawBase()
 {
-    
+    s_pJsonData = NULL;
+	s_patConfigData = NULL;
 }
 
 CCreateColumnView::~CCreateColumnView()
@@ -91,47 +92,49 @@ AcDbObjectId CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath,
 
     // 4. 用文件名作为块名（重名时自动加 _1、_2 后缀）
     ACHAR szBlockName[256];
-    MakeBlockName(pszDwgPath, szBlockName, 256);
-    if (arrayName != NULL && arrayName[0] != '\0')
-    {
-        // arrayName 来自 cJSON，是 UTF-8 编码，先转成 TCHAR
-        ACHAR szArrName[256];
-		CUtils::SafeCopy(szArrName, 256, arrayName, (int)_tcslen(arrayName));
+	CUtils::SafeCopy(szBlockName, 256, arrayName, (int)_tcslen(arrayName));
 
-        // arrayName 来自 JSON 键名，可能含块名非法字符，替换为 '_'
-        for (ACHAR* p = szArrName; *p != _T('\0'); ++p)
-        {
-            if (CUtils::IsIllegalBlockNameChar(*p))
-                *p = _T('_');
-        }
+    //MakeBlockName(pszDwgPath, szBlockName, 256);
+  //  if (arrayName != NULL && arrayName[0] != '\0')
+  //  {
+  //      // arrayName 来自 cJSON，是 UTF-8 编码，先转成 TCHAR
+  //      ACHAR szArrName[256];
+		//CUtils::SafeCopy(szArrName, 256, arrayName, (int)_tcslen(arrayName));
 
-        if (szArrName[0] != _T('\0'))
-        {
-            // 拼接 szBlockName + "_" + szArrName
-            // 长度预算：GetUniqueBlockName 之后最多再追加 "_999"（4字符+NUL），
-            // 所以总长控制在 250 以内
-            int base = (int)_tcslen(szBlockName);
-            int maxArr = 250 - base - 1;      // 减 1 是给 '_' 占位
-            if (maxArr > 0)
-            {
-                ACHAR szBuf[256];
-                CUtils::SafeCopy(szBuf, 256, szBlockName, base);
-                szBuf[base] = _T('_');
-                ++base;
+  //      // arrayName 来自 JSON 键名，可能含块名非法字符，替换为 '_'
+  //      /*for (ACHAR* p = szArrName; *p != _T('\0'); ++p)
+  //      {
+  //          if (CUtils::IsIllegalBlockNameChar(*p))
+  //              *p = _T('_');
+  //      }*/
 
-                int n = 0;
-                while (n < maxArr && szArrName[n] != _T('\0'))
-                {
-                    szBuf[base + n] = szArrName[n];
-                    ++n;
-                }
-                szBuf[base + n] = _T('\0');
+  //      if (szArrName[0] != _T('\0'))
+  //      {
+  //          // 拼接 szBlockName + "_" + szArrName
+  //          // 长度预算：GetUniqueBlockName 之后最多再追加 "_999"（4字符+NUL），
+  //          // 所以总长控制在 250 以内
+  //          int base = (int)_tcslen(szBlockName);
+  //          int maxArr = 250 - base - 1;      // 减 1 是给 '_' 占位
+  //          if (maxArr > 0)
+  //          {
+  //              ACHAR szBuf[256];
+  //              CUtils::SafeCopy(szBuf, 256, szBlockName, base);
+  //              szBuf[base] = _T('_');
+  //              ++base;
 
-                CUtils::SafeCopy(szBlockName, 256, szBuf, base + n);
-            }
-            // maxArr <= 0：文件名部分太长放不下，退回用纯文件名
-        }
-    }
+  //              int n = 0;
+  //              while (n < maxArr && szArrName[n] != _T('\0'))
+  //              {
+  //                  szBuf[base + n] = szArrName[n];
+  //                  ++n;
+  //              }
+  //              szBuf[base + n] = _T('\0');
+
+  //              CUtils::SafeCopy(szBlockName, 256, szBuf, base + n);
+  //          }
+  //          // maxArr <= 0：文件名部分太长放不下，退回用纯文件名
+  //      }
+  //  }
 
     // 5. 判断块是否已存在
     AcDbBlockTable* pBlkTbl = NULL;
@@ -210,11 +213,11 @@ AcDbObjectId CCreateColumnView::ImportDwgAsBlock(const ACHAR* pszDwgPath, const 
     if (blockName != NULL && blockName[0] != _T('\0'))
     {
         CUtils::SafeCopy(szBlockName, 256, blockName, (int)_tcslen(blockName));
-        for (ACHAR* p = szBlockName; *p != _T('\0'); ++p)
+        /*for (ACHAR* p = szBlockName; *p != _T('\0'); ++p)
         {
             if (CUtils::IsIllegalBlockNameChar(*p))
                 *p = _T('_');
-        }
+        }*/
     }
     else
     {
@@ -356,21 +359,23 @@ void CCreateColumnView::Execute()
     }
 
 	// 解析 JSON（失败时内部已打印错误，这里保留原有业务提示）
-    cJSON* s_pJsonData = CUtils::LoadJsonFile(strUrl.GetString());   // 静默模式
+    s_pJsonData = CUtils::LoadJsonFile(strUrl.GetString());   // 静默模式
     if (s_pJsonData == NULL) {
         CUtils::acutPrintf(_T("[CAD ERROR] 没有导入数据，请先完成数据导入! %s\n"), strUrl.GetString());
         return;
     }
 
     // 解析 JSON（失败时内部已打印错误，这里保留原有业务提示）
-    cJSON* s_patConfigData = CUtils::LoadJsonFile(cadSoilConfigUrl.GetString());   // 静默模式
+    s_patConfigData = CUtils::LoadJsonFile(cadSoilConfigUrl.GetString());   // 静默模式
     if (s_patConfigData == NULL) {
         CUtils::acutPrintf(_T("[CAD ERROR] 没有pat配置文件，请检查！ %s\n"), cadSoilConfigUrl.GetString());
         return;
     }
 
     int ret = this->actionBefore();
-	if (ret != 0 ) return;
+	if (ret != 0 ) {
+		return;
+	}
 
     cJSON* item = NULL;
     AcGePoint3d ptInsert;
@@ -631,8 +636,10 @@ void CCreateColumnView::Execute()
 							AcGePoint3d ptDrawSoi(ptDraw);
 							ptDrawSoi.x += space_no + space_mc/2;
 							ptDrawSoi.y += hDraw/2;
+
 							CUtils::AddDbText(pModelSpace,(ACHAR*)arrSeg[1].GetString(),
-                            ptDrawSoi,2.1,pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+                            ptDrawSoi,2.1,pszStyleName,DBTA_CENTER,dWidthFactor);
+
                         }
                     }
 				}
@@ -648,7 +655,7 @@ void CCreateColumnView::Execute()
 					CString str;
 					str.Format(_T("%.2f"), elevation_cur);
 					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_elevation,
-                    2.1,pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+                    2.1,pszStyleName,DBTA_CENTER,dWidthFactor);
 
 
 					//深度
@@ -658,7 +665,7 @@ void CCreateColumnView::Execute()
 	
 					str.Format(_T("%.2f"), toDepth);
 					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_depth,2.1,
-                    pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+                    pszStyleName,DBTA_CENTER,dWidthFactor);
 
 
 					//厚度
@@ -668,7 +675,7 @@ void CCreateColumnView::Execute()
 	
 					str.Format(_T("%.2f"), thick);
 					CUtils::AddDbText(pModelSpace,(ACHAR*)str.GetString(),ptDraw_thick,2.1,
-                    pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+                    pszStyleName,DBTA_CENTER,dWidthFactor);
 				}
 
 				{
@@ -757,10 +764,10 @@ void CCreateColumnView::Execute()
 							}else{
 								preTop = ptDraw_desc.y;
 							}
+                            pDesc->close();
 						}else{
 							preTop = ptDraw_desc.y;
 						}
-						
 					}else{
 						preTop = ptDraw_desc.y;
 					}
@@ -838,7 +845,7 @@ void CCreateColumnView::Execute()
 							ptDraw_sampling_txt_no.y += 2.5;
 
 							CUtils::AddDbText(pModelSpace,sampling_txt,ptDraw_sampling_txt_no,
-                                2.1,pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+                                2.1,pszStyleName,DBTA_CENTER,dWidthFactor);
 
 
 							//取样数值
@@ -849,7 +856,7 @@ void CCreateColumnView::Execute()
 							ptDraw_sampling_txt.y -=2.5;
 
 							CUtils::AddDbText(pModelSpace,sampling_txt,ptDraw_sampling_txt,
-                                2.1,pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+                                2.1,pszStyleName,DBTA_CENTER,dWidthFactor);
 
                         }
 					}
@@ -955,13 +962,13 @@ void CCreateColumnView::Execute()
                             ptDraw_dt_head.y += height_desc;
 							ptDraw_dt_head.y -=2.1;
                             CUtils::AddDbText(pModelSpace,_T("N"),ptDraw_dt_head,2.1,
-                                pszStyleName,DbTextHAlign::DBTA_LEFT,dWidthFactor);
+                                pszStyleName,DBTA_LEFT,dWidthFactor);
                             ptDraw_dt_head.x = ptDraw_Dt.x + 0.9;
                             CUtils::AddDbText(pModelSpace,_T("63.5"),ptDraw_dt_head,1.4,
-                                pszStyleName,DbTextHAlign::DBTA_LEFT,dWidthFactor);
+                                pszStyleName,DBTA_LEFT,dWidthFactor);
                             ptDraw_dt_head.x = ptDraw_Dt.x + 3.2;
                             CUtils::AddDbText(pModelSpace,_T("="),ptDraw_dt_head,2.1,
-                                pszStyleName,DbTextHAlign::DBTA_LEFT,dWidthFactor);
+                                pszStyleName,DBTA_LEFT,dWidthFactor);
                             ptDraw_dt_head.x = ptDraw_Dt.x + 4.2;
 							AcDbMText* pText = AcDbMText::cast(entity_desc);
 							if (pText != NULL)
@@ -974,6 +981,8 @@ void CCreateColumnView::Execute()
                                     pText->setLocation(ptLoc);
                                 }
                                 pText->close();   // entity_desc 与 pText 是同一对象，close 一次即可
+                            }else{
+                                entity_desc->close();
                             }
 
                             //最小值-最大值
@@ -985,7 +994,7 @@ void CCreateColumnView::Execute()
                             ptDraw_dt_len.y -=2.1;
 
                             CUtils::AddDbText(pModelSpace,dt_txt,ptDraw_dt_len,2.1,
-                                pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+                                pszStyleName,DBTA_CENTER,dWidthFactor);
 
                         }
                     }
@@ -1025,7 +1034,7 @@ void CCreateColumnView::Execute()
 				ptDraw_standard_head.y += 2.1;
 
 				CUtils::AddDbText(pModelSpace,standard_txt,ptDraw_standard_head,2.1,
-                    pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+                    pszStyleName,DBTA_CENTER,dWidthFactor);
 
 
 				//最小值-最大值
@@ -1036,11 +1045,10 @@ void CCreateColumnView::Execute()
 				ptDraw_standard_len.y -=2.1;
 
 				CUtils::AddDbText(pModelSpace,standard_txt,ptDraw_standard_len,2.1,
-                    pszStyleName,DbTextHAlign::DBTA_CENTER,dWidthFactor);
+                    pszStyleName,DBTA_CENTER,dWidthFactor);
             }
 
 			//动探击数
-
 
 			ptInsert.x += space;
 
@@ -1237,6 +1245,12 @@ void CCreateColumnView::ClearExtDbCache()
     for (it = m_extDbCache.begin(); it != m_extDbCache.end(); ++it)
         delete it->second;
     m_extDbCache.clear();
+
+	if (s_pJsonData)
+		cJSON_free(s_pJsonData);
+	if (s_patConfigData)
+		cJSON_free(s_patConfigData);
+
 }
 
 void CCreateColumnView::ChangeNo(AcDbObjectId blkDefId,ACHAR* no)

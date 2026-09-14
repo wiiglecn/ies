@@ -570,7 +570,7 @@ AcDbObjectId CUtils::FindTextStyle(const ACHAR* pszStyleName)
 
 // 在指定位置创建单行文本并设置样式
 AcDbObjectId CUtils::AddDbText(AcDbBlockTableRecord* container, const ACHAR* pszText, const AcGePoint3d& pt,
-                               double dHeight, const ACHAR* pszStyleName, DbTextHAlign hAlign,double dWidthFactor)
+                               double dHeight, const ACHAR* pszStyleName, int hAlign,double dWidthFactor)
 {
     AcDbText* pText = new AcDbText;
     pText->setPosition(pt);
@@ -787,6 +787,7 @@ AcDbEntity* CUtils::OpenEntityById(const AcDbObjectId& id, AcDb::OpenMode openMo
     return pEnt;
 }
 
+#pragma message("========== GetJsonConfig compiling ==========")
 
 // Static accessor implementation
 cJSON* CUtils::GetJsonConfig()
@@ -805,6 +806,7 @@ cJSON* CUtils::GetJsonConfig()
         // Create the profile object
         profile = cJSON_AddObjectToObject(s_pJsonConfig, "profile");
         
+
         // Add default values
         // Note: cJSON_AddStringToObject creates a copy of the string
         cJSON_AddStringToObject(profile, "hole_diameter", "2");
@@ -821,7 +823,7 @@ cJSON* CUtils::GetJsonConfig()
             cJSON_AddStringToObject(profile, HOLE_DIAMETER_ZK, "130");
         }
     }
-
+//#error TEST_GET_JSON_CONFIG
     return s_pJsonConfig;
 }
 void CUtils::FreeJsonConfig()

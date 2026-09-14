@@ -6,19 +6,6 @@
 #include "gepnt3d.h"
 #include "declare.h"
 
-
-#ifdef _CAD2005
-    typedef std::string KString;
-
-#define CADYEAR _T("2005")
-
-#else
-    typedef std::wstring KString;
-
-#define CADYEAR _T("2007")
-
-#endif
-
 // 单行文本水平对齐方式
 enum DbTextHAlign
 {
@@ -26,6 +13,22 @@ enum DbTextHAlign
     DBTA_CENTER = 1,   // 居中：pt = 文本水平中心（基线高度不变）
     DBTA_RIGHT  = 2    // 右对齐：pt = 文本基线右端
 };
+
+#ifdef _CAD2005
+    typedef std::string KString;
+
+	#define CADYEAR _T("2005")
+
+#else
+
+	typedef std::wstring KString;
+	#define CADYEAR _T("2007")
+
+	#define DBTA_CENTER DbTextHAlign::DBTA_CENTER
+    #define DBTA_LEFT   DbTextHAlign::DBTA_LEFT
+    #define DBTA_RIGHT  DbTextHAlign::DBTA_RIGHT
+#endif
+
 
 class CUtils
 {
@@ -58,7 +61,7 @@ public:
 	static AcDbObjectId FindTextStyle(const ACHAR* pszStyleName);
 	static AcDbObjectId AddDbText(AcDbBlockTableRecord* container,const ACHAR* pszText, const AcGePoint3d& pt,
 						double dHeight, const ACHAR* pszStyleName,
-                              DbTextHAlign hAlign = DBTA_LEFT,double dWidthFactor = 1.0);   // 默认值只能写在头文件
+                              int hAlign,double dWidthFactor = 1.0);   // 默认值只能写在头文件
 	    // 获取实体几何包围盒的宽和高（世界坐标系）；失败返回 false，宽高置 0
     static bool GetEntExtent(AcDbEntity* pEnt, double& dWidth, double& dHeight);
 	static double CStringToDouble(const CString& str);
@@ -78,6 +81,7 @@ public:
 
 	static cJSON* GetJsonConfigDirect();
 	static cJSON* GetJsonConfig();
+
 	static void FreeJsonConfig();
 #ifdef _CAD2005
 	static void safeVsnprintfVC7(char* szBuffer, size_t bufferSize, const char* pszFmt, va_list args);

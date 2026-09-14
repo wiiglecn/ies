@@ -24,6 +24,7 @@
 //-----------------------------------------------------------------------------
 #include "StdAfx.h"
 
+#include "cJSON.h"
 
 #include "CPalette.h"
 #include "PaletteSet.h"
@@ -545,14 +546,14 @@ void CDataPalette::onPageReady()
                 CUtils::acutPrintf(_T("[DEBUG] Profile JSON String: %S\n"), profileJsonStr); // Use %S for char* in Unicode build
 
                 // Convert char* to CString/TCHAR* for CallJsFunction
-#ifdef UNICODE
+//#ifdef UNICODE
                 CString strProfile(profileJsonStr);
                 CUtils::acutPrintf(_T("[DEBUG] Calling onReady with CString length: %d\n"), strProfile.GetLength());
                 m_pHtmlView->CallJsFunction(_T("onReady"), strProfile);
-#else
-                acutPrintf(_T("[DEBUG] Calling onReady with char*\n"));
-                m_pHtmlView->CallJsFunction(_T("onReady"), profileJsonStr);
-#endif
+//#else
+//                acutPrintf(_T("[DEBUG] Calling onReady with char*\n"));
+//                m_pHtmlView->CallJsFunction(_T("onReady"), profileJsonStr);
+//#endif
                 // Free the string allocated by cJSON_Print
                 cJSON_free(profileJsonStr);
                 CUtils::acutPrintf(_T("[DEBUG] Freed profileJsonStr.\n"));
@@ -566,6 +567,7 @@ void CDataPalette::onPageReady()
         CUtils::acutPrintf(_T("[DEBUG] ERROR: pRootConfig is NULL.\n"));
     }
     acedPostCommandPrompt();
+
 }
 void CDataPalette::SetDiameter(CBaseMarker& marker)
 {

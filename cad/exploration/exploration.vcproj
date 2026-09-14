@@ -599,6 +599,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\features\CreatePlanView.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\features\CreatePlanView.h"
+				>
+			</File>
+			<File
 				RelativePath=".\features\PatHatchLoader.cpp"
 				>
 			</File>

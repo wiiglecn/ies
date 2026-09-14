@@ -31,7 +31,7 @@
 #endif // _MSC_VER > 1000
 #include "aduiPaletteSet.h"
 #include "resource.h"
-#include "cJSON.h"
+
 
 class CMyPaletteSet : public CAdUiPaletteSet 
 {

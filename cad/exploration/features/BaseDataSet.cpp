@@ -50,9 +50,12 @@ void CBaseDataSet::ExecuteHoleDiameter()
 	TCHAR szVal[32];
 	_sntprintf(szVal, 32, _T("%.2f"), dNew);
 
+#ifdef _CAD2005
+	cJSON_ReplaceItemInObject(pProfile, HOLE_DIAMETER_ZK, cJSON_CreateString(szVal));
+#else
 	cJSON_ReplaceItemInObject(pProfile, HOLE_DIAMETER_ZK,
 			cJSON_CreateString(CW2A(szVal, CP_UTF8)));
-
+#endif
 
 	CUtils::acutPrintf(_T("\n孔直径已更新为: %.3f\n"), dNew);
 	acedPostCommandPrompt();

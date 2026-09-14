@@ -29,7 +29,7 @@
 //#error _DEBUG should not be defined except in internal Adesk debug builds
 //#endif
 
-
+#include "cJSON.h"
 
 #include "PaletteSet.h"
 #include "resource.h"

@@ -1,7 +1,6 @@
 #pragma once
 #include "declare.h"
 
-class cJSON;
 class ToolDrawBase
 {
 public:

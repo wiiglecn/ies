@@ -1,7 +1,7 @@
 #pragma once
 #include "atlstr.h"
 class CDataPalette;
-class cJSON;
+struct cJSON;
 
 class AiChat
 {

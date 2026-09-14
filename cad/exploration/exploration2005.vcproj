@@ -40,7 +40,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rxapi.lib  acdb16.lib  acge16.lib acgiapi.lib achapi16.lib acISMobj16.lib acad.lib acedapi.lib adui16.lib acui16.lib Oleacc.lib mongoose.lib crypt32.lib"
+				AdditionalDependencies="rxapi.lib acdb16.lib acge16.lib acgiapi.lib achapi16.lib acISMobj16.lib acad.lib acedapi.lib adui16.lib acui16.lib Oleacc.lib mongoose.lib crypt32.lib shlwapi.lib"
 				OutputFile="$(outdir)/KsExploration.arx"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib;..\lib\2005"
@@ -65,12 +65,9 @@
 				ProxyFileName="CustPalette_p.c"/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.html&quot; &quot;$(OutDir)&quot;
-xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.css&quot; &quot;$(OutDir)&quot;
-xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.js&quot; &quot;$(OutDir)&quot;
-xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;
+				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;
 xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;
-xcopy /Y /D &quot;$(ProjectDir)res\chat.bin&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D /E /I &quot;$(ProjectDir)res\page&quot; &quot;$(OutDir)\page&quot;
 xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&quot;
 "/>
 			<Tool
@@ -397,10 +394,22 @@ xcopy /Y /D &quot;$(ProjectDir)res\chat.bin&quot; &quot;$(OutDir)&quot;
 			Name="features"
 			Filter="">
 			<File
+				RelativePath="features\BaseDataSet.cpp">
+			</File>
+			<File
+				RelativePath="features\BaseDataSet.h">
+			</File>
+			<File
 				RelativePath="features\CreateColumnView.cpp">
 			</File>
 			<File
 				RelativePath="features\CreateColumnView.h">
+			</File>
+			<File
+				RelativePath="features\PatHatchLoader.cpp">
+			</File>
+			<File
+				RelativePath="features\PatHatchLoader.h">
 			</File>
 		</Filter>
 	</Files>

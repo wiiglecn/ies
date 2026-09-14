@@ -253,11 +253,12 @@ bool PatHatchLoader::RegisterPatFile(const TCHAR* lpszPatPath)
 
     TCHAR szDir[MAX_PATH] = {0};
     _tcsncpy(szDir, lpszPatPath, MAX_PATH - 1);
-    TCHAR* pSlash = _tcsrchr(szDir, _T('\\'));
-    if (pSlash == NULL) pSlash = _tcsrchr(szDir, _T('/'));
-    if (pSlash == NULL)
-        return false;                              // 路径中没有目录部分
-    *pSlash = _T('\0');
+
+    //TCHAR* pSlash = _tcsrchr(szDir, _T('\\'));
+    //if (pSlash == NULL) pSlash = _tcsrchr(szDir, _T('/'));
+    //if (pSlash == NULL)
+    //    return false;                              // 路径中没有目录部分
+    //*pSlash = _T('\0');
 
     return AddSupportPath(szDir);                  // 幂等, 内部已去重
 }
