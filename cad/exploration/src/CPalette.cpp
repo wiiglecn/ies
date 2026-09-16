@@ -87,7 +87,7 @@ LRESULT CDataPalette::onAcadKeepFocus( WPARAM wParam, LPARAM lParam )
 }
 
 
-CDataPalette::CDataPalette():hChat(NULL)
+CDataPalette::CDataPalette():hChat(NULL),m_pHtmlView(NULL)
 {
 	
 
@@ -96,6 +96,7 @@ CDataPalette::CDataPalette():hChat(NULL)
 CDataPalette::~CDataPalette()
 {
 	//
+	clean();
 	
 }
 
@@ -165,12 +166,11 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
     m_pHtmlView->SetParentPalette(this);
 
 	m_pHtmlView->MoveWindow(&rectClient, TRUE);
-	 m_pHtmlView->InitializeBrowser(); 
-    // 
-    LoadPalette();
-    
-    // 
+	m_pHtmlView->InitializeBrowser(); 
     UpdateHtmlDisplay();
+
+
+	 LoadPalette();
 
     SetName(_T("Data HTML"));
 
@@ -186,46 +186,11 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
     return 0;
 }
 
-void CDataPalette::OnDestroy()
-{
-	if (hChat) delete hChat;
-
-	hServer->Stop();
-	delete hServer;
-	hServer = NULL;
-
-	 CUtils::acutPrintf(_T("CDataPalette::OnDestroy.\n"));
-
-
-	//CPaletteCleanup::SafeCleanupHtmlView(m_pHtmlView);
-
-	if (m_pHtmlView)
-    {
- //       // 停止网页
- //       m_pHtmlView->Stop();
-
-	//	// 3. 显式释放 IWebBrowser2 接口
- //   // 减少 COM 引用计数，促使内部对象提前清理
- //   LPDISPATCH pDisp = m_pHtmlView->GetApplication();
- //   if (pDisp)
- //   {
- //       pDisp->Release();
- //   }
-
-	//	//m_pHtmlView->Detach(); 
-		if (::IsWindow(m_pHtmlView->GetSafeHwnd())){
-			m_pHtmlView->DestroyWindow();
-			
-		}else{
-			delete m_pHtmlView;
-		}
-        
-        m_pHtmlView = NULL;
-    }
-	// Save Palette's persistent data
-	SavePalette();
-	CAdUiPalette::OnDestroy();
-}
+//void CDataPalette::OnDestroy()
+//{
+//	
+//	CAdUiPalette::OnDestroy();
+//}
 
 //Called by AutoCAD to steal focus from the palette
 bool CDataPalette::CanFrameworkTakeFocus()
@@ -400,10 +365,17 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 
 	else if (_tcscmp(szCommand, _T("CreateColumnView")) == 0)
     {
+		CUtils::acutPrintf(_T("CreateColumnView.\n"));
+
 		CUtils::FocusAcadDrawing();
 		CCreateColumnView view;
 		view.Execute();
 		acedPostCommandPrompt(); 
+
+		/*AcApDocument* pDoc = acDocManager->curDocument();
+		if (pDoc) {
+			acDocManager->sendStringToExecute(pDoc, _T("SLCCV\n"));
+		}*/
     }
 
 	else if (_tcscmp(szCommand, _T("HoleDiameter")) == 0 
@@ -610,4 +582,46 @@ LRESULT CDataPalette::HandleChatError(WPARAM wParam, LPARAM lParam)
 		m_pHtmlView->CallJsFunction(_T("onChatError"), _T(""));
 	}
 	return 0;
+}
+void CDataPalette::clean()
+{
+	if (hChat) {
+		delete hChat;
+		hChat = NULL;
+	}
+	hServer->Stop();
+	delete hServer;
+	hServer = NULL;
+
+	//CUtils::acutPrintf(_T("CDataPalette::OnDestroy.\n"));
+
+
+	//CPaletteCleanup::SafeCleanupHtmlView(m_pHtmlView);
+#ifndef _CAD2005
+	if (m_pHtmlView)
+    {
+ //       // 停止网页
+ //       m_pHtmlView->Stop();
+
+	//	// 3. 显式释放 IWebBrowser2 接口
+ //   // 减少 COM 引用计数，促使内部对象提前清理
+ //   LPDISPATCH pDisp = m_pHtmlView->GetApplication();
+ //   if (pDisp)
+ //   {
+ //       pDisp->Release();
+ //   }
+
+	//	//m_pHtmlView->Detach(); 
+		if (::IsWindow(m_pHtmlView->GetSafeHwnd())){
+			m_pHtmlView->DestroyWindow();
+			
+		}else{
+			delete m_pHtmlView;
+		}
+        
+        m_pHtmlView = NULL;
+    }
+#endif
+	// Save Palette's persistent data
+	SavePalette();
 }

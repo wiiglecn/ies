@@ -66,7 +66,7 @@ protected:
 	//afx_msg LRESULT HandleJsCommandInternal(WPARAM wParam, LPARAM lParam);
 public:
 	afx_msg int OnCreate (LPCREATESTRUCT lpCreateStruct);
-	afx_msg void OnDestroy(); 
+	//afx_msg void OnDestroy(); 
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	// 新增：处理来自 HTML 视图的命令
     LRESULT HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam);
@@ -80,6 +80,8 @@ private:
 
 	void onPageReady();
 	void SetDiameter(CBaseMarker& marker);
+
+	void clean();
 
 	afx_msg LRESULT HandleApiCommand(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT HandleChatReply(WPARAM wParam, LPARAM lParam);

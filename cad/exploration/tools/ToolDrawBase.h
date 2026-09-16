@@ -1,6 +1,6 @@
 #pragma once
 #include "declare.h"
-
+#include "dbtrans.h"
 class ToolDrawBase
 {
 public:
@@ -13,6 +13,12 @@ public:
 	void setDocument(AcApDocument* pDocSrc);
     void setModelSpace(AcDbBlockTableRecord* pModelSpaceSrc);
     void setDatabase(AcDbDatabase* pDbSrc);
+	void setTrans(AcTransaction* pTransSrc);
+
+
+	void aboutTrans();
+	bool startTrans();
+	bool commitTrans();
 protected:
     ToolDrawBase(void);
     virtual ~ToolDrawBase(void);
@@ -24,4 +30,5 @@ protected:
     AcApDocument* pDoc;
     AcDbBlockTableRecord* pModelSpace;
     AcDbDatabase* pDb;
+	AcTransaction* pTrans;
 };

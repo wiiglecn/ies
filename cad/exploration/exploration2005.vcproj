@@ -86,18 +86,18 @@ xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&q
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="Release"
-			IntermediateDirectory="Release"
+			OutputDirectory="Release2005"
+			IntermediateDirectory="Release2005"
 			ConfigurationType="2"
 			UseOfMFC="2"
 			UseOfATL="2"
-			CharacterSet="1">
+			CharacterSet="2">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
-				AdditionalIncludeDirectories="..\include;.\include;..\inc\2005"
+				AdditionalIncludeDirectories="..\include;..\inc\2005;.\include"
 				AdditionalUsingDirectories=""
-				PreprocessorDefinitions="_CAD2005;WIN32;_WINDOWS;NDEBUG;CUSTPALETTE_MODULE;UNICODE;_UNICODE;_AFXEXT;_ACRXAPP;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="_CAD2005;WIN32;_WINDOWS;NDEBUG;_AFXEXT;_ACRXAPP"
 				StringPooling="TRUE"
 				MinimalRebuild="FALSE"
 				BasicRuntimeChecks="0"
@@ -114,7 +114,7 @@ xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&q
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rxapi.lib  acdb16.lib  acge16.lib acgiapi.lib achapi16.lib acISMobj16.lib acad.lib acedapi.lib adui16.lib acui16.lib Oleacc.lib mongoose.lib crypt32.lib"
+				AdditionalDependencies="rxapi.lib acdb16.lib acge16.lib acgiapi.lib achapi16.lib acISMobj16.lib acad.lib acedapi.lib adui16.lib acui16.lib Oleacc.lib mongoose.lib crypt32.lib shlwapi.lib"
 				OutputFile="$(outdir)/KsExploration.arx"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib;..\lib\2005"
@@ -139,12 +139,10 @@ xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&q
 				ProxyFileName="CustPalette_p.c"/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.html&quot; &quot;$(OutDir)&quot;
-xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.css&quot; &quot;$(OutDir)&quot;
-xcopy /Y /D &quot;$(ProjectDir)res\PalettePage.js&quot; &quot;$(OutDir)&quot;
-xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;
+				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;
 xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;
-xcopy /Y /D &quot;$(ProjectDir)res\chat.bin&quot; &quot;$(OutDir)&quot;
+xcopy /Y /D /E /I &quot;$(ProjectDir)res\page&quot; &quot;$(OutDir)\page&quot;
+xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&quot;
 "/>
 			<Tool
 				Name="VCPreBuildEventTool"/>

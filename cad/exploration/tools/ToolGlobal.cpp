@@ -5,6 +5,7 @@
 #include "arxHeaders.h"
 #include "utils.h"
 
+#include "../features/CreateColumnView.h"
 
 // Global FIFO queue
 static std::queue<AiToolCommandData*> g_cmdQueue;
@@ -211,4 +212,9 @@ void ToolGlobal::get_drawing_units(AiToolCommandData* data) {
     data->resultJson = pJson;
     data->ret = 0;
     actionEnd();
+}
+void ToolGlobal::CreateColumnView()
+{
+	CCreateColumnView view;
+	view.Execute();
 }

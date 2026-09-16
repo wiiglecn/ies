@@ -186,6 +186,7 @@ void InitApplication()
 	AddCommand(_T("ASDK"), _T("SLSHOW"), _T("SLSHOW"), ACRX_CMD_MODAL, paletteShow);
 	AddCommand(_T("ASDK"), _T("SLHIDE"), _T("SLHIDE"), ACRX_CMD_MODAL, paletteHide);
 	AddCommand(_T("ASDK"), _T("SLCMD"), _T("SLCMD"), ACRX_CMD_MODAL, ToolGlobal::CMD);
+	AddCommand(_T("ASDK"), _T("SLCCV"), _T("SLCCV"), ACRX_CMD_MODAL, ToolGlobal::CreateColumnView);
 
 #ifdef _CAD2005
 #else
@@ -208,23 +209,24 @@ void UnloadApplication()
 	// CUtils::FocusAcadDrawing();
 	// Unregister commands
 
+	
 	acedRegCmds->removeGroup(_T("ASDK"));
-
 	// Destroy the paletteset
 	if(pPaletteSet)
 	{
+		
+#ifdef _CAD2005
+		//pPaletteSet->SavePaletteSet();
+		//CUtils::FreeJsonConfig();
+		
+#else
 		// 【关键新增 2】：获取 AutoCAD 主框架，清除活动视图！
         // 这能阻止 AutoCAD 失去焦点时去通知已被销毁的 CHtmlView
         CMDIFrameWnd* pAcadFrame = acedGetAcadFrame();
         if (pAcadFrame != NULL && pAcadFrame->GetSafeHwnd() != NULL)
         {
-#ifdef _CAD2005
-#else
             pAcadFrame->SetActiveView(NULL);
-#endif
         }
-
-
         int count = pPaletteSet->GetPaletteCount();
         for (int i = count - 1; i >= 0; i--)
         {
@@ -250,10 +252,10 @@ void UnloadApplication()
 		pPaletteSet->ShowWindow(SW_HIDE);
 		//pPaletteSet->RemoveAll();
 		pPaletteSet->DestroyWindow();
-		
+#endif
 		delete pPaletteSet;
 
-		// pPaletteSet = NULL;
+		pPaletteSet = NULL;
 	}
 	/*if (pHook){
 		delete pHook;

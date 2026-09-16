@@ -582,9 +582,43 @@ AcDbObjectId CUtils::AddDbText(AcDbBlockTableRecord* container, const ACHAR* psz
         AcDbObjectId styleId = FindTextStyle(pszStyleName);
         if (!styleId.isNull())
             pText->setTextStyle(styleId);
+	}else{
+		pText->setHeight(dHeight);
+		pText->setWidthFactor(dWidthFactor);
+	}
+
+    // ★ 对齐：先设模式，再设对齐点（顺序不能反）
+    switch (hAlign)
+    {
+    case DBTA_CENTER:
+        pText->setHorizontalMode(AcDb::kTextMid);
+        break;
+    case DBTA_RIGHT:
+        pText->setHorizontalMode(AcDb::kTextRight);
+        break;
+    case DBTA_LEFT:
+    default:
+        pText->setHorizontalMode(AcDb::kTextLeft);
+        break;
     }
-    pText->setHeight(dHeight);
-    pText->setWidthFactor(dWidthFactor);  
+    pText->setAlignmentPoint(pt);   // 左对齐时被忽略（用 position），其他模式接管定位
+
+    AcDbObjectId textId = AcDbObjectId::kNull;
+    Acad::ErrorStatus es = container->appendAcDbEntity(textId, pText);
+    if (es == Acad::eOk)
+        pText->close();
+    else
+        delete pText;
+    return textId;
+}
+AcDbObjectId CUtils::AddDbText(AcDbBlockTableRecord* container,const ACHAR* pszText, const AcGePoint3d& pt,
+		AcDbObjectId styleId,int hAlign)
+{
+	AcDbText* pText = new AcDbText;
+    pText->setPosition(pt);
+    pText->setTextString(pszText);
+    pText->setRotation(0.0);
+	pText->setTextStyle(styleId);
 
     // ★ 对齐：先设模式，再设对齐点（顺序不能反）
     switch (hAlign)
@@ -759,6 +793,38 @@ bool CUtils::FindPatNameBySoilName(cJSON* pPatConfig, const TCHAR* pszSoilName,
     }
     return false;
 }
+bool CUtils::FindBlockNameByHoleName(cJSON* pPatConfig, const TCHAR* pszHoleName,
+                                  TCHAR* pszBlockName, int nBufCount)
+{
+	if (pPatConfig == NULL || pszHoleName == NULL || pszBlockName == NULL || nBufCount <= 0)
+        return false;
+    pszBlockName[0] = _T('\0');
+
+    // 查找键（岩性名）转 UTF-8，用于与 JSON 值做字节比较
+    char utf8Name[256] = { 0 };
+    TCharToUtf8(pszHoleName, utf8Name, sizeof(utf8Name));
+
+    // 两个中文键名也转成 UTF-8
+    char utf8KeyName[64], utf8KeyPat[64];
+    TCharToUtf8(_T("符号名称"), utf8KeyName, sizeof(utf8KeyName));
+    TCharToUtf8(_T("图块名称"), utf8KeyPat, sizeof(utf8KeyPat));
+
+    cJSON* patRow = NULL;
+    cJSON_ArrayForEach(patRow, pPatConfig)
+    {
+        cJSON* jName = cJSON_GetObjectItem(patRow, utf8KeyName);
+        if (jName == NULL || !cJSON_IsString(jName))
+            continue;
+        if (strcmp(jName->valuestring, utf8Name) != 0)      // UTF-8 字节精确比较
+            continue;
+
+        cJSON* jPat = cJSON_GetObjectItem(patRow, utf8KeyPat);
+        if (jPat != NULL && cJSON_IsString(jPat))
+            utf8ToTChar(jPat->valuestring, pszBlockName, nBufCount);  // "gt": UTF-8 → TCHAR
+        return (pszBlockName[0] != _T('\0'));
+    }
+    return false;
+}
 // JSON 数值兼容读取：number 直接取；字符串转 double 后取（标贯各列可能是数字或字符串）
 double CUtils::JsonValToDouble(cJSON* node)
 {
@@ -836,4 +902,103 @@ void CUtils::FreeJsonConfig()
 cJSON* CUtils::GetJsonConfigDirect()
 {
     return s_pJsonConfig;
+}
+// 确保文字样式存在：不存在则创建。返回样式 ID（失败返回 kNull）
+AcDbObjectId CUtils::EnsureTextStyle(const ACHAR* pszStyleName, const ACHAR* pszFontName,
+                                     double dHeight, double dWidthFactor)
+{
+    if (pszStyleName == NULL || pszStyleName[0] == _T('\0'))
+        return AcDbObjectId::kNull;
+
+    // 1. 已存在：直接返回，不改动现有设置
+    AcDbObjectId styleId = FindTextStyle(pszStyleName);
+    if (!styleId.isNull())
+        return styleId;
+
+    // 2. 打开文字样式表（要新建记录，必须写方式打开）
+    AcDbTextStyleTable* pTsTbl = NULL;
+    if (acdbHostApplicationServices()->workingDatabase()
+            ->getTextStyleTable(pTsTbl, AcDb::kForWrite) != Acad::eOk)
+        return AcDbObjectId::kNull;
+
+    AcDbTextStyleTableRecord* pTsRec = new AcDbTextStyleTableRecord;
+    pTsRec->setName(pszStyleName);
+
+    // 3. 字体：以 .shx 结尾 → 形字体；否则 → Windows 字体（TTF）
+    bool bIsShx = false;
+    if (pszFontName != NULL && pszFontName[0] != _T('\0'))
+    {
+        int nLen = (int)_tcslen(pszFontName);
+        bIsShx = (nLen > 4 && _tcsicmp(pszFontName + nLen - 4, _T(".shx")) == 0);
+    }
+    if (bIsShx)
+        pTsRec->setFileName(pszFontName);                                  // 如 txt.shx / gbenor.shx
+    else if (pszFontName != NULL && pszFontName[0] != _T('\0'))
+        pTsRec->setFont(pszFontName, false, false, 0, 0);
+
+    // 4. 字高与宽度比例（字高 <= 0 表示不固定，随实体设置）
+    if (dHeight > 0.0)
+        pTsRec->setTextSize(dHeight);
+    if (dWidthFactor > 0.0)
+        pTsRec->setXScale(dWidthFactor);
+
+    // 5. 入表：成功 close（所有权归 CAD），失败 delete
+    AcDbObjectId newId = AcDbObjectId::kNull;
+    if (pTsTbl->add(pTsRec) == Acad::eOk)
+    {
+        newId = pTsRec->objectId();
+        pTsRec->close();
+    }
+    else
+        delete pTsRec;
+    pTsTbl->close();
+    return newId;
+}
+// 确保图层存在：不存在则创建；bSetCurrent 时切换为当前层
+AcDbObjectId CUtils::EnsureLayer(const ACHAR* pszLayerName, bool bSetCurrent)
+{
+    if (pszLayerName == NULL || pszLayerName[0] == _T('\0'))
+        return AcDbObjectId::kNull;
+
+    AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
+    if (pDb == NULL)
+        return AcDbObjectId::kNull;
+
+    // 1. 已存在：需要时切换为当前层后直接返回
+    AcDbLayerTable* pLyrTbl = NULL;
+    if (pDb->getLayerTable(pLyrTbl, AcDb::kForRead) != Acad::eOk)
+        return AcDbObjectId::kNull;
+
+    AcDbObjectId layerId = AcDbObjectId::kNull;
+    pLyrTbl->getAt(pszLayerName, layerId);
+    pLyrTbl->close();
+
+    if (!layerId.isNull())
+    {
+        if (bSetCurrent && pDb->clayer() != layerId)
+            pDb->setClayer(layerId);
+        return layerId;
+    }
+
+    // 2. 不存在：写方式打开图层表，新建记录（默认颜色/线型，继承 0 层以外的默认值）
+    if (pDb->getLayerTable(pLyrTbl, AcDb::kForWrite) != Acad::eOk)
+        return AcDbObjectId::kNull;
+
+    AcDbLayerTableRecord* pLyrRec = new AcDbLayerTableRecord;
+    pLyrRec->setName(pszLayerName);
+
+    AcDbObjectId newId = AcDbObjectId::kNull;
+    if (pLyrTbl->add(pLyrRec) == Acad::eOk)
+    {
+        newId = pLyrRec->objectId();
+        pLyrRec->close();           // 项目约定：入库成功 close，失败 delete
+    }
+    else
+        delete pLyrRec;
+    pLyrTbl->close();
+
+    // 3. 切换为当前层（之后新建的实体默认落在该层）
+    if (!newId.isNull() && bSetCurrent)
+        pDb->setClayer(newId);
+    return newId;
 }

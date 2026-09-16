@@ -94,7 +94,8 @@ int CMyPaletteSet::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 	return 0;
 }
-
+#ifdef _CAD2005
+#else
 void CMyPaletteSet::OnDestroy()
 {
 	// Save PaletteSet data
@@ -102,6 +103,7 @@ void CMyPaletteSet::OnDestroy()
 	CUtils::FreeJsonConfig();
 	CAdUiPaletteSet::OnDestroy();
 }
+#endif
 
 
 void CMyPaletteSet::LoadPaletteSet()

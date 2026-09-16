@@ -62,6 +62,8 @@ public:
 	static AcDbObjectId AddDbText(AcDbBlockTableRecord* container,const ACHAR* pszText, const AcGePoint3d& pt,
 						double dHeight, const ACHAR* pszStyleName,
                               int hAlign,double dWidthFactor = 1.0);   // 默认值只能写在头文件
+	static AcDbObjectId AddDbText(AcDbBlockTableRecord* container,const ACHAR* pszText, const AcGePoint3d& pt,
+		AcDbObjectId styleId,int hAlign);   // 默认值只能写在头文件
 	    // 获取实体几何包围盒的宽和高（世界坐标系）；失败返回 false，宽高置 0
     static bool GetEntExtent(AcDbEntity* pEnt, double& dWidth, double& dHeight);
 	static double CStringToDouble(const CString& str);
@@ -73,12 +75,25 @@ public:
     static cJSON* LoadJsonFile(const TCHAR* pszFilePath, bool bSilent = true);
 	static bool FindPatNameBySoilName(cJSON* pPatConfig, const TCHAR* pszSoilName,
                                   TCHAR* pszPatName, int nBufCount);
+	static bool FindBlockNameByHoleName(cJSON* pPatConfig, const TCHAR* pszHoleName,
+                                  TCHAR* pszBlockName, int nBufCount);
+
 	static double JsonValToDouble(cJSON* node);
 	    // 按 id 打开实体并返回指针；失败返回 NULL（id 为空 / 已删除 / 类型不是实体）
     // ★ 所有权归 CAD：调用方用完必须 pEnt->close()，不能 delete
     static AcDbEntity* OpenEntityById(const AcDbObjectId& id,
                                       AcDb::OpenMode openMode = AcDb::kForRead);
 
+									  // 确保文字样式存在：不存在则创建（pszFontName 以 .shx 结尾按形字体处理，否则按 Windows 字体）
+    // dHeight <= 0 表示不固定字高（推荐，字高由实体决定）；返回样式 ID，失败返回 kNull
+    static AcDbObjectId EnsureTextStyle(const ACHAR* pszStyleName,
+                                        const ACHAR* pszFontName,
+                                        double dHeight = 0.0,
+                                        double dWidthFactor = 1.0);
+	// 确保图层存在：不存在则创建；bSetCurrent=true 时同时切换为当前层（相当于设置 CLAYER）
+    // 返回图层 ID，失败返回 kNull
+    static AcDbObjectId EnsureLayer(const ACHAR* pszLayerName, bool bSetCurrent = true);
+	
 	static cJSON* GetJsonConfigDirect();
 	static cJSON* GetJsonConfig();
 

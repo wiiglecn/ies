@@ -25,7 +25,7 @@ CHtmlPaletteView::~CHtmlPaletteView()
 BEGIN_MESSAGE_MAP(CHtmlPaletteView, CHtmlView)
 	ON_MESSAGE( WM_ACAD_KEEPFOCUS, onAcadKeepFocus )
 //ON_WM_ERASEBKGND()
- //ON_WM_DESTROY()
+ ON_WM_DESTROY()
  //ON_MESSAGE(WM_GETOBJECT, OnGetObject)
 END_MESSAGE_MAP()
 
@@ -172,7 +172,7 @@ void CHtmlPaletteView::InitializeBrowser()
 }
 void CHtmlPaletteView::OnDestroy()
 {
-    CUtils::acutPrintf(_T("CHtmlPaletteView::OnDestroy.\n"));
+    //CUtils::acutPrintf(_T("CHtmlPaletteView::OnDestroy.\n"));
 
     // 1. 确保焦点不在内部子窗口上
    /* if (GetFocus() != NULL && (this == GetFocus() || IsChild(GetFocus())))
@@ -225,8 +225,14 @@ void CHtmlPaletteView::OnDestroy()
         CoDisconnectObject(pUnk, 0);
     }
 
+#ifdef _CAD2005
+	CWnd::OnDestroy();
+#else
+
+
     // 调用基类
     CHtmlView::OnDestroy();
+#endif
 }
 //BOOL CHtmlPaletteView::PreCreateWindow(CREATESTRUCT& cs)
 //{

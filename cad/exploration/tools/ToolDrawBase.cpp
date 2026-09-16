@@ -11,7 +11,7 @@ VOID CALLBACK UpdateDisplayTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWO
     KillTimer(NULL, idEvent);
     acedUpdateDisplay();
 }
-ToolDrawBase::ToolDrawBase(void):pDoc(NULL),pModelSpace(NULL),pDb(NULL)
+ToolDrawBase::ToolDrawBase(void):pDoc(NULL),pModelSpace(NULL),pDb(NULL),pTrans(NULL)
 {
 }
 
@@ -59,9 +59,15 @@ int ToolDrawBase::actionBefore()
 
 	AcDbBlockTable* pBlockTable = NULL;
     //this->pModelSpace = NULL;
-
+	if(pTrans !=NULL){
+		es = pTrans->getObject((AcDbObject*&)pBlockTable, pDb->blockTableId(), AcDb::kForRead);
+	}else {
+		es = pDb->getBlockTable(pBlockTable, AcDb::kForRead);
+	}
+	
+	
     // Open Model Space for write
-    if (pDb->getBlockTable(pBlockTable, AcDb::kForRead) != Acad::eOk)
+    if (es != Acad::eOk)
     {
         acutPrintf(_T("[ERROR] DrawRedCircle: Failed to open Block Table.\n"));
         return 3;
@@ -79,6 +85,10 @@ int ToolDrawBase::actionBefore()
 }
 int ToolDrawBase::actionEnd()
 {
+	if (pTrans!=NULL){
+		actrTransactionManager->abortTransaction();
+		pTrans=NULL;
+	}
 	if (pModelSpace != NULL)
 		pModelSpace->close();
 	acDocManager->unlockDocument(this->pDoc);
@@ -134,4 +144,31 @@ void ToolDrawBase::setModelSpace(AcDbBlockTableRecord* pModelSpaceSrc)
 void ToolDrawBase::setDatabase(AcDbDatabase* pDbSrc)
 {
     this->pDb = pDbSrc;
+}
+void ToolDrawBase::setTrans(AcTransaction* pTransSrc)
+{
+    this->pTrans = pTransSrc;
+}
+bool ToolDrawBase::startTrans()
+{
+    if (pTrans == NULL) {
+		pTrans = actrTransactionManager->startTransaction();
+	}
+	return pTrans == NULL ? true : false;
+}
+bool ToolDrawBase::commitTrans()
+{
+	if(pTrans!=NULL){
+		Acad::ErrorStatus esTx = actrTransactionManager->endTransaction();
+		pTrans = NULL;
+		return esTx == Acad::eOk ? true : false;
+	}
+	return false;
+}
+void ToolDrawBase::aboutTrans()
+{
+	if (pTrans != NULL) {
+		actrTransactionManager->abortTransaction();
+		pTrans = NULL;
+	}
 }

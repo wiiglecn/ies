@@ -47,7 +47,10 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg int OnCreate (LPCREATESTRUCT lpCreateStruct);
+#ifdef _CAD2005
+#else
 	afx_msg void OnDestroy(); 
+#endif
 public:
 	void LoadPaletteSet();
 	static void SavePaletteSet();

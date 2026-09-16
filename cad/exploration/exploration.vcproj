@@ -573,6 +573,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\features\CreateBaseView.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\features\CreateBaseView.h"
+				>
+			</File>
+			<File
 				RelativePath=".\features\CreateColumnView.cpp"
 				>
 				<FileConfiguration

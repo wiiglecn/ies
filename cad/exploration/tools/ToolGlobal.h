@@ -14,6 +14,7 @@ public:
 
     static void CMD();
 
+	static void CreateColumnView();
 private:
 	ToolGlobal(void);
     ~ToolGlobal(void);

@@ -1,11 +1,20 @@
 #pragma once
 #include "arxHeaders.h"
-#include "../tools/ToolDrawBase.h"
+#include "./CreateBaseView.h"
 
-class CCreatePlanView : public ToolDrawBase
+class CCreatePlanView : public CCreateBaseView
 {
 public:
-	CCreatePlanView(void);
+	//CCreatePlanView(void);
+
+	void Execute();
 public:
-	~CCreatePlanView(void);
+	//~CCreatePlanView(void);
+
+protected:
+	cJSON* s_blockConfigData;
+
+
+	virtual void ClearExtDbCache();
+	void ChangeText(AcDbObjectId blkDefId,AcDbObjectId styleId, ACHAR* holeName,ACHAR* elevation,ACHAR* depth);
 };
