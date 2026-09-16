@@ -41,6 +41,7 @@
 #include "PreSelectScale.h"
 
 #include "../features/CreateColumnView.h"
+#include "../features/CreatePlanView.h"
 #include "../features/PatHatchLoader.h"
 #include "../features/BaseDataSet.h"
 
@@ -376,6 +377,16 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 		if (pDoc) {
 			acDocManager->sendStringToExecute(pDoc, _T("SLCCV\n"));
 		}*/
+    }
+
+	else if (_tcscmp(szCommand, _T("CreatePlanView")) == 0)
+    {
+		CUtils::acutPrintf(_T("CreatePlanView.\n"));
+
+		CUtils::FocusAcadDrawing();
+		CCreatePlanView view;
+		view.Execute();
+		acedPostCommandPrompt(); 
     }
 
 	else if (_tcscmp(szCommand, _T("HoleDiameter")) == 0 

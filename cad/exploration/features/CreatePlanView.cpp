@@ -21,17 +21,7 @@ void CCreatePlanView::Execute()
         return;
     }
 
-	const TCHAR* layerName = _T("勘察点方案");        // ← 按需改图层名
-	if (CUtils::EnsureLayer(layerName).isNull()){
-		CUtils::acutPrintf(_T("[CAD ERROR] 创建图层失败，请检查！ %s\n"), layerName);
-        return;
-	}
-	AcDbObjectId styleId=CUtils::EnsureTextStyle( _T("勘察孔"), _T("宋体"),3.0,0.7);
-	if (styleId.isNull()){
-		CUtils::acutPrintf(_T("[CAD ERROR] 创建样式失败，请检查！\n"));
-        return;
-	}
-
+	CUtils::ClearSelection();
 
 	if (this->startTrans()) return;
 
@@ -40,6 +30,25 @@ void CCreatePlanView::Execute()
 		aboutTrans();
 		return;
 	}
+	
+
+	const TCHAR* layerName = _T("勘察点方案");        // ← 按需改图层名
+	if (CUtils::EnsureLayer(layerName).isNull()){
+		CUtils::acutPrintf(_T("[CAD ERROR] 创建图层失败，请检查！ %s\n"), layerName);
+		aboutTrans();
+        return;
+	}
+	// 清除当前层旧元素（pModelSpace 由基类管理开关，本函数不动它）
+    int n = CUtils::EraseLayerEntities(this->pModelSpace, layerName); 
+
+	AcDbObjectId styleId=CUtils::EnsureTextStyle( _T("勘察孔"), _T("宋体"),1.75,0.7);
+	if (styleId.isNull()){
+		CUtils::acutPrintf(_T("[CAD ERROR] 创建样式失败，请检查！\n"));
+		aboutTrans();
+        return;
+	}
+
+
 	
 	cJSON* item = NULL;
 	cJSON_ArrayForEach(item, s_pJsonData) {
@@ -78,7 +87,7 @@ void CCreatePlanView::Execute()
 				_tcscpy(blockSingleName, _T("GKJBK"));
             }
 			CString cadBlockUrl;
-			cadBlockUrl.Format(_T("support/block/%.dwg"), blockSingleName);
+			cadBlockUrl.Format(_T("support/block/%s.dwg"), blockSingleName);
 			cadBlockUrl = strFilePath + cadBlockUrl;
 
 			AcGePoint3d ptInsert;
@@ -100,6 +109,8 @@ void CCreatePlanView::Execute()
 					ptInsert.y = columnTry->valuedouble;
 				}
 			}
+			// 同名旧块先删（含其参照），强制按最新 DWG 重建
+            CUtils::EraseBlock(this->pModelSpace, blockStyleName.GetString());
 
 			AcDbObjectId blkDefId = ImportDwgAsBlock(cadBlockUrl.GetString(),ptInsert, blockStyleName);
 			if (blkDefId == AcDbObjectId::kNull)
@@ -113,23 +124,19 @@ void CCreatePlanView::Execute()
 				if (rowTry == NULL)
 					continue;  
 				{
-					cJSON* columnTry = cJSON_GetArrayItem(rowTry, 11); 
-					if (columnTry != NULL && cJSON_IsNumber(columnTry)){
-						CUtils::utf8ToTChar(columnTry->valueString, elevation_str, 128);
-					}
+					double elevation = CUtils::JsonValToDouble(cJSON_GetArrayItem(rowTry, 11));
+    				_stprintf(elevation_str, _T("%.2f"), elevation);
 				}
 				{
-					cJSON* columnTry = cJSON_GetArrayItem(rowTry, 18); 
-					if (columnTry != NULL && cJSON_IsNumber(columnTry)){
-						CUtils::utf8ToTChar(columnTry->valueString, depth_str, 128);
-					}
+					double depth = CUtils::JsonValToDouble(cJSON_GetArrayItem(rowTry, 18));
+    				_stprintf(depth_str, _T("%.2f"), depth);
 				}
 			}
 
-			ChangeText(blkDefId,styleId,holeName,elevation_str,depth_str);
+			ChangeText(blkDefId,styleId,arrayName,elevation_str,depth_str);
 
 
-            break;
+            //break;
 		}
 	}
 
@@ -157,17 +164,47 @@ void CCreatePlanView::ChangeText(AcDbObjectId blkDefId,AcDbObjectId styleId, ACH
 	double dWidthFactor = 0.6;
 	TCHAR* pszStyleName = _T("勘察孔");
 
+	double radius = 2.15;
+
 	// 创建文本实体 - 顶部文本 (holeName)
-	CUtils::AddDbText(pBTR,holeName,
-                            AcGePoint3d(0.0, 2.0, 0.0),height,pszStyleName,DBTA_CENTER,dWidthFactor);
+	AcDbObjectId textId = CUtils::AddDbText(pBTR,holeName,
+                            AcGePoint3d(radius*2, 1, 0.0),height,pszStyleName,DBTA_LEFT,dWidthFactor);
 
-	// 创建文本实体 - 中间文本 (elevation)
-	CUtils::AddDbText(pBTR,elevation,
-                            AcGePoint3d(0.0, 0.0, 0.0),height,pszStyleName,DBTA_CENTER,dWidthFactor);
+	double dW = 0.0, dH = 0.0;						
+    CUtils::GetEntExtentById(textId, dW, dH);
+	AcGePoint3d ptDraw;
+	ptDraw.x = radius*2+dW;
+	ptDraw.y =  1-2.5/2;
+	// 创建文本实体 -  (elevation)
+	textId = CUtils::AddDbText(pBTR,elevation,
+                            ptDraw,height,pszStyleName,DBTA_LEFT,dWidthFactor);
+	CUtils::GetEntExtentById(textId, dW, dH);
 
-	// 创建文本实体 - 底部文本 (depth)
+	// 创建文本实体 -  (depth)
+	ptDraw.y = 1.5+2.5/2;
 	CUtils::AddDbText(pBTR,depth,
-                            AcGePoint3d(0.0, -2.0, 0.0),height,pszStyleName,DBTA_CENTER,dWidthFactor);
+                            ptDraw,height,pszStyleName,DBTA_LEFT,dWidthFactor);
+
+	AcGePoint3d ptDraw_start(ptDraw);
+	ptDraw_start.y = 1.25+2.5/2;
+	AcGePoint3d ptDraw_end(ptDraw_start);
+	ptDraw_end.x +=dW;
+
+
+	AcDbLine* pLine = new AcDbLine(ptDraw_start, ptDraw_end);
+	AcDbObjectId lineId = AcDbObjectId::kNull;
+	Acad::ErrorStatus es = pBTR->appendAcDbEntity(lineId, pLine);
+	if (es == Acad::eOk)
+		pLine->close();                  
+	else
+		delete pLine;    
+
+	AcGePoint3d ptOrigin;
+	ptOrigin.x=2.15;
+	ptOrigin.y=2.15;
+	if (pBTR->setOrigin(ptOrigin) != Acad::eOk)
+        CUtils::acutPrintf(_T("[CAD ERROR] 设置块原点失败\n"));
+
 
 	pBTR->close();
 }

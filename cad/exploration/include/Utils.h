@@ -66,6 +66,7 @@ public:
 		AcDbObjectId styleId,int hAlign);   // 默认值只能写在头文件
 	    // 获取实体几何包围盒的宽和高（世界坐标系）；失败返回 false，宽高置 0
     static bool GetEntExtent(AcDbEntity* pEnt, double& dWidth, double& dHeight);
+	static bool GetEntExtentById(const AcDbObjectId& id, double& dWidth, double& dHeight);
 	static double CStringToDouble(const CString& str);
 	// 创建多行文本：dWidth <= 0 表示不自动折行；attach 为九宫格附着点（默认左上）
 	static AcDbObjectId AddDbMText(AcDbBlockTableRecord* container, const ACHAR* pszText, const AcGePoint3d& pt,
@@ -93,10 +94,21 @@ public:
 	// 确保图层存在：不存在则创建；bSetCurrent=true 时同时切换为当前层（相当于设置 CLAYER）
     // 返回图层 ID，失败返回 kNull
     static AcDbObjectId EnsureLayer(const ACHAR* pszLayerName, bool bSetCurrent = true);
-	
+	    // 清除指定图层上的实体（模型空间 + 所有布局，不动块定义内部；pszLayerName 为 NULL/空 = 当前层）
+    // 返回删除的实体数量，失败返回 -1
+        // 在调用方已打开的容器（如 pModelSpace）里删除指定图层实体
+    // ★ 容器的开/关归调用方（含事务打开的情况），本函数不 close 它；pszLayerName 为 NULL/空 = 当前层
+    // 返回删除数量，失败返回 -1
+    static int EraseLayerEntities(AcDbBlockTableRecord* pOpenedBtr, const ACHAR* pszLayerName = NULL);
+	// 在调用方已打开的容器（如 pModelSpace）里删除指向块名的所有块参照，并删除该块定义
+    // ★ 容器开/关归调用方（事务打开也兼容）；嵌套在其他块里的参照不在处理范围
+    // 块本就不存在也算成功；返回 false = 找到了但删失败
+    static bool EraseBlock(AcDbBlockTableRecord* pOpenedBtr, const ACHAR* pszBlockName);
+	// 取消所有选中的元素（含夹点）；返回 true 表示成功
+	static bool ClearSelection();
+
 	static cJSON* GetJsonConfigDirect();
 	static cJSON* GetJsonConfig();
-
 	static void FreeJsonConfig();
 #ifdef _CAD2005
 	static void safeVsnprintfVC7(char* szBuffer, size_t bufferSize, const char* pszFmt, va_list args);

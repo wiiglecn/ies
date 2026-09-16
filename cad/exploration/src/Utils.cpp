@@ -663,6 +663,18 @@ bool CUtils::GetEntExtent(AcDbEntity* pEnt, double& dWidth, double& dHeight)
     dHeight = maxPt.y - minPt.y;
     return true;
 }
+// 按实体 ID 取几何包围盒宽高（世界坐标系）；失败返回 false
+bool CUtils::GetEntExtentById(const AcDbObjectId& id, double& dWidth, double& dHeight)
+{
+    dWidth = 0.0;
+    dHeight = 0.0;
+    AcDbEntity* pEnt = OpenEntityById(id, AcDb::kForRead);
+    if (pEnt == NULL)
+        return false;
+    bool bOk = GetEntExtent(pEnt, dWidth, dHeight);
+    pEnt->close();
+    return bOk;
+}
 double CUtils::CStringToDouble(const CString& str)
 {
     if (str.IsEmpty())
@@ -902,103 +914,4 @@ void CUtils::FreeJsonConfig()
 cJSON* CUtils::GetJsonConfigDirect()
 {
     return s_pJsonConfig;
-}
-// 确保文字样式存在：不存在则创建。返回样式 ID（失败返回 kNull）
-AcDbObjectId CUtils::EnsureTextStyle(const ACHAR* pszStyleName, const ACHAR* pszFontName,
-                                     double dHeight, double dWidthFactor)
-{
-    if (pszStyleName == NULL || pszStyleName[0] == _T('\0'))
-        return AcDbObjectId::kNull;
-
-    // 1. 已存在：直接返回，不改动现有设置
-    AcDbObjectId styleId = FindTextStyle(pszStyleName);
-    if (!styleId.isNull())
-        return styleId;
-
-    // 2. 打开文字样式表（要新建记录，必须写方式打开）
-    AcDbTextStyleTable* pTsTbl = NULL;
-    if (acdbHostApplicationServices()->workingDatabase()
-            ->getTextStyleTable(pTsTbl, AcDb::kForWrite) != Acad::eOk)
-        return AcDbObjectId::kNull;
-
-    AcDbTextStyleTableRecord* pTsRec = new AcDbTextStyleTableRecord;
-    pTsRec->setName(pszStyleName);
-
-    // 3. 字体：以 .shx 结尾 → 形字体；否则 → Windows 字体（TTF）
-    bool bIsShx = false;
-    if (pszFontName != NULL && pszFontName[0] != _T('\0'))
-    {
-        int nLen = (int)_tcslen(pszFontName);
-        bIsShx = (nLen > 4 && _tcsicmp(pszFontName + nLen - 4, _T(".shx")) == 0);
-    }
-    if (bIsShx)
-        pTsRec->setFileName(pszFontName);                                  // 如 txt.shx / gbenor.shx
-    else if (pszFontName != NULL && pszFontName[0] != _T('\0'))
-        pTsRec->setFont(pszFontName, false, false, 0, 0);
-
-    // 4. 字高与宽度比例（字高 <= 0 表示不固定，随实体设置）
-    if (dHeight > 0.0)
-        pTsRec->setTextSize(dHeight);
-    if (dWidthFactor > 0.0)
-        pTsRec->setXScale(dWidthFactor);
-
-    // 5. 入表：成功 close（所有权归 CAD），失败 delete
-    AcDbObjectId newId = AcDbObjectId::kNull;
-    if (pTsTbl->add(pTsRec) == Acad::eOk)
-    {
-        newId = pTsRec->objectId();
-        pTsRec->close();
-    }
-    else
-        delete pTsRec;
-    pTsTbl->close();
-    return newId;
-}
-// 确保图层存在：不存在则创建；bSetCurrent 时切换为当前层
-AcDbObjectId CUtils::EnsureLayer(const ACHAR* pszLayerName, bool bSetCurrent)
-{
-    if (pszLayerName == NULL || pszLayerName[0] == _T('\0'))
-        return AcDbObjectId::kNull;
-
-    AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
-    if (pDb == NULL)
-        return AcDbObjectId::kNull;
-
-    // 1. 已存在：需要时切换为当前层后直接返回
-    AcDbLayerTable* pLyrTbl = NULL;
-    if (pDb->getLayerTable(pLyrTbl, AcDb::kForRead) != Acad::eOk)
-        return AcDbObjectId::kNull;
-
-    AcDbObjectId layerId = AcDbObjectId::kNull;
-    pLyrTbl->getAt(pszLayerName, layerId);
-    pLyrTbl->close();
-
-    if (!layerId.isNull())
-    {
-        if (bSetCurrent && pDb->clayer() != layerId)
-            pDb->setClayer(layerId);
-        return layerId;
-    }
-
-    // 2. 不存在：写方式打开图层表，新建记录（默认颜色/线型，继承 0 层以外的默认值）
-    if (pDb->getLayerTable(pLyrTbl, AcDb::kForWrite) != Acad::eOk)
-        return AcDbObjectId::kNull;
-
-    AcDbLayerTableRecord* pLyrRec = new AcDbLayerTableRecord;
-    pLyrRec->setName(pszLayerName);
-
-    AcDbObjectId newId = AcDbObjectId::kNull;
-    if (pLyrTbl->add(pLyrRec) == Acad::eOk)
-    {
-        newId = pLyrRec->objectId();
-        pLyrRec->close();           // 项目约定：入库成功 close，失败 delete
-    }
-    else
-        delete pLyrRec;
-    pLyrTbl->close();
-
-    // 3. 切换为当前层（之后新建的实体默认落在该层）
-    if (!newId.isNull() && bSetCurrent)
-        pDb->setClayer(newId);
-    return newId;
 }
