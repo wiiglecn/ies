@@ -225,14 +225,14 @@ void CHtmlPaletteView::OnDestroy()
         CoDisconnectObject(pUnk, 0);
     }
 
-#ifdef _CAD2005
+//#ifdef _CAD2005
 	CWnd::OnDestroy();
-#else
-
-
-    // 调用基类
-    CHtmlView::OnDestroy();
-#endif
+//#else
+//
+//
+//    // 调用基类
+//    CHtmlView::OnDestroy();
+//#endif
 }
 //BOOL CHtmlPaletteView::PreCreateWindow(CREATESTRUCT& cs)
 //{

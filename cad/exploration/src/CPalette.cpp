@@ -626,9 +626,10 @@ void CDataPalette::clean()
 		if (::IsWindow(m_pHtmlView->GetSafeHwnd())){
 			m_pHtmlView->DestroyWindow();
 			
-		}else{
-			delete m_pHtmlView;
 		}
+		/*else{
+			delete m_pHtmlView;
+		}*/
         
         m_pHtmlView = NULL;
     }

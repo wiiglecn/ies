@@ -212,3 +212,86 @@ bool CUtils::ClearSelection()
 {
     return acedSSSetFirst(NULL, NULL) == RTNORM;
 }
+// 取模型空间全部实体的总包围盒（跳过已删除实体；返回 false 表示图中无有效实体）
+bool CUtils::GetModelSpaceBounds(AcDbBlockTableRecord* pBTR, AcDbExtents& extOut)
+{
+    bool bHasAny = false;
+    AcDbBlockTableRecordIterator* pIter = NULL;
+    if (pBTR == NULL || pBTR->newIterator(pIter) != Acad::eOk)
+        return false;
+
+    for (pIter->start(); !pIter->done(); pIter->step())
+    {
+        AcDbEntity* pEnt = NULL;
+        if (pIter->getEntity(pEnt, AcDb::kForRead) != Acad::eOk)
+            continue;
+
+        if (pEnt->isErased()) { pEnt->close(); continue; }   // 刚被 EraseLayerEntities 删掉的旧图例会被跳过
+
+        AcDbExtents ext;
+        if (pEnt->getGeomExtents(ext) == Acad::eOk)
+        {
+            if (!bHasAny) { extOut = ext; bHasAny = true; }
+            else
+            {
+                extOut.addPoint(ext.minPoint());   // addPoint = 扩展包围盒包含该点
+                extOut.addPoint(ext.maxPoint());
+            }
+        }
+        pEnt->close();
+    }
+    delete pIter;        // 迭代器用完必须 delete
+    return bHasAny;
+}
+AcDbObjectId CUtils::AddDbPolyline(AcDbBlockTableRecord* container,
+                                   const std::vector<AcGePoint3d>& arrPts,
+                                   double dWidth, bool bClosed)
+{
+    if (container == NULL || arrPts.size() < 2)
+        return AcDbObjectId::kNull;
+
+    AcDbPolyline* pPline = new AcDbPolyline(arrPts.size());
+    pPline->setConstantWidth(dWidth);      // ★ 全局线宽（0.35 之类）
+    pPline->setClosed(bClosed);
+
+    for (size_t i = 0; i < arrPts.size(); ++i)
+    {
+        // 顶点是二维点（OCS），Z 由标高决定；平面图直接丢 z 即可
+        pPline->addVertexAt((unsigned)i, AcGePoint2d(arrPts[i].x, arrPts[i].y));
+    }
+
+    AcDbObjectId plineId = AcDbObjectId::kNull;
+    Acad::ErrorStatus es = container->appendAcDbEntity(plineId, pPline);
+    if (es == Acad::eOk)
+        pPline->close();                   // 成功：所有权归数据库
+    else
+        delete pPline;                     // 失败：防内存泄漏
+    return plineId;
+}
+// 把已入库实体改到指定层（"0" 层始终存在，无需 EnsureLayer）
+bool CUtils::SetEntLayer(const AcDbObjectId& id, const ACHAR* pszLayer)
+{
+    AcDbEntity* pEnt = CUtils::OpenEntityById(id, AcDb::kForWrite);
+    if (pEnt == NULL)
+        return false;
+    bool bOk = (pEnt->setLayer(pszLayer) == Acad::eOk);
+    pEnt->close();
+    return bOk;
+}
+// 以中心点 + 高宽画闭合矩形，直接复用 AddDbPolyline
+AcDbObjectId CUtils::AddDbRect(AcDbBlockTableRecord* container,
+                               const AcGePoint3d& ptCenter,
+                               double dWidth, double dHeight, double dLineWidth)
+{
+    double dHalfW = dWidth  * 0.5;
+    double dHalfH = dHeight * 0.5;
+
+    std::vector<AcGePoint3d> arrPts;
+    arrPts.reserve(4);
+    arrPts.push_back(AcGePoint3d(ptCenter.x - dHalfW, ptCenter.y - dHalfH, 0));  // 左下
+    arrPts.push_back(AcGePoint3d(ptCenter.x + dHalfW, ptCenter.y - dHalfH, 0));  // 右下
+    arrPts.push_back(AcGePoint3d(ptCenter.x + dHalfW, ptCenter.y + dHalfH, 0));  // 右上
+    arrPts.push_back(AcGePoint3d(ptCenter.x - dHalfW, ptCenter.y + dHalfH, 0));  // 左上
+
+    return AddDbPolyline(container, arrPts, dLineWidth, true);   // true = 闭合 → 矩形
+}

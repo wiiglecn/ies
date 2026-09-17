@@ -106,6 +106,22 @@ public:
     static bool EraseBlock(AcDbBlockTableRecord* pOpenedBtr, const ACHAR* pszBlockName);
 	// 取消所有选中的元素（含夹点）；返回 true 表示成功
 	static bool ClearSelection();
+	//获得空间大小
+	static bool GetModelSpaceBounds(AcDbBlockTableRecord* pBTR, AcDbExtents& extOut);
+	    // 创建轻量多段线：arrPts 至少 2 个点；dWidth = 全局线宽（0 = 细线）；bClosed = 是否闭合
+    // 顶点取三维点的 x/y，Z 忽略（多段线是 OCS 平面实体）；返回实体 ID，失败 kNull
+    static AcDbObjectId AddDbPolyline(AcDbBlockTableRecord* container,
+                                   const std::vector<AcGePoint3d>& arrPts,
+                                   double dWidth = 0.0,
+                                   bool bClosed = false);
+	// 把已入库实体改到指定层（"0" 层始终存在，无需 EnsureLayer）
+	static bool SetEntLayer(const AcDbObjectId& id, const ACHAR* pszLayer);
+	    // 以 ptCenter 为中心画矩形（高 dHeight × 宽 dWidth），dLineWidth = 全局线宽；返回实体 ID，失败 kNull
+    static AcDbObjectId AddDbRect(AcDbBlockTableRecord* container,
+                                  const AcGePoint3d& ptCenter,
+								  double dWidth,
+                                  double dHeight,
+                                  double dLineWidth = 0.0);
 
 	static cJSON* GetJsonConfigDirect();
 	static cJSON* GetJsonConfig();

@@ -576,16 +576,17 @@ AcDbObjectId CUtils::AddDbText(AcDbBlockTableRecord* container, const ACHAR* psz
     pText->setPosition(pt);
     pText->setTextString(pszText);
     pText->setRotation(0.0);
+    
 
     if (pszStyleName != NULL)
     {
         AcDbObjectId styleId = FindTextStyle(pszStyleName);
         if (!styleId.isNull())
             pText->setTextStyle(styleId);
-	}else{
-		pText->setHeight(dHeight);
-		pText->setWidthFactor(dWidthFactor);
 	}
+
+	pText->setHeight(dHeight);
+	pText->setWidthFactor(dWidthFactor);
 
     // ★ 对齐：先设模式，再设对齐点（顺序不能反）
     switch (hAlign)
