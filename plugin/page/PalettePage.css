@@ -1,0 +1,317 @@
+/* General Body Styles */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 5px;
+    overflow: hidden; /* Critical: Prevents scrollbars from triggering resize loops */
+    background-color: #F0F0F0; 
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+}
+/* Group Container */
+.group-box {
+    border: 1px solid #999;
+    padding: 0;
+    margin-bottom: 10px;
+    background-color: #fff;
+    position: relative; /* For absolute positioning context if needed */
+}
+/* Header / Title Bar */
+.group-header {
+    background-color: #e0e0e0;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #999;
+    font-weight: bold;
+    color: #333;
+    user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+}
+
+.group-header:hover {
+    background-color: #d0d0d0;
+}
+
+/* Content Area */
+.group-content {
+    padding: 10px;
+    display: block;
+    overflow: hidden; /* Contain floats/margins */
+}
+
+.group-content.collapsed {
+    display: none;
+}
+
+/* Property Table Layout */
+.property-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.property-table td {
+    padding: 4px 2px;
+    vertical-align: middle;
+}
+
+.label-cell {
+    width: 50px;
+    color: #555;
+    text-align: right;
+    padding-right: 10px;
+}
+
+.input-cell {
+    width: auto;
+}
+
+/* Flat Textbox Style */
+input[type="text"] {
+    width: 85%;
+    padding: 3px 5px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    color: #333;
+    font-size: 12px;
+    outline: none;
+}
+
+input[type="text"]:focus {
+    border-color: #666;
+    background-color: #fafafa;
+}
+
+/* Button Container */
+.button-row-center {
+    margin-top: 10px;
+    text-align: center;
+    padding-top: 5px;
+    border-top: 1px solid #eee;
+}
+
+/* Custom Button Style */
+.custom-btn {
+    background-color: #007acc;
+    color: white;
+    border: none;
+    padding: 5px 15px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+.custom-btn:hover {
+    background-color: #005f9e;
+}
+
+.custom-btn:active {
+    background-color: #004578;
+}
+
+.t5 {
+    margin-top: 5px;
+}
+
+/* --- AI Chat Component Styles --- */
+.chat-container {
+    border: 1px solid #ddd;
+    background-color: #fafafa;
+    overflow-y: auto;
+    padding: 5px;
+    margin-bottom: 5px;
+    /* Height will be set by JS */
+}
+
+.chat-message {
+    margin-bottom: 10px;
+    line-height: 1.4;
+    padding: 8px 5px; /* 增加内边距让内容不贴边 */
+    /* border-style: solid;
+    border-width: 1px; */
+    word-wrap: break-word; /* 强制长文本换行 */
+}
+
+.chat-message.user {
+    text-align: right;
+    color: #004578; /* 深蓝色文字 */
+    background-color: #E6F3FF; /* 浅蓝色背景 */
+    border-color: #B3D9F2; /* 浅蓝色边框 */
+    margin-left: 5px; /* 左侧留白，模拟靠右 */
+}
+
+.chat-message.ai {
+    text-align: left;
+    color: #333;
+    background-color: #F5F5F5; /* 浅灰色背景 */
+    border-color: #DDD; /* 浅灰色边框 */
+    border-left: 3px solid #999; /* 左侧重颜色边框，突出AI消息 */
+    margin-right: 5px; /* 右侧留白，模拟靠左 */
+}
+
+.chat-input-area {
+    width: 100%;
+}
+
+.chat-send-btn {
+    width: 60px;
+    padding: 4px;
+}
+
+.textarea-owner {
+    width: 95%;
+    padding: 5px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    color: #333;
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+    outline: none;
+    resize: vertical;
+    min-height: 60px;
+}
+
+.textarea-owner:focus {
+    border-color: #666;
+    background-color: #fafafa;
+}
+
+/* Ensure the second group takes up remaining space */
+#group-ai {
+    overflow: hidden;
+    position: relative;
+    /* Height will be set by JS */
+}
+.textarea-owner:focus {
+    border-color: #666;
+    background-color: #fafafa;
+}
+
+/* Blinking cursor for thinking state */
+.thinking-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 12px;
+    background-color: #333;
+    margin-left: 3px;
+    vertical-align: middle;
+    overflow: hidden;
+}
+.t5 {
+    margin-top: 5px;
+}
+
+/* Icon Button Style */
+.icon-btn {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    text-align: center;
+    background-color: #007acc;
+    color: white;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    margin: 0 3px;
+    padding: 0;
+    vertical-align: middle;
+}
+
+.icon-btn:hover {
+    background-color: #005f9e;
+}
+
+.icon-btn:active {
+    background-color: #004578;
+}
+.hidden{
+    display: none;
+}
+/* --- 功能菜单 磁贴样式 --- */
+.menu-grid {
+    text-align: center;
+}
+
+.menu-item {
+    display: inline-block;
+    width: 70px;
+    margin: 3px;
+    padding: 8px 4px 6px 4px;
+    border: 1px solid #d6d6d6;
+    background-color: #fafafa;
+    text-align: center;
+    cursor: pointer;
+    vertical-align: top;
+    *display: inline; /* 老版本 IE 兼容 */
+    zoom: 1;
+}
+
+.menu-item:hover {
+    background-color: #e6f3ff;
+    border-color: #007acc;
+}
+
+.menu-item:active {
+    background-color: #cce6ff;
+    border-color: #005f9e;
+}
+
+.menu-icon {
+    display: block;
+    font-size: 18px;
+    line-height: 26px;
+    color: #007acc;
+    font-family: "Segoe UI Symbol", "Arial Unicode MS", Arial, sans-serif;
+}
+
+.menu-text {
+    display: block;
+    margin-top: 3px;
+    color: #333;
+    font-size: 12px;
+}
+/* --- 基础数据 二级菜单 --- */
+/* 修正1：放开菜单组的 overflow，否则弹出的二级菜单会被裁剪 */
+#group-menu .group-content {
+    overflow: visible;
+}
+/* 修正2：IE7 下后面的 group-box(position:relative) 会盖住弹出菜单 */
+#group-menu {
+    z-index: 10;
+}
+
+.menu-item-wrapper {
+    display: inline-block;
+    vertical-align: top;
+    position: relative;   /* 二级菜单的定位参照 */
+    margin: 3px;          /* 外边距移到 wrapper 上 */
+    *display: inline;     /* IE7 inline-block hack，与 .menu-item 相同 */
+    zoom: 1;
+}
+.menu-item-wrapper .menu-item {
+    margin: 0;            /* 避免与 wrapper 边距叠加产生缝隙 */
+}
+
+.submenu {
+    display: none;
+    position: absolute;
+    top: 100%;            /* 紧贴磁贴下边缘，无缝隙 */
+    left: 0;
+    z-index: 100;
+    width: 96px;          /* IE7 下用固定宽度，不用 min-width */
+    background-color: #ffffff;
+    border: 1px solid #007acc;
+}
+.submenu-item {
+    padding: 6px 10px;
+    color: #333;
+    font-size: 12px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.submenu-item:hover {
+    background-color: #e6f3ff;
+    color: #007acc;
+}

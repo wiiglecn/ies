@@ -13,9 +13,7 @@ void CCreatePlanView::Execute()
 {
 	if (!prepare()) return;
 
-	strFilePath = CUtils::GetArxFolder();
-	strFilePath.Replace(_T("\\"), _T("/"));
-
+	
 	CString cadHoleConfigUrl= strFilePath + _T("support/block_define.json");
 	// 解析 JSON（失败时内部已打印错误，这里保留原有业务提示）
     s_blockConfigData = CUtils::LoadJsonFile(cadHoleConfigUrl.GetString());   // 静默模式

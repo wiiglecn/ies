@@ -245,7 +245,7 @@ void CCreateBaseView::MakeBlockName(const ACHAR* pszDwgPath, ACHAR* pszName, int
 }
 bool CCreateBaseView::prepare()
 {
-	CString strFilePath = CUtils::GetArxFolder();
+	strFilePath = CUtils::GetArxFolder();
 	strFilePath.Replace(_T("\\"), _T("/"));
 	CString strUrl;
 	strUrl = strFilePath + _T("project/钻探编录表.json");
@@ -256,6 +256,8 @@ bool CCreateBaseView::prepare()
         CUtils::acutPrintf(_T("[CAD ERROR] 没有导入数据，请先完成数据导入! %s\n"), strUrl.GetString());
         return false;
     }
+
+
 	return true;
 
 }

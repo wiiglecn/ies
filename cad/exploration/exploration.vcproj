@@ -619,6 +619,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\features\CreateSectionView.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\features\CreateSectionView.h"
+				>
+			</File>
+			<File
 				RelativePath=".\features\PatHatchLoader.cpp"
 				>
 			</File>

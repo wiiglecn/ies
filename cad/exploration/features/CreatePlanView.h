@@ -13,7 +13,6 @@ public:
 
 protected:
 	cJSON* s_blockConfigData;
-	CString strFilePath;
 	TCHAR* pszStyleName;
 
 

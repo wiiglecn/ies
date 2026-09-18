@@ -221,6 +221,9 @@ xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&q
 				RelativePath=".\src\Utils.cpp">
 			</File>
 			<File
+				RelativePath="src\Utils_ext_01.cpp">
+			</File>
+			<File
 				RelativePath=".\src\cJSON.c">
 			</File>
 			<File
@@ -398,10 +401,28 @@ xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&q
 				RelativePath="features\BaseDataSet.h">
 			</File>
 			<File
+				RelativePath="features\CreateBaseView.cpp">
+			</File>
+			<File
+				RelativePath="features\CreateBaseView.h">
+			</File>
+			<File
 				RelativePath="features\CreateColumnView.cpp">
 			</File>
 			<File
 				RelativePath="features\CreateColumnView.h">
+			</File>
+			<File
+				RelativePath="features\CreatePlanView.cpp">
+			</File>
+			<File
+				RelativePath="features\CreatePlanView.h">
+			</File>
+			<File
+				RelativePath="features\CreateSectionView.cpp">
+			</File>
+			<File
+				RelativePath="features\CreateSectionView.h">
 			</File>
 			<File
 				RelativePath="features\PatHatchLoader.cpp">

@@ -22,6 +22,8 @@
 #include "../tools/ToolView.h"
 #include "../tools/ToolStyle.h"
 
+#include "../features/CreateColumnView.h"
+
 // Remove #include thread> and add a helper thread procedure
 struct ThreadProcData {
     AiToolCommandData* params;
@@ -274,6 +276,14 @@ LRESULT CDataPalette::HandleApiCommand(WPARAM wParam, LPARAM lParam)
                 }
             }
             break;
+		case WM_USER_FEATURE_COLUMNVIEW:
+			{
+				CUtils::FocusAcadDrawing();
+				CCreateColumnView view;
+				view.Execute();
+				acedPostCommandPrompt(); 
+			}
+			break;
     }
     //acedUpdateDisplay();
     // Signal the waiting thread

@@ -9,6 +9,11 @@ public:
 public:
 	~CCreateBaseView(void);
 protected:
+	cJSON* s_pJsonData;
+	cJSON* s_patConfigData;
+	CString strFilePath;
+
+
 	//-------------------------------------------------------------------------
     // pszDwgPath  : DWG 文件完整路径
     // ptInsert    : 插入点（当前图形 WCS 坐标）
@@ -29,9 +34,6 @@ protected:
     void MakeBlockName(const ACHAR* pszDwgPath, ACHAR* pszName, int nNameCount);
 	// 取（无则读入）路径对应的外部库；失败返回 NULL
     AcDbDatabase* GetExtDb(const ACHAR* pszDwgPath);
-
-	cJSON* s_pJsonData;
-	cJSON* s_patConfigData;
 
 	bool prepare();
 	virtual void ClearExtDbCache();

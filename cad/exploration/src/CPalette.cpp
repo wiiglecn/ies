@@ -42,6 +42,7 @@
 
 #include "../features/CreateColumnView.h"
 #include "../features/CreatePlanView.h"
+#include "../features/CreateSectionView.h"
 #include "../features/PatHatchLoader.h"
 #include "../features/BaseDataSet.h"
 
@@ -171,7 +172,7 @@ int CDataPalette::OnCreate(LPCREATESTRUCT lpCreateStruct)
     UpdateHtmlDisplay();
 
 
-	 LoadPalette();
+	LoadPalette();
 
     SetName(_T("Data HTML"));
 
@@ -385,6 +386,16 @@ LRESULT CDataPalette::HandleJsCommand(LPCTSTR szCommand, LPCTSTR szParam)
 
 		CUtils::FocusAcadDrawing();
 		CCreatePlanView view;
+		view.Execute();
+		acedPostCommandPrompt(); 
+    }
+
+	else if (_tcscmp(szCommand, _T("CreateSectionView")) == 0)
+    {
+		CUtils::acutPrintf(_T("CreateSectionView.\n"));
+
+		CUtils::FocusAcadDrawing();
+		CCreateSectionView view;
 		view.Execute();
 		acedPostCommandPrompt(); 
     }
