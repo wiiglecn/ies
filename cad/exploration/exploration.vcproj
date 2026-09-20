@@ -119,7 +119,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D /E /I &quot;$(ProjectDir)res\page&quot; &quot;$(OutDir)\page&quot;&#x0D;&#x0A;xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
+				CommandLine="xcopy /Y /D &quot;$(ProjectDir)..\lib\2007\libcurl.dll&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.json&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D &quot;$(ProjectDir)res\tools.lsp&quot; &quot;$(OutDir)&quot;&#x0D;&#x0A;xcopy /Y /D /E /I &quot;$(ProjectDir)res\page&quot; &quot;$(OutDir)\page&quot;&#x0D;&#x0A;xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -289,6 +289,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\Init.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\LineHolePlacer.cpp"
 				>
 			</File>
@@ -302,6 +306,10 @@
 			</File>
 			<File
 				RelativePath=".\src\MySafeHtmlView.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\OwnerMenu.cpp"
 				>
 			</File>
 			<File
@@ -394,6 +402,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\include\Init.h"
+				>
+			</File>
+			<File
 				RelativePath=".\include\LineHolePlacer.h"
 				>
 			</File>
@@ -407,6 +419,10 @@
 			</File>
 			<File
 				RelativePath=".\include\MySafeHtmlView.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\OwnerMenu.h"
 				>
 			</File>
 			<File

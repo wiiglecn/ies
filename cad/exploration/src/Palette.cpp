@@ -33,7 +33,11 @@
 #include "CPalette.h"
 //#include "InspPalette.h"
 #include "Utils.h"
+#include "Init.h"
+
 #include "../tools/ToolGlobal.h"
+#include "./OwnerMenu.h"
+
 //#include "../tools/AcadFrameHook.h"
 
 // Global Palette Set Instance
@@ -81,14 +85,14 @@ acrxEntryPoint(AcRx::AppMsgCode msg, void* pkt)
 	case AcRx::kUnloadAppMsg:
 //#ifdef _CAD2005
 //#else
-		DllMain(_hdllInstance, DLL_PROCESS_DETACH, NULL);
+		
 //#endif
 		UnloadApplication();
+		DllMain(_hdllInstance, DLL_PROCESS_DETACH, NULL);
 		break;
 	}
 	return AcRx::kRetOK;
 }
-
 // Command implementation for "PALETTESHOW"
 void paletteShow()
 {
@@ -155,7 +159,21 @@ VOID CALLBACK PaletteShowTimerProc(HWND hWnd, UINT nMsg, UINT_PTR nTimerid, DWOR
 	if (acDocManager->curDocument() != NULL)
 	{
 		KillTimer(NULL, nTimerid); // 停止定时器，确保只执行一次
-		paletteShow();
+		//paletteShow();
+		//CInit::loadMenu();
+		AcApDocument* pDoc = acDocManager->curDocument();
+
+		if (pDoc == NULL)
+			return;
+		Acad::ErrorStatus es =
+        acDocManager->sendStringToExecute(
+            pDoc,
+            _T("SLINIT\n"),
+            false,
+            false,
+            true
+        );
+		CUtils::acutPrintf(_T("send SLINIT status = %d\n"), es);
 	}
     
 }
@@ -172,12 +190,50 @@ void paletteHide()
 void InitApplication()
 {
 	// Add a command to show the paletteset
-	AddCommand(_T("ASDK"), _T("SLSHOW"), _T("SLSHOW"), ACRX_CMD_MODAL, paletteShow);
-	AddCommand(_T("ASDK"), _T("SLHIDE"), _T("SLHIDE"), ACRX_CMD_MODAL, paletteHide);
-	AddCommand(_T("ASDK"), _T("SLCMD"), _T("SLCMD"), ACRX_CMD_MODAL, ToolGlobal::CMD);
-	AddCommand(_T("ASDK"), _T("SLCCV"), _T("SLCCV"), ACRX_CMD_MODAL, ToolGlobal::CreateColumnView);
-	
+	AddCommand(MENUGROUP, _T("SLSHOW"), _T("SLSHOW"), ACRX_CMD_MODAL, paletteShow);
+	AddCommand(MENUGROUP, _T("SLHIDE"), _T("SLHIDE"), ACRX_CMD_MODAL, paletteHide);
+	AddCommand(MENUGROUP, _T("SLCMD"), _T("SLCMD"), ACRX_CMD_MODAL, ToolGlobal::CMD);
+	AddCommand(MENUGROUP, _T("SLCCV"), _T("SLCCV"), ACRX_CMD_MODAL, ToolGlobal::CreateColumnView);
+	AddCommand(MENUGROUP, _T("SLINIT"), _T("SLINIT"), ACRX_CMD_MODAL, CInit::Prepare);
 
+	//AddCommand(MENUGROUP, _T("SLUNLOAD"), _T("SLUNLOAD"), ACRX_CMD_MODAL, CInit::CmdUnloadSLTools);
+
+
+	AddCommand(MENUGROUP, _T("SLPLANVIEW"),  _T("SLPLANVIEW"),
+           ACRX_CMD_MODAL, COwnerMenu::SLPlanView);
+
+	AddCommand(MENUGROUP, _T("SLSECTIONVIEW"), _T("SLSECTIONVIEW"),
+			ACRX_CMD_MODAL, COwnerMenu::SLSectionView);
+
+	AddCommand(MENUGROUP, _T("SLCOLUMNVIEW"), _T("SLCOLUMNVIEW"),
+			ACRX_CMD_MODAL, COwnerMenu::SLColumnView);
+
+	AddCommand(MENUGROUP, _T("SLHOLEDIAMETER"), _T("SLHOLEDIAMETER"),
+           ACRX_CMD_MODAL, COwnerMenu::SLHoleDiameter);
+
+	AddCommand(MENUGROUP, _T("SLMAPPING"), _T("SLMAPPING"),
+			ACRX_CMD_MODAL, COwnerMenu::SLMapping);
+
+	AddCommand(MENUGROUP, _T("SLCHECK"), _T("SLCHECK"),
+			ACRX_CMD_MODAL, COwnerMenu::SLCheck);
+
+	AddCommand(MENUGROUP, _T("SLIMPORTDATA"), _T("SLIMPORTDATA"),
+			ACRX_CMD_MODAL, COwnerMenu::SLImportData);
+
+	AddCommand(MENUGROUP, _T("SLBLOCKLINESELECT"), _T("SLBLOCKLINESELECT"),
+			ACRX_CMD_MODAL, COwnerMenu::SLBlockLineSelect);
+
+	AddCommand(MENUGROUP, _T("SLPOLYLINEHOLE"), _T("SLPOLYLINEHOLE"),
+			ACRX_CMD_MODAL, COwnerMenu::SLPolylineHole);
+
+	AddCommand(MENUGROUP, _T("SLARCPICK"), _T("SLARCPICK"),
+			ACRX_CMD_MODAL, COwnerMenu::SLArcPick);
+
+	AddCommand(MENUGROUP, _T("SLSINGLESCALE"), _T("SLSINGLESCALE"),
+			ACRX_CMD_MODAL, COwnerMenu::SLSingleScale);
+
+	AddCommand(MENUGROUP, _T("SLALLSCALE"), _T("SLALLSCALE"),
+			ACRX_CMD_MODAL, COwnerMenu::SLAllScale);
 #ifdef _CAD2005
 #else
 
@@ -198,13 +254,11 @@ void InitApplication()
 void UnloadApplication()
 {
 
+	CInit::Unload();
+	acedRegCmds->removeGroup(MENUGROUP);
 	// CUtils::FocusAcadDrawing();
 	// Unregister commands
-#ifdef _CAD2005
-	acedRegCmds->removeGroup("ASDK");
-#else
-	acedRegCmds->removeGroup(_T("ASDK"));
-#endif
+
 
 	// Destroy the paletteset
 	if(pPaletteSet)

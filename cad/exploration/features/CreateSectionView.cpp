@@ -45,6 +45,8 @@ void CCreateSectionView::Execute()
         }
     }
 
+	drawTable();
+
 	//String cadBlockUrl;
 	//cadBlockUrl.Format(_T("support/%s/钻孔剖面图.dwg"), CADYEAR);
 	//cadBlockUrl = strFilePath + cadBlockUrl;
@@ -123,6 +125,7 @@ void CCreateSectionView::showAllLayer()
     }
     pLayerTable->close();
 
+
     // 拼接成数组形式：["a", "b", "c"]
     CString strAll(_T("["));
     for (size_t i = 0; i < arrNames.size(); ++i)
@@ -137,4 +140,23 @@ void CCreateSectionView::showAllLayer()
     // 一次性打印（整个数组只调一次 acutPrintf）
     CUtils::acutPrintf(_T("[LAYER LIST] 共 %d 个图层：%s\n"),
                        (int)arrNames.size(), (LPCTSTR)strAll);
+
+}
+
+void CCreateSectionView::drawTable()
+{
+	double left=23.0;
+	double bottom = 76.0;
+	double height = 10.0;
+
+
+	
+	bool is_dt = false;
+
+	ACHAR* layerName = _T("地质-标注栏");
+	CUtils::EnsureLayer(layerName,true);
+
+
+	
+
 }

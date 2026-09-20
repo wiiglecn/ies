@@ -1,0 +1,114 @@
+;; ============================================================
+;; SLTOOLS.MNL
+;; AutoCAD 2005 / 2007
+;; 将 SLTOOLS.POP1 添加到现有菜单栏末尾
+;; ============================================================
+
+(defun SL_AddMenuToEnd ( / i pos ret test )
+
+  (princ "\n")
+  (princ "\n========================================")
+  (princ "\n[SLTOOLS] 开始添加菜单")
+  (princ "\n========================================")
+
+  ;; 1. 检查菜单组
+  (if (not (menugroup "SLTOOLS"))
+
+    (progn
+      (princ "\n[错误] 没有找到 SLTOOLS 菜单组。")
+      (princ "\n请先执行 MENULOAD 加载 SLTOOLS。")
+    )
+
+    (progn
+
+      (princ "\n[成功] 已找到 SLTOOLS 菜单组。")
+
+      ;; 2. 删除之前添加的同名菜单，避免重复
+      (princ "\n[步骤1] 尝试删除已经插入的 SLTOOLS.POP1...")
+
+      (setq ret (menucmd "GSLTOOLS.POP1=-"))
+
+      (princ
+        (strcat
+          "\n[调试] 删除操作返回："
+          (if ret (vl-princ-to-string ret) "nil")
+        )
+      )
+
+      ;; 3. 查找菜单栏末尾
+      (princ "\n[步骤2] 开始探测菜单栏位置...")
+
+      (setq i 1)
+
+      (while
+        (and
+          (<= i 16)
+          (menucmd (strcat "P" (itoa i) ".1=?"))
+        )
+
+        (princ
+          (strcat "\n[调试] P" (itoa i) " 存在。")
+        )
+
+        (setq i (1+ i))
+      )
+
+      ;; i 是第一个不存在的位置
+      ;; 因此 i-1 是最后一个已有菜单的位置
+      (setq pos (1- i))
+
+      (princ
+        (strcat
+          "\n[调试] 最后一个菜单位置：P"
+          (itoa pos)
+        )
+      )
+
+      ;; 4. 在最后一个菜单后面插入
+      (if (and (>= pos 1) (<= pos 16))
+
+        (progn
+
+          (princ
+            (strcat
+              "\n[步骤3] 准备在 P"
+              (itoa pos)
+              " 后面插入 SLTOOLS.POP1..."
+            )
+          )
+
+          (setq ret
+            (menucmd
+              (strcat
+                "P"
+                (itoa pos)
+                "=+SLTOOLS.POP1"
+              )
+            )
+          )
+
+          (princ
+            (strcat
+              "\n[调试] 插入操作返回："
+              (if ret (vl-princ-to-string ret) "nil")
+            )
+          )
+
+          ;; 5. 输出结果
+          (princ "\n[步骤4] 插入操作已执行。")
+          (princ "\n请检查菜单栏末尾是否出现“昇龙助手”。")
+        )
+
+        (princ "\n[错误] 没有找到有效的菜单栏位置。")
+      )
+    )
+  )
+
+  (princ "\n[SLTOOLS] 执行结束。")
+  (princ)
+)
+
+;; 自动执行
+(SL_AddMenuToEnd)
+
+(princ)

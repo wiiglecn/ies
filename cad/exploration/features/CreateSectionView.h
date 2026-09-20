@@ -17,4 +17,6 @@ public:
 protected:
 	cJSON* s_ConfigData;
 
+
+	void drawTable();
 };

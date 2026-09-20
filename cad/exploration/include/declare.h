@@ -96,6 +96,9 @@
 #define WM_USER_CHAT_SEND_ERROR (WM_USER + 4001)
 
 #define HOLE_DIAMETER_ZK "hole_diameter_zk"
+
+#define MENUGROUP _T("SLTOOLS")
+
 //#ifdef _AUTOCAD2005
 typedef wchar_t KCHAR;
 //#endif

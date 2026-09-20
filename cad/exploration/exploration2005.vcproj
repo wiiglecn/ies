@@ -191,6 +191,9 @@ xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&q
 				RelativePath=".\src\HttpClient.cpp">
 			</File>
 			<File
+				RelativePath="src\Init.cpp">
+			</File>
+			<File
 				RelativePath=".\src\LineHolePlacer.cpp">
 			</File>
 			<File
@@ -198,6 +201,9 @@ xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&q
 			</File>
 			<File
 				RelativePath=".\src\Logger.cpp">
+			</File>
+			<File
+				RelativePath="src\OwnerMenu.cpp">
 			</File>
 			<File
 				RelativePath="src\Palette2005.cpp">
@@ -261,6 +267,9 @@ xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&q
 				RelativePath=".\include\HttpClient.h">
 			</File>
 			<File
+				RelativePath="include\Init.h">
+			</File>
+			<File
 				RelativePath=".\include\LineHolePlacer.h">
 			</File>
 			<File
@@ -268,6 +277,9 @@ xcopy /Y /D /E /I &quot;$(ProjectDir)res\support&quot; &quot;$(OutDir)\support&q
 			</File>
 			<File
 				RelativePath=".\include\Logger.h">
+			</File>
+			<File
+				RelativePath="include\OwnerMenu.h">
 			</File>
 			<File
 				RelativePath=".\include\PaletteCleanup.h">

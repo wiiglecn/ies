@@ -619,11 +619,11 @@ void CDataPalette::clean()
 
 
 	//CPaletteCleanup::SafeCleanupHtmlView(m_pHtmlView);
-#ifndef _CAD2005
+//#ifdef _CAD2005
 	if (m_pHtmlView)
     {
  //       // 停止网页
- //       m_pHtmlView->Stop();
+        m_pHtmlView->Stop();
 
 	//	// 3. 显式释放 IWebBrowser2 接口
  //   // 减少 COM 引用计数，促使内部对象提前清理
@@ -644,7 +644,7 @@ void CDataPalette::clean()
         
         m_pHtmlView = NULL;
     }
-#endif
+//#endif
 	// Save Palette's persistent data
 	SavePalette();
 }
