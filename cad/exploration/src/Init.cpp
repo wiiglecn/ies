@@ -4,15 +4,54 @@
 #include "utils.h"
 #include "Init.h"
 #include "adslib.h"
+#include "AiApiRequest.h"
+#include "ApiMessageWnd.h"
 
-
+AiApiRequest* CInit::hServer = NULL;
+CApiMessageWnd* CInit::pApiWnd = NULL;
 
 void CInit::Prepare()
 {
 	loadMenu();
+
+	pApiWnd = new CApiMessageWnd();
+
+    if (!pApiWnd->Create())
+    {
+        delete pApiWnd;
+        pApiWnd = NULL;
+
+        CUtils::acutPrintf(_T("[ERROR] Create API message window failed\n"));
+        return;
+    }
+
+    hServer = new AiApiRequest();
+    hServer->setAcadWnd(pApiWnd);
+    hServer->Start();
+
+
 }
 void CInit::Unload()
 {
+	if (hServer != NULL)
+    {
+        hServer->Stop();
+        delete hServer;
+        hServer = NULL;
+    }
+
+	if (pApiWnd != NULL)
+    {
+        if (::IsWindow(pApiWnd->GetSafeHwnd()))
+        {
+            pApiWnd->DestroyWindow();
+        }
+
+        delete pApiWnd;
+        pApiWnd = NULL;
+    }
+
+
 	//unloadMenu();
     /*int ret =acedCommand(
         RTSTR, _T("_.MENUUNLOAD"),

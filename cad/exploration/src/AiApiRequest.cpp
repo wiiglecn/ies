@@ -276,7 +276,7 @@ void HandleAiTool(struct mg_connection* nc,
 		waitResult = WAIT_OBJECT_0;
 	}else{*/
 		pAcadWnd->PostMessage(WM_USER_TOOL, nCommandID, (LPARAM)pData);
-		waitResult = WaitForSingleObject(hEvent, 10000); 
+		waitResult = WaitForSingleObject(hEvent, 60*1000); 
 	//}
 
      // 6. Wait for the event to be signaled by the main thread

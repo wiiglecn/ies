@@ -1,5 +1,8 @@
 #pragma once
 
+class AiApiRequest;
+class CApiMessageWnd;
+//class AiChat;
 class CInit
 {
 public:
@@ -14,4 +17,9 @@ public:
 private:
 	static void unloadMenu();
 	static void loadMenu();
+
+	
+	static AiApiRequest* hServer;
+	static CApiMessageWnd* pApiWnd;
+	//static AiChat* hChat;
 };

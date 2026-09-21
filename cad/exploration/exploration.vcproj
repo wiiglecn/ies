@@ -249,6 +249,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ApiMessageWnd.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\BaseMarker.cpp"
 				>
 			</File>
@@ -363,6 +367,10 @@
 			</File>
 			<File
 				RelativePath=".\include\AiChat.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\ApiMessageWnd.h"
 				>
 			</File>
 			<File
