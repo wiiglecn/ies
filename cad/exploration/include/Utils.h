@@ -114,14 +114,17 @@ public:
                                    const std::vector<AcGePoint3d>& arrPts,
                                    double dWidth = 0.0,
                                    bool bClosed = false);
-	// 把已入库实体改到指定层（"0" 层始终存在，无需 EnsureLayer）
-	static bool SetEntLayer(const AcDbObjectId& id, const ACHAR* pszLayer);
 	    // 以 ptCenter 为中心画矩形（高 dHeight × 宽 dWidth），dLineWidth = 全局线宽；返回实体 ID，失败 kNull
     static AcDbObjectId AddDbRect(AcDbBlockTableRecord* container,
                                   const AcGePoint3d& ptCenter,
 								  double dWidth,
                                   double dHeight,
                                   double dLineWidth = 0.0);
+	//画直线
+	static AcDbObjectId AddLine(AcDbBlockTableRecord* container,AcGePoint3d& ptStart,AcGePoint3d& ptEnd);
+	
+	// 把已入库实体改到指定层（"0" 层始终存在，无需 EnsureLayer）
+	static bool SetEntLayer(const AcDbObjectId& id, const ACHAR* pszLayer);
 
 	static cJSON* GetJsonConfigDirect();
 	static cJSON* GetJsonConfig();

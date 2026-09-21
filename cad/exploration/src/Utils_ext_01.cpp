@@ -295,3 +295,15 @@ AcDbObjectId CUtils::AddDbRect(AcDbBlockTableRecord* container,
 
     return AddDbPolyline(container, arrPts, dLineWidth, true);   // true = 闭合 → 矩形
 }
+AcDbObjectId CUtils::AddLine(AcDbBlockTableRecord* container,AcGePoint3d& ptStart,AcGePoint3d& ptEnd)
+{
+	//从头到土层描述的横线
+	AcDbLine* pLine = new AcDbLine(ptStart, ptEnd);
+	AcDbObjectId lineId = AcDbObjectId::kNull;
+	Acad::ErrorStatus es = container->appendAcDbEntity(lineId, pLine);
+	if (es == Acad::eOk)
+		pLine->close();                  // 入库成功 → close（不能 delete）
+	else
+		delete pLine;                    // 入库失败 → 未入库，只能 delete
+	return lineId;
+}

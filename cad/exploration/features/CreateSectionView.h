@@ -18,5 +18,8 @@ protected:
 	cJSON* s_ConfigData;
 
 
-	void drawTable();
+	//画标注表格
+	void drawTable(AcGePoint3d& basePt);
+	//画标尺
+	void drawRuler(AcGePoint3d& basePt,double min_zk,int divide,double elevation_zero);
 };
