@@ -56,7 +56,7 @@ void CCreatePlanView::Execute()
 	cJSON* item = NULL;
 	cJSON_ArrayForEach(item, s_pJsonData) {
         // 处理每个属性
-        if (cJSON_IsArray(item)) {
+        if (item!=NULL) {
             const char* blockName = (item->string != NULL) ? item->string : "(匿名数组)";
             CUtils::acutPrintf(_T("[数组] %hs，共 %d 个元素\n"),
                             blockName, cJSON_GetArraySize(item));
@@ -69,13 +69,9 @@ void CCreatePlanView::Execute()
 
 			ACHAR holeName[256] = {0};
 			{
-				cJSON* rowTry = cJSON_GetArrayItem(item, 2);
-				if (rowTry == NULL){
+				cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("钻孔类型"));
+				if (columnTry == NULL){
 					continue;  
-				}
-				cJSON* columnTry = cJSON_GetArrayItem(rowTry, 14); 
-				if (columnTry == NULL || !cJSON_IsString(columnTry)){
-					continue;
 				}
 				CUtils::utf8ToTChar(columnTry->valuestring, holeName, ARRAYSIZE(holeName));
 			}
@@ -108,20 +104,19 @@ void CCreatePlanView::Execute()
 
 			AcGePoint3d ptInsert;
 			{
-				cJSON* rowTry = cJSON_GetArrayItem(item, 4);
-				if (rowTry == NULL)
-					continue;  
 				{
-					cJSON* columnTry = cJSON_GetArrayItem(rowTry, 4); 
-					if (columnTry == NULL || !cJSON_IsNumber(columnTry))
-						continue;
+					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("X坐标(m)"));
+					if (columnTry == NULL){
+						continue;  
+					}
 					ptInsert.x = columnTry->valuedouble;
 
 				}
 				{
-					cJSON* columnTry = cJSON_GetArrayItem(rowTry, 9); 
-					if (columnTry == NULL || !cJSON_IsNumber(columnTry))
-						continue;
+					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("Y坐标(m)"));
+					if (columnTry == NULL){
+						continue;  
+					}
 					ptInsert.y = columnTry->valuedouble;
 				}
 			}
@@ -136,15 +131,20 @@ void CCreatePlanView::Execute()
 			TCHAR elevation_str[128] = { 0 };
 			TCHAR depth_str[128] = { 0 };
 			{
-				cJSON* rowTry = cJSON_GetArrayItem(item, 2);
-				if (rowTry == NULL)
-					continue;  
 				{
-					double elevation = CUtils::JsonValToDouble(cJSON_GetArrayItem(rowTry, 11));
-    				_stprintf(elevation_str, _T("%.2f"), elevation);
+					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("孔口高程(m)"));
+					if (columnTry == NULL){
+						continue;  
+					}
+					double elevation = CUtils::JsonValToDouble(columnTry);
+					_stprintf(elevation_str, _T("%.2f"), elevation);
 				}
 				{
-					double depth = CUtils::JsonValToDouble(cJSON_GetArrayItem(rowTry, 18));
+					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("终孔深度(m)"));
+					if (columnTry == NULL){
+						continue;
+					}
+					double depth = CUtils::JsonValToDouble(columnTry);
     				_stprintf(depth_str, _T("%.2f"), depth);
 				}
 			}

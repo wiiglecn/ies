@@ -88,7 +88,9 @@ static const ToolRouteInfo toolRoutes[] = {
 
 	{ "/ai/tool/test", "test", WM_USER_TOOL_TEST },
 
-	{ "/ai/feature/create_column_view", "create_column_view", WM_USER_FEATURE_COLUMNVIEW }
+	{ "/ai/feature/create_plan_view", "create_plan_view", WM_USER_FEATURE_PLANVIEW },
+	{ "/ai/feature/create_column_view", "create_column_view", WM_USER_FEATURE_COLUMNVIEW },
+	{ "/ai/feature/create_section_view", "create_section_view", WM_USER_FEATURE_SECTIONVIEW }
 };	
 bool EndsWith(const std::string& str, const std::string& suffix) {
     if (suffix.size() > str.size()) return false;

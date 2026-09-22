@@ -23,8 +23,9 @@
 #include "../tools/ToolView.h"
 #include "../tools/ToolStyle.h"
 
+#include "../features/CreatePlanView.h"
 #include "../features/CreateColumnView.h"
-
+#include "../features/CreateSectionView.h"
 
 
 //CApiMessageWnd::CApiMessageWnd(void)
@@ -304,10 +305,28 @@ LRESULT CApiMessageWnd::HandleApiCommand(WPARAM wParam, LPARAM lParam)
                 }
             }
             break;
+		case WM_USER_FEATURE_PLANVIEW:
+			{
+				//CUtils::FocusAcadDrawing();
+				CCreatePlanView view;
+				view.Execute();
+				params->ret = 0;
+				//acedPostCommandPrompt(); 
+			}
+			break;
 		case WM_USER_FEATURE_COLUMNVIEW:
 			{
 				//CUtils::FocusAcadDrawing();
 				CCreateColumnView view;
+				view.Execute();
+				params->ret = 0;
+				//acedPostCommandPrompt(); 
+			}
+			break;
+		case WM_USER_FEATURE_SECTIONVIEW:
+			{
+				//CUtils::FocusAcadDrawing();
+				CCreateSectionView view;
 				view.Execute();
 				params->ret = 0;
 				//acedPostCommandPrompt(); 

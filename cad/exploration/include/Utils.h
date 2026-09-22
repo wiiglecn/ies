@@ -38,6 +38,7 @@ public:
 	CUtils(void);
 public:
 	~CUtils(void);
+	static bool checkEmpty(const TCHAR* str);
 	static bool IsCircleExisting(const AcGePoint3d& center);
 	static void FocusAcadDrawing();
 	static CString GetArxFolder();
@@ -126,6 +127,7 @@ public:
 	// 把已入库实体改到指定层（"0" 层始终存在，无需 EnsureLayer）
 	static bool SetEntLayer(const AcDbObjectId& id, const ACHAR* pszLayer);
 
+	static cJSON* GetJsonObjectItemUtf8(cJSON* root, const TCHAR* key);
 	static cJSON* GetJsonConfigDirect();
 	static cJSON* GetJsonConfig();
 	static void FreeJsonConfig();

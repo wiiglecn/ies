@@ -33,6 +33,10 @@ CUtils::CUtils(void)
 CUtils::~CUtils(void)
 {
 }
+bool CUtils::checkEmpty(const TCHAR* str)
+{
+	return str == NULL || str[0] == _T('\0');
+}
 void CUtils::FocusAcadDrawing()
 {
     // Try to get the active document's viewport window
@@ -915,4 +919,14 @@ void CUtils::FreeJsonConfig()
 cJSON* CUtils::GetJsonConfigDirect()
 {
     return s_pJsonConfig;
+}
+cJSON* CUtils::GetJsonObjectItemUtf8(cJSON* root, const TCHAR* key)
+{
+	if (root == NULL || key == NULL)
+        return NULL;
+
+    char utf8Key[256] = {0};
+    TCharToUtf8(key, utf8Key, sizeof(utf8Key));
+
+    return cJSON_GetObjectItemCaseSensitive(root, utf8Key);
 }
