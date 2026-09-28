@@ -7,6 +7,7 @@
 
 CCreatePlanView::CCreatePlanView():CCreateBaseView()
 {
+	s_blockConfigData = NULL;
 	pszStyleName = _T("勘察孔");
 }
 bool CCreatePlanView::Execute(const TCHAR* requestPath)
