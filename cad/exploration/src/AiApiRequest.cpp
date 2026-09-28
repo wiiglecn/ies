@@ -267,6 +267,7 @@ void HandleAiTool(struct mg_connection* nc,
         static LONG requestSequence = 0;
         CString requestDir = CUtils::GetArxFolder();
         requestDir += _T("runtime");
+        CUtils::acutPrintf(_T("[AI] Plan view runtime dir: %s\n"), requestDir.GetString());
         if (!CreateDirectory(requestDir, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
             delete pData;
             CloseHandle(hEvent);
@@ -294,6 +295,7 @@ void HandleAiTool(struct mg_connection* nc,
             return;
         }
         _tcscpy(pData->planViewRequestPath, requestPath.GetString());
+        CUtils::acutPrintf(_T("[AI] Plan view request file: %s\n"), requestPath.GetString());
         FILE* requestFile = _tfopen(requestPath.GetString(), _T("wb"));
         if (requestFile == NULL || fwrite(body.data(), 1, body.size(), requestFile) != body.size()) {
             if (requestFile) fclose(requestFile);
