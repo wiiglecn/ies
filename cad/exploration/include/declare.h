@@ -114,9 +114,10 @@ struct AiToolCommandData {
     HANDLE hEvent;        // Sync event
 	int ret;
     cJSON* resultJson;    // Output JSON result from CAD (can be NULL)
+    TCHAR planViewRequestPath[MAX_PATH]; // Per-request parameter file path
     
     // Constructor to initialize members
-    AiToolCommandData() : jsonRoot(NULL), hEvent(NULL), ret(1), resultJson(NULL) {}
+    AiToolCommandData() : jsonRoot(NULL), hEvent(NULL), ret(1), resultJson(NULL) { planViewRequestPath[0] = _T('\0'); }
 };
 
 
