@@ -311,7 +311,7 @@ LRESULT CApiMessageWnd::HandleApiCommand(WPARAM wParam, LPARAM lParam)
 				CCreatePlanView view;
 				params->ret = view.Execute(params->planViewRequestPath) ? 0 : 1;
 				// Remove the one-shot payload after CAD has consumed it.
-				if (params->planViewRequestPath[0] != _T('\\0'))
+				if (params->planViewRequestPath[0] != _T('\0'))
 					DeleteFile(params->planViewRequestPath);
 				//acedPostCommandPrompt(); 
 			}
