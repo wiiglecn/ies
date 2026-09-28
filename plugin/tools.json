@@ -1,0 +1,1228 @@
+[
+    {
+        "type": "function",
+        "function": {
+            "name": "create_line",
+            "description": "Draws a line in AutoCAD Model Space. Returns a JSON object containing the 'entityID' (handle) of the newly created line.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x1": { "type": "number", "description": "Start point X coordinate" },
+                    "y1": { "type": "number", "description": "Start point Y coordinate" },
+                    "x2": { "type": "number", "description": "End point X coordinate" },
+                    "y2": { "type": "number", "description": "End point Y coordinate" },
+                    "width": {
+                        "type": "number",
+                        "description": "Line weight in hundredths of a millimeter (e.g., 30 = 0.30mm). Common values: 0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211. Optional, defaults to ByLayer."
+                    }
+                },
+                "required": [
+                    "x1",
+                    "y1",
+                    "x2",
+                    "y2"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_circle",
+            "description": "Draws a circle in AutoCAD Model Space. Returns a JSON object containing the 'entityID' (handle) of the newly created circle.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "Center point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Center point Y coordinate"
+                    },
+                    "radius": {
+                        "type": "number",
+                        "description": "Radius of the circle (must be positive)"
+                    }
+                },
+                "required": [
+                    "x",
+                    "y",
+                    "radius"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_rectangle",
+            "description": "Draws a rectangle in AutoCAD Model Space as a closed polyline. Returns a JSON object containing the 'entityID' (handle) of the newly created rectangle.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x1": { "type": "number", "description": "Bottom-left corner X coordinate" },
+                    "y1": { "type": "number", "description": "Bottom-left corner Y coordinate" },
+                    "width": { "type": "number", "description": "Width of the rectangle" },
+                    "height": { "type": "number", "description": "Height of the rectangle" },
+                    "line_width": {
+                        "type": "number",
+                        "description": "Constant line width in drawing units (optional, defaults to 0)."
+                    }
+                },
+                "required": [
+                    "x1",
+                    "y1",
+                    "width",
+                    "height"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_text",
+            "description": "Creates a text entity in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "Insertion point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Insertion point Y coordinate"
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "The text content to display"
+                    },
+                    "height": {
+                        "type": "number",
+                        "description": "Height of the text (optional, defaults to 1.0 if not provided)"
+                    },
+                    "rotation": {
+                        "type": "number",
+                        "description": "Rotation angle in radians (optional, defaults to 0.0)"
+                    }
+                },
+                "required": [
+                    "x",
+                    "y",
+                    "text"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_layer",
+            "description": "Creates a new layer in the AutoCAD database if it does not already exist.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the new layer"
+                    }
+                },
+                "required": [
+                    "name"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_layers",
+            "description": "Lists all existing layers in the current AutoCAD drawing. Returns a JSON array of layer names.",
+            "parameters": {
+            "type": "object",
+            "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_polyline",
+            "description": "Draws a polyline in AutoCAD Model Space. Returns a JSON object containing the 'entityID' (handle) of the newly created polyline.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "points": {
+                        "type": "array",
+                        "description": "Array of points for the polyline vertices (minimum 2 points).",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "x": { "type": "number", "description": "Point X coordinate" },
+                                "y": { "type": "number", "description": "Point Y coordinate" }
+                            },
+                            "required": ["x", "y"]
+                        }
+                    },
+                    "closed": {
+                        "type": "boolean",
+                        "description": "Whether the polyline is closed (optional, defaults to false)."
+                    },
+                    "width": {
+                        "type": "number",
+                        "description": "Constant line width in drawing units (optional, defaults to 0)."
+                    }
+                },
+                "required": [
+                    "points"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_ellipse",
+            "description": "Draws an ellipse in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "Center point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Center point Y coordinate"
+                    },
+                    "major_x": {
+                        "type": "number",
+                        "description": "Major axis vector X component (length defines the radius)."
+                    },
+                    "major_y": {
+                        "type": "number",
+                        "description": "Major axis vector Y component (length defines the radius)."
+                    },
+                    "ratio": {
+                        "type": "number",
+                        "description": "Ratio of minor axis to major axis (must be > 0 and <= 1)."
+                    }
+                },
+                "required": [
+                    "x",
+                    "y",
+                    "major_x",
+                    "major_y",
+                    "ratio"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_spline",
+            "description": "Draws a spline curve in AutoCAD Model Space using fit points.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "points": {
+                        "type": "array",
+                        "description": "Array of fit points for the spline (minimum 3 points).",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "x": {
+                                    "type": "number",
+                                    "description": "Point X coordinate"
+                                },
+                                "y": {
+                                    "type": "number",
+                                    "description": "Point Y coordinate"
+                                }
+                            },
+                            "required": [
+                                "x",
+                                "y"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "points"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_dimension_linear",
+            "description": "Creates a linear (rotated) dimension in AutoCAD Model Space between two points.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x1": { "type": "number", "description": "First definition point X coordinate" },
+                    "y1": { "type": "number", "description": "First definition point Y coordinate" },
+                    "x2": { "type": "number", "description": "Second definition point X coordinate" },
+                    "y2": { "type": "number", "description": "Second definition point Y coordinate" },
+                    "dim_x": { "type": "number", "description": "Dimension line point X coordinate" },
+                    "dim_y": { "type": "number", "description": "Dimension line point Y coordinate" },
+                    "rotation": { "type": "number", "description": "Rotation angle of the dimension line in radians (optional, defaults to 0.0)" }
+                },
+                "required": ["x1", "y1", "x2", "y2", "dim_x", "dim_y"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_dimension_aligned",
+            "description": "Creates an aligned dimension in AutoCAD Model Space. The dimension line is parallel to the line between two definition points.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x1": { "type": "number", "description": "First definition point X coordinate" },
+                    "y1": { "type": "number", "description": "First definition point Y coordinate" },
+                    "x2": { "type": "number", "description": "Second definition point X coordinate" },
+                    "y2": { "type": "number", "description": "Second definition point Y coordinate" },
+                    "dim_x": { "type": "number", "description": "Dimension line point X coordinate" },
+                    "dim_y": { "type": "number", "description": "Dimension line point Y coordinate" }
+                },
+                "required": ["x1", "y1", "x2", "y2", "dim_x", "dim_y"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_dimension_angular",
+            "description": "Creates a 3-point angular dimension in AutoCAD Model Space. Measures the angle between two lines defined by a center point and two endpoints.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "center_x": { "type": "number", "description": "Center point X coordinate" },
+                    "center_y": { "type": "number", "description": "Center point Y coordinate" },
+                    "x1": { "type": "number", "description": "First endpoint X coordinate (defines first line from center)" },
+                    "y1": { "type": "number", "description": "First endpoint Y coordinate (defines first line from center)" },
+                    "x2": { "type": "number", "description": "Second endpoint X coordinate (defines second line from center)" },
+                    "y2": { "type": "number", "description": "Second endpoint Y coordinate (defines second line from center)" },
+                    "arc_x": { "type": "number", "description": "Arc point X coordinate (optional, determines where the dimension arc is drawn)" },
+                    "arc_y": { "type": "number", "description": "Arc point Y coordinate (optional, determines where the dimension arc is drawn)" }
+                },
+                "required": ["center_x", "center_y", "x1", "y1", "x2", "y2"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_dimension_radius",
+            "description": "Creates a radius dimension in AutoCAD Model Space for a circle or arc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "center_x": { "type": "number", "description": "Center point X coordinate" },
+                    "center_y": { "type": "number", "description": "Center point Y coordinate" },
+                    "radius": { "type": "number", "description": "Radius value (must be positive)" },
+                    "angle": { "type": "number", "description": "Angle in radians where the dimension line points to" },
+                    "leader_length": { "type": "number", "description": "Length of the leader line (optional, defaults to 0.0)" }
+                },
+                "required": ["center_x", "center_y", "radius", "angle"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_leader",
+            "description": "Creates a leader annotation in AutoCAD Model Space with optional text content.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "points": {
+                        "type": "array",
+                        "description": "Array of points defining the leader vertices (minimum 2 points).",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "x": { "type": "number", "description": "Point X coordinate" },
+                                "y": { "type": "number", "description": "Point Y coordinate" }
+                            },
+                            "required": ["x", "y"]
+                        }
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Text content for the leader annotation (optional)"
+                    }
+                },
+                "required": ["points"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_entities",
+            "description": "Deletes entities from the AutoCAD database using their handles.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handles": {
+                        "type": "array",
+                        "description": "Array of entity handles (hexadecimal strings) to delete.",
+                        "items": {
+                            "type": "string",
+                            "description": "Entity handle (e.g., '1F2')"
+                        }
+                    }
+                },
+                "required": [
+                    "handles"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_entities",
+            "description": "Lists all first-level entities (objects) in the current AutoCAD Model Space. Returns a JSON array of objects containing their handle, type, color, and layer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Optional. Entity handle (hexadecimal string) of an AcDbBlockReference. If provided, lists entities inside that block definition."
+                    }
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "query_layer",
+            "description": "Queries information about a specific layer by name, including its color index.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to query"
+                    }
+                },
+                "required": [
+                    "name"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_current_layer",
+            "description": "Gets the name of the current active layer in the AutoCAD drawing.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_current_layer",
+            "description": "Sets the current active layer in the AutoCAD drawing by name.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to set as current"
+                    }
+                },
+                "required": [
+                    "name"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "query_all_layers",
+            "description": "Queries all layers in the current AutoCAD drawing, returning detailed information including name, color index, visibility, frozen state, and locked state.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_current_layer_color",
+            "description": "Gets the color index of the current active layer.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_arc",
+            "description": "Draws an arc in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "Center point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Center point Y coordinate"
+                    },
+                    "radius": {
+                        "type": "number",
+                        "description": "Radius of the arc (must be positive)"
+                    },
+                    "start_angle": {
+                        "type": "number",
+                        "description": "Start angle in radians"
+                    },
+                    "end_angle": {
+                        "type": "number",
+                        "description": "End angle in radians"
+                    }
+                },
+                "required": [
+                    "x",
+                    "y",
+                    "radius",
+                    "start_angle",
+                    "end_angle"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_mtext",
+            "description": "Creates a multiline text (MText) entity in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "Insertion point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Insertion point Y coordinate"
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "The text content to display"
+                    },
+                    "height": {
+                        "type": "number",
+                        "description": "Height of the text (optional, defaults to 1.0)"
+                    },
+                    "width": {
+                        "type": "number",
+                        "description": "Width of the bounding box for word wrap (optional, defaults to 100.0)"
+                    }
+                },
+                "required": [
+                    "x",
+                    "y",
+                    "text"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_hatch",
+            "description": "Creates a hatch (fill pattern) bounded by an array of points forming a closed polygon in AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "points": {
+                        "type": "array",
+                        "description": "Array of points defining the hatch boundary (minimum 2 points).",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "x": {
+                                    "type": "number",
+                                    "description": "Point X coordinate"
+                                },
+                                "y": {
+                                    "type": "number",
+                                    "description": "Point Y coordinate"
+                                }
+                            },
+                            "required": [
+                                "x",
+                                "y"
+                            ]
+                        }
+                    },
+                    "pattern": {
+                        "type": "string",
+                        "description": "Name of the hatch pattern (e.g., 'SOLID', 'ANSI31'). Optional, defaults to 'SOLID'."
+                    },
+                    "scale": {
+                        "type": "number",
+                        "description": "Scale factor for the hatch pattern. Optional, defaults to 1.0."
+                    }
+                },
+                "required": [
+                    "points"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_move",
+            "description": "Moves an entity in AutoCAD Model Space to a new coordinate.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "dx": {
+                        "type": "number",
+                        "description": "Displacement along the X axis"
+                    },
+                    "dy": {
+                        "type": "number",
+                        "description": "Displacement along the Y axis"
+                    }
+                },
+                "required": [
+                    "handle",
+                    "dx",
+                    "dy"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_copy",
+            "description": "Copies an entity in AutoCAD Model Space by a displacement vector.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "dx": {
+                        "type": "number",
+                        "description": "Displacement along the X axis"
+                    },
+                    "dy": {
+                        "type": "number",
+                        "description": "Displacement along the Y axis"
+                    }
+                },
+                "required": [
+                    "handle",
+                    "dx",
+                    "dy"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_rotate",
+            "description": "Rotates an entity around a base point.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "Base point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Base point Y coordinate"
+                    },
+                    "angle": {
+                        "type": "number",
+                        "description": "Rotation angle in radians"
+                    }
+                },
+                "required": [
+                    "handle",
+                    "x",
+                    "y",
+                    "angle"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_scale",
+            "description": "Scales an entity based on a base point.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "Base point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Base point Y coordinate"
+                    },
+                    "scale": {
+                        "type": "number",
+                        "description": "Scale factor"
+                    }
+                },
+                "required": [
+                    "handle",
+                    "x",
+                    "y",
+                    "scale"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_mirror",
+            "description": "Mirrors an entity along a line axis defined by two points.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "x1": { "type": "number", "description": "Axis start point X" },
+                    "y1": { "type": "number", "description": "Axis start point Y" },
+                    "x2": { "type": "number", "description": "Axis end point X" },
+                    "y2": { "type": "number", "description": "Axis end point Y" },
+                    "delete_original": {
+                        "type": "boolean",
+                        "description": "Whether to delete the original entity (optional, defaults to false)."
+                    }
+                },
+                "required": [
+                    "handle",
+                    "x1",
+                    "y1",
+                    "x2",
+                    "y2"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_offset",
+            "description": "Creates parallel offsets of curves (like lines, circles, polylines).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    },
+                    "distance": {
+                        "type": "number",
+                        "description": "Offset distance (positive or negative determines side)"
+                    }
+                },
+                "required": [
+                    "handle",
+                    "distance"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_fillet",
+            "description": "Constructs a fillet (arc) between two entities.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle1": { "type": "string", "description": "First entity handle" },
+                    "handle2": { "type": "string", "description": "Second entity handle" },
+                    "radius": { "type": "number", "description": "Fillet radius" }
+                },
+                "required": [
+                    "handle1",
+                    "handle2",
+                    "radius"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_chamfer",
+            "description": "Constructs a chamfer between two entities.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle1": { "type": "string", "description": "First entity handle" },
+                    "handle2": { "type": "string", "description": "Second entity handle" },
+                    "dist1": { "type": "number", "description": "First chamfer distance" },
+                    "dist2": { "type": "number", "description": "Second chamfer distance" }
+                },
+                "required": [
+                    "handle1",
+                    "handle2",
+                    "dist1",
+                    "dist2"
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_array",
+            "description": "Creates a rectangular array of an entity.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": { "type": "string", "description": "Entity handle (hexadecimal string)" },
+                    "num_rows": { "type": "integer", "description": "Number of rows" },
+                    "num_cols": { "type": "integer", "description": "Number of columns" },
+                    "row_spacing": { "type": "number", "description": "Distance between rows" },
+                    "col_spacing": { "type": "number", "description": "Distance between columns" }
+                },
+                "required": ["handle", "num_rows", "num_cols", "row_spacing", "col_spacing"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_get",
+            "description": "Gets detailed properties of an entity by its handle. Returns common properties (handle, type, color, layer) and type-specific properties: Line (start_point, end_point), Polyline (points, closed), Circle (center, radius), Arc (center, radius, start_angle, end_angle), Ellipse (center, major_axis, ratio), Spline (control_points, degree), Text (position, text, height, rotation), MText (position, text, height, width), BlockReference (block_name, position, scale_x, scale_y, rotation).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string)"
+                    }
+                },
+                "required": ["handle"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "entity_set_color",
+            "description": "Sets the color of one or more entities by their handles using AutoCAD Color Index (ACI). Common ACI values: 0=ByBlock, 1=Red, 2=Yellow, 3=Green, 4=Cyan, 5=Blue, 6=Magenta, 7=White/Black, 256=ByLayer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handles": {
+                        "type": "array",
+                        "description": "Array of entity handles (hexadecimal strings) to batch update. Recommended for bulk operations.",
+                        "items": {
+                            "type": "string",
+                            "description": "Entity handle (e.g., '1F2')"
+                        }
+                    },
+                    "handle": {
+                        "type": "string",
+                        "description": "Single entity handle (hexadecimal string). Use this or 'handles' for batch processing."
+                    },
+                    "color": {
+                        "type": "integer",
+                        "description": "AutoCAD Color Index (ACI) value (0-256)"
+                    }
+                },
+                "required": ["color"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "layer_set_properties",
+            "description": "Sets properties (color, linetype, lineweight) of an existing layer in the AutoCAD drawing.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to modify"
+                    },
+                    "color": {
+                        "type": "integer",
+                        "description": "AutoCAD color index (ACI) to set (optional)"
+                    },
+                    "linetype": {
+                        "type": "string",
+                        "description": "Name of the linetype to set (optional). Must already exist in the drawing."
+                    },
+                    "lineweight": {
+                        "type": "integer",
+                        "description": "Line weight value to set (optional). Common values: 0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211 (in hundredths of mm)."
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "layer_freeze",
+            "description": "Freezes a layer in the current AutoCAD drawing by name.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to freeze"
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "layer_thaw",
+            "description": "Thaws (unfreezes) a layer in the current AutoCAD drawing by name.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to thaw"
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "layer_lock",
+            "description": "Locks a layer in the current AutoCAD drawing by name.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to lock"
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "layer_unlock",
+            "description": "Unlocks a layer in the current AutoCAD drawing by name.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the layer to unlock"
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "dispatch_command",
+            "description": "Directly executes an AutoCAD command with optional arguments.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "cmd": {
+                        "type": "string",
+                        "description": "The AutoCAD command name to execute (e.g., '_u', '_r')."
+                    },
+                    "args": {
+                        "type": "array",
+                        "description": "An array of arguments for the command. Supports strings and numbers.",
+                        "items": {
+                            "type": ["string", "number"]
+                        }
+                    }
+                },
+                "required": ["cmd"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_list",
+            "description": "Lists all block definitions in the current AutoCAD drawing. Returns a JSON array of objects containing block name, handle, and flags.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_insert",
+            "description": "Inserts a block reference into AutoCAD Model Space at a specified position.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the block definition to insert"
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "Insertion point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Insertion point Y coordinate"
+                    },
+                    "scale": {
+                        "type": "number",
+                        "description": "Uniform scale factor (optional, defaults to 1.0)"
+                    },
+                    "rotation": {
+                        "type": "number",
+                        "description": "Rotation angle in radians (optional, defaults to 0.0)"
+                    }
+                },
+                "required": ["name", "x", "y"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_insert_with_attributes",
+            "description": "Inserts a block reference with attribute values into AutoCAD Model Space.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the block definition to insert"
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "Insertion point X coordinate"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Insertion point Y coordinate"
+                    },
+                    "scale": {
+                        "type": "number",
+                        "description": "Uniform scale factor (optional, defaults to 1.0)"
+                    },
+                    "rotation": {
+                        "type": "number",
+                        "description": "Rotation angle in radians (optional, defaults to 0.0)"
+                    },
+                    "attributes": {
+                        "type": "object",
+                        "description": "Key-value pairs of attribute tag names and their values (e.g., {\"TAG1\": \"value1\"})"
+                    }
+                },
+                "required": ["name", "x", "y"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_get_attributes",
+            "description": "Gets all attribute values from a block reference by its handle.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string) of the block reference"
+                    }
+                },
+                "required": ["handle"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_update_attributes",
+            "description": "Updates attribute values on a block reference.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handle": {
+                        "type": "string",
+                        "description": "Entity handle (hexadecimal string) of the block reference"
+                    },
+                    "attributes": {
+                        "type": "object",
+                        "description": "Key-value pairs of attribute tag names and their new values (e.g., {\"TAG1\": \"new_value\"})"
+                    }
+                },
+                "required": ["handle", "attributes"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "block_define",
+            "description": "Defines a new block in the AutoCAD database. Optionally copies existing entities into the block definition.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the new block definition"
+                    },
+                    "base_x": {
+                        "type": "number",
+                        "description": "Block base point X coordinate (optional, defaults to 0.0)"
+                    },
+                    "base_y": {
+                        "type": "number",
+                        "description": "Block base point Y coordinate (optional, defaults to 0.0)"
+                    },
+                    "entities": {
+                        "type": "array",
+                        "description": "Array of entity handles (hexadecimal strings) to copy into the block definition (optional)",
+                        "items": {
+                            "type": "string",
+                            "description": "Entity handle (e.g., '1F2')"
+                        }
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "zoom_extents",
+            "description": "Zooms the current viewport to display all entities in the drawing (equivalent to ZOOM Extents in AutoCAD).",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "zoom_window",
+            "description": "Zooms the current viewport to a rectangular window defined by two corner points.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "x1": { "type": "number", "description": "First corner X coordinate" },
+                    "y1": { "type": "number", "description": "First corner Y coordinate" },
+                    "x2": { "type": "number", "description": "Opposite corner X coordinate" },
+                    "y2": { "type": "number", "description": "Opposite corner Y coordinate" }
+                },
+                "required": ["x1", "y1", "x2", "y2"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_selected_entity",
+            "description": "Gets the currently selected entity (or entities) in AutoCAD. Returns a JSON array of objects containing their handle, type, color, and layer.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_selected_entity",
+            "description": "Sets one or more entities as the currently selected entities (highlights them with grips) in AutoCAD Model Space using their handles.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "handles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Array of entity handles (hexadecimal strings) to set as selected."
+                    }
+                },
+                "required": ["handles"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_drawing_units",
+            "description": "Gets the current document's measurement units information. Returns a JSON object containing: 'insunits' (AutoCAD insertion units code, e.g., 4=Millimeters, 1=Inches, 6=Meters), 'unit_name' (readable unit name), 'measurement' (0=Imperial, 1=Metric), 'measurement_system' (string), 'lunits' (linear units display format: 1=Scientific, 2=Decimal, 3=Engineering, 4=Architectural, 5=Fractional), 'lunits_name' (string), and 'luprec' (decimal precision for linear units).",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    }
+    
+]

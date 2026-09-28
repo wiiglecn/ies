@@ -1,0 +1,25 @@
+***MENUGROUP=SLTOOLS
+
+***POP1
+[昇龙助手]
+IDSL_PlanView [一键平面图]^C^C_SLPlanView
+IDSL_SectionView [一键剖面图]^C^C_SLSectionView
+IDSL_ColumnView [一键柱状图]^C^C_SLColumnView
+[--]
+
+IDSL_BaseData [->基础数据]
+IDSL_HoleDiameter  [孔直径]^C^C_SLHoleDiameter
+IDSL_Mapping  [制图人]^C^C_SLMapping
+IDSL_Check  [<-校对人]^C^C_SLCheck
+
+IDSL_ImportData [导入数据]^C^C_SLImportData
+[--]
+
+IDSL_ExplorationAssist [->勘探辅助]
+IDSL_BlockLineSelect [块和线条选择]^C^C_SLBlockLineSelect
+IDSL_PolylineHole [通过多段线开孔]^C^C_SLPolylineHole
+IDSL_ArcPick [<-圆弧拾取]^C^C_SLArcPick
+
+IDSL_CustomScale [->自定义缩放]
+IDSL_SingleScale [单个缩放]^C^C_SLSingleScale
+IDSL_AllScale [<-整体缩放]^C^C_SLAllScale

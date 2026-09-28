@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>昇龙助手</title>
+    <link type="text/css" rel="stylesheet" href="PalettePage.css">
+    <script src="PalettePage.js"></script>
+    <script src="PalettePageMenu.js"></script>
+</head>
+<body scroll="no" onload="init()" >
+    <!-- oncontextmenu="return false;" -->
+    <div class="group-box" id="group-menu">
+        <div class="group-header" onclick="toggleGroup(this)">
+            功能菜单
+        </div>
+        <div class="group-content">
+            <div class="button-row-center">
+                <!-- 菜单放这里 -->
+                <div class="menu-grid">
+                    <div class="menu-item" onclick="onMenuCmd('ImportData')" title="导入勘探数据">
+                        <span class="menu-icon">&#8681;</span>
+                        <span class="menu-text">导入数据</span>
+                    </div>
+                    <div class="menu-item" onclick="onMenuCmd('CreatePlanView')" title="一键创建平面图">
+                        <span class="menu-icon">&#8862;</span>
+                        <span class="menu-text">平面图</span>
+                    </div>
+                    <div class="menu-item" onclick="onMenuCmd('CreateSectionView')" title="一键创建剖面图">
+                        <span class="menu-icon">&#9636;</span>
+                        <span class="menu-text">剖面图</span>
+                    </div>
+                    <div class="menu-item" onclick="onMenuCmd('CreateColumnView')" title="一键创建柱状图">
+                        <span class="menu-icon">&#9601;&#9605;&#9608;</span>
+                        <span class="menu-text">柱状图</span>
+                    </div>
+                    <div class="menu-item-wrapper" id="basicDataMenu"
+                        onmouseover="onSubMenuMouseOver()" onmouseout="onSubMenuMouseOut()">
+                        <div class="menu-item" onclick="toggleBasicDataMenu()" title="基础数据">
+                            <span class="menu-icon">&#9638;</span>
+                            <span class="menu-text">基础数据</span>
+                        </div>
+                        <div class="submenu" id="basicDataSubmenu">
+                            <div class="submenu-item" onclick="onBasicDataCmd('HoleDiameter')" title="孔直径">孔直径</div>
+                            <div class="submenu-item" onclick="onBasicDataCmd('Drafting')" title="制图人">制图人</div>
+                            <div class="submenu-item" onclick="onBasicDataCmd('Proofread')" title="校对人">校对人</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="group-box" id="group-probe">
+        <div class="group-header" onclick="toggleGroup(this)">
+            勘探常用功能
+        </div>
+        <div class="group-content">
+            
+            <div class="button-row-center">
+                <button class="icon-btn" onclick="onSelectBlock()" title="选择多段线或者块，如果是块则块内的多段线则作为参照物进行计算">&#9678;</button>
+                <button class="icon-btn" onclick="onSelectLine()" title="通过拉取多段线进行智能部孔">&#9998;</button>
+                <button class="icon-btn" onclick="onSelectCircle()" title="仅选取圆环">&#8857;</button>
+                <button class="icon-btn" onclick="onScale()" title="比例缩放">&#10530;</button>
+                <button class="icon-btn" onclick="onScaleEntireModel()" title="整个模型一键缩放">&#9974;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group 2: AI Smart -->
+    <div class="group-box" id="group-ai">
+        <div class="group-header" onclick="toggleGroup(this)">
+            AI 智能
+        </div>
+        <div class="group-content">
+            <!-- Chat Display Area -->
+            <div id="ai-chat-container" class="chat-container">
+                <div class="chat-message ai">昇龙助手: 您好! 今天我能帮助您做点什么吗?</div>
+                <hr style="border: 0; border-top: 1px dashed #cccccc; margin: 10px 0; color: #cccccc;">
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="chat-input-area">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 100%;">
+                            <textarea id="ai-chat-input" class="chat-input-field textarea-owner" placeholder="Type your question..." onkeydown="checkEnter(event)"></textarea>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 200px; text-align: left; vertical-align: bottom;">
+                            <button class="custom-btn chat-send-btn t5" onclick="sendChat()" id="buSend">发送</button>
+                            <button class="custom-btn chat-send-btn t5 hidden" onclick="stopChat()" id="buStop">停止</button>
+                            <button class="custom-btn chat-send-btn t5 hidden" onclick="retryChat()" id="buRetry">重试</button>
+                            <button class="custom-btn chat-send-btn t5" onclick="newChat()" id="buNew">新会话</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

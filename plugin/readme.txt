@@ -1,0 +1,1 @@
+D:\Programs\AutoCAD2007\acad.exe /nologo /b "D:\software\ksWorkspace\ies\plugin\load_plugin.scr"

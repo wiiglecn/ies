@@ -1,0 +1,249 @@
+<?xml version="1.0"?>
+<!--
+警告！请勿编辑此文件的内容。
+如果试图使用 XML 编辑器来编辑此文件，可能会失去自定义和移植功能。
+如果需要修改自定义文件中的信息，请使用产品中的“自定义用户界面”对话框。
+要访问“自定义用户界面”对话框，请单击“工具”菜单 >“自定义”>“界面”，或者在命令行中输入 CUI。
+-->
+<CustSection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <FileVersion MajorVersion="0" MinorVersion="3" IncrementalVersion="2" UserVersion="1" />
+  <Header>
+    <CommonConfiguration>
+      <CommonItems>
+        <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+      </CommonItems>
+    </CommonConfiguration>
+    <WorkspaceRoot>
+      <WorkspaceConfigRoot />
+    </WorkspaceRoot>
+  </Header>
+  <MenuGroup Name="SLTOOLS">
+    <MacroGroup Name="SLTOOLSMacros">
+      <MenuMacro UID="IDSL_PlanView">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0002">一键平面图</Name>
+          <Command>^C^C_SLPlanView</Command>
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="IDSL_SectionView">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0004">一键剖面图</Name>
+          <Command>^C^C_SLSectionView</Command>
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="IDSL_ColumnView">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0006">一键柱状图</Name>
+          <Command>^C^C_SLColumnView</Command>
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="IDSL_HoleDiameter">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0009">孔直径</Name>
+          <Command>^C^C_SLHoleDiameter</Command>
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="IDSL_Mapping">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0011">制图人</Name>
+          <Command>^C^C_SLMapping</Command>
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="IDSL_Check">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0013">校对人</Name>
+          <Command>^C^C_SLCheck</Command>
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="IDSL_ImportData">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0015">导入数据</Name>
+          <Command>^C^C_SLImportData</Command>
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="IDSL_BlockLineSelect">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0018">块和线条选择</Name>
+          <Command>^C^C_SLBlockLineSelect</Command>
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="IDSL_PolylineHole">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0020">通过多段线开孔</Name>
+          <Command>^C^C_SLPolylineHole</Command>
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="IDSL_ArcPick">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0022">圆弧拾取</Name>
+          <Command>^C^C_SLArcPick</Command>
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="IDSL_SingleScale">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0025">单个缩放</Name>
+          <Command>^C^C_SLSingleScale</Command>
+        </Macro>
+      </MenuMacro>
+      <MenuMacro UID="IDSL_AllScale">
+        <Macro type="Any">
+          <Revision MajorVersion="16" MinorVersion="2" UserVersion="1" />
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0027">整体缩放</Name>
+          <Command>^C^C_SLAllScale</Command>
+        </Macro>
+      </MenuMacro>
+    </MacroGroup>
+    <MenuRoot>
+      <AcceleratorRoot />
+      <OverrideRoot />
+      <MouseButtonRoot />
+      <DigitizerButtonRoot />
+      <PopMenuRoot>
+        <PopMenu hasDiesel="false" UID="PMU_0002">
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Alias>POP1</Alias>
+          <Name xlate="true" UID="XLS_0001">昇龙助手</Name>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0001">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0003" xlate="true">一键平面图</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_PlanView" />
+            </MenuItem>
+          </PopMenuItem>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0002">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0005" xlate="true">一键剖面图</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_SectionView" />
+            </MenuItem>
+          </PopMenuItem>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0003">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0007" xlate="true">一键柱状图</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_ColumnView" />
+            </MenuItem>
+          </PopMenuItem>
+          <PopMenuItem IsSeparator="true" hasDiesel="false" UID="PMIU_0004">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          </PopMenuItem>
+          <PopMenuRef pUID="IDSL_BaseData" UID="PMRU_0001">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          </PopMenuRef>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0008">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0016" xlate="true">导入数据</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_ImportData" />
+            </MenuItem>
+          </PopMenuItem>
+          <PopMenuItem IsSeparator="true" hasDiesel="false" UID="PMIU_0009">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          </PopMenuItem>
+          <PopMenuRef pUID="IDSL_ExplorationAssist" UID="PMRU_0002">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          </PopMenuRef>
+          <PopMenuRef pUID="IDSL_CustomScale" UID="PMRU_0003">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          </PopMenuRef>
+        </PopMenu>
+        <PopMenu hasDiesel="false" UID="IDSL_BaseData">
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0008">基础数据</Name>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0005">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0010" xlate="true">孔直径</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_HoleDiameter" />
+            </MenuItem>
+          </PopMenuItem>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0006">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0012" xlate="true">制图人</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_Mapping" />
+            </MenuItem>
+          </PopMenuItem>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0007">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0014" xlate="true">校对人</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_Check" />
+            </MenuItem>
+          </PopMenuItem>
+        </PopMenu>
+        <PopMenu hasDiesel="false" UID="IDSL_ExplorationAssist">
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0017">勘探辅助</Name>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0010">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0019" xlate="true">块和线条选择</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_BlockLineSelect" />
+            </MenuItem>
+          </PopMenuItem>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0011">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0021" xlate="true">通过多段线开孔</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_PolylineHole" />
+            </MenuItem>
+          </PopMenuItem>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0012">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0023" xlate="true">圆弧拾取</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_ArcPick" />
+            </MenuItem>
+          </PopMenuItem>
+        </PopMenu>
+        <PopMenu hasDiesel="false" UID="IDSL_CustomScale">
+          <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+          <Name xlate="true" UID="XLS_0024">自定义缩放</Name>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0013">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0026" xlate="true">单个缩放</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_SingleScale" />
+            </MenuItem>
+          </PopMenuItem>
+          <PopMenuItem IsSeparator="false" hasDiesel="false" UID="PMIU_0014">
+            <ModifiedRev MajorVersion="17" MinorVersion="0" UserVersion="1" />
+            <NameRef UID="XLS_0028" xlate="true">整体缩放</NameRef>
+            <MenuItem>
+              <MacroRef MenuMacroID="IDSL_AllScale" />
+            </MenuItem>
+          </PopMenuItem>
+        </PopMenu>
+      </PopMenuRoot>
+      <ToolbarRoot />
+      <ScreenMenuRoot />
+      <ImageMenuRoot />
+      <TabletMenuRoot />
+      <DoubleClickRoot />
+    </MenuRoot>
+  </MenuGroup>
+</CustSection>
