@@ -309,8 +309,10 @@ LRESULT CApiMessageWnd::HandleApiCommand(WPARAM wParam, LPARAM lParam)
 			{
 				//CUtils::FocusAcadDrawing();
 				CCreatePlanView view;
-				view.Execute();
-				params->ret = 0;
+				params->ret = view.Execute(params->planViewRequestPath) ? 0 : 1;
+				// Remove the one-shot payload after CAD has consumed it.
+				if (params->planViewRequestPath[0] != _T('\\0'))
+					DeleteFile(params->planViewRequestPath);
 				//acedPostCommandPrompt(); 
 			}
 			break;
