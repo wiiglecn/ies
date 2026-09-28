@@ -7,7 +7,7 @@ class CCreatePlanView : public CCreateBaseView
 public:
 	CCreatePlanView(void);
 
-	void Execute();
+	bool Execute(const TCHAR* requestPath = NULL);
 public:
 	//~CCreatePlanView(void);
 
@@ -18,8 +18,8 @@ protected:
 
 	virtual void ClearExtDbCache();
 	void ChangeText(AcDbObjectId blkDefId,AcDbObjectId styleId, ACHAR* holeName,ACHAR* elevation,ACHAR* depth);
-	//´´½¨Í¼Àı
-	//´´½¨Í¼Àı£¨ÑùÀı¿×µÄ¿×ºÅ/±ê¸ß/¿×ÉîÈ¡µÚÒ»¸ö¿×µÄÖµ£©
+	//åˆ›å»ºå›¾ä¾‹
+	//åˆ›å»ºå›¾ä¾‹ï¼ˆæ ·ä¾‹å­”çš„å­”å·/æ ‡é«˜/å­”æ·±å–ç¬¬ä¸€ä¸ªå­”çš„å€¼ï¼‰
     void CreateLegend(std::vector<CString>& arrUsedHoles,
 					const CString& fistCadBlockUrl,
                     const CString& blockStyleName);
