@@ -35,20 +35,22 @@ bool CCreatePlanView::Execute(const TCHAR* requestPath)
 
 	CUtils::ClearSelection();
 
+	// 图层表操作必须在开启本次绘图事务前完成。
+	// 某些 AutoCAD/ObjectARX 版本在事务已经打开且模型空间处于写状态时，
+	// 直接写 AcDbLayerTable 会返回 eWasOpenForWrite/eLockViolation。
+	const TCHAR* layerName = _T("勘察点方案");
+	AcDbObjectId planLayerId = CUtils::EnsureLayer(layerName, true);
+	if (planLayerId.isNull()){
+		CUtils::acutPrintf(_T("[CAD ERROR] 创建/获取图层失败，请检查！ %s\n"), layerName);
+		return false;
+	}
+
 	if (this->startTrans()) return false;
 
     int ret = this->actionBefore();
 	if (ret != 0 ) {
 		aboutTrans();
 		return false;
-	}
-	
-
-	const TCHAR* layerName = _T("勘察点方案");        // ← 按需改图层名
-	if (CUtils::EnsureLayer(layerName).isNull()){
-		CUtils::acutPrintf(_T("[CAD ERROR] 创建图层失败，请检查！ %s\n"), layerName);
-		aboutTrans();
-        return false;
 	}
 	// 清除当前层旧元素（pModelSpace 由基类管理开关，本函数不动它）
     int n = CUtils::EraseLayerEntities(this->pModelSpace, layerName); 
