@@ -1,4 +1,4 @@
-#include "StdAfx.h"        // ±¾ÏîÄ¿Ô¼¶¨£ºcpp ±ØĞë×îÏÈ°üº¬£¨MFC _DEBUG ¹æ±Ü£©
+#include "StdAfx.h"        // æœ¬é¡¹ç›®çº¦å®šï¼šcpp å¿…é¡»æœ€å…ˆåŒ…å«ï¼ˆMFC _DEBUG è§„é¿ï¼‰
 #include "arxHeaders.h"
 #include <shlwapi.h>
 #include "cJSON.h"
@@ -7,69 +7,79 @@
 
 CCreatePlanView::CCreatePlanView():CCreateBaseView()
 {
-	pszStyleName = _T("¿±²ì¿×");
+	pszStyleName = _T("å‹˜å¯Ÿå­”");
 }
-void CCreatePlanView::Execute()
+bool CCreatePlanView::Execute(const TCHAR* requestPath)
 {
-	if (!prepare()) return;
+	if (requestPath == NULL || requestPath[0] == _T('\0')) {
+		CUtils::acutPrintf(_T("[CAD ERROR] å¹³é¢å›¾è¯·æ±‚å‚æ•°æ–‡ä»¶è·¯å¾„ä¸ºç©ºï¼\n"));
+		return false;
+	}
+	strFilePath = CUtils::GetArxFolder();
+	strFilePath.Replace(_T("\\"), _T("/"));
+	s_pJsonData = CUtils::LoadJsonFile(requestPath);
+	if (s_pJsonData == NULL || !cJSON_IsArray(s_pJsonData)) {
+		CUtils::acutPrintf(_T("[CAD ERROR] å¹³é¢å›¾è¯·æ±‚å‚æ•°å¿…é¡»æ˜¯ JSON æ•°ç»„ï¼Œæˆ–å‚æ•°æ–‡ä»¶æ— æ³•è¯»å–ï¼š%s\n"), requestPath);
+		return false;
+	}
 
 	
 	CString cadHoleConfigUrl= strFilePath + _T("support/block_define.json");
-	// ½âÎö JSON£¨Ê§°ÜÊ±ÄÚ²¿ÒÑ´òÓ¡´íÎó£¬ÕâÀï±£ÁôÔ­ÓĞÒµÎñÌáÊ¾£©
-    s_blockConfigData = CUtils::LoadJsonFile(cadHoleConfigUrl.GetString());   // ¾²Ä¬Ä£Ê½
+	// è§£æ JSONï¼ˆå¤±è´¥æ—¶å†…éƒ¨å·²æ‰“å°é”™è¯¯ï¼Œè¿™é‡Œä¿ç•™åŸæœ‰ä¸šåŠ¡æç¤ºï¼‰
+    s_blockConfigData = CUtils::LoadJsonFile(cadHoleConfigUrl.GetString());   // é™é»˜æ¨¡å¼
     if (s_blockConfigData == NULL) {
-        CUtils::acutPrintf(_T("[CAD ERROR] Ã»ÓĞpatÅäÖÃÎÄ¼ş£¬Çë¼ì²é£¡ %s\n"), cadHoleConfigUrl.GetString());
-        return;
+        CUtils::acutPrintf(_T("[CAD ERROR] æ²¡æœ‰paté…ç½®æ–‡ä»¶ï¼Œè¯·æ£€æŸ¥ï¼ %s\n"), cadHoleConfigUrl.GetString());
+        return false;
     }
 
 	CUtils::ClearSelection();
 
-	if (this->startTrans()) return;
+	if (this->startTrans()) return false;
 
     int ret = this->actionBefore();
 	if (ret != 0 ) {
 		aboutTrans();
-		return;
+		return false;
 	}
 	
 
-	const TCHAR* layerName = _T("¿±²ìµã·½°¸");        // ¡û °´Ğè¸ÄÍ¼²ãÃû
+	const TCHAR* layerName = _T("å‹˜å¯Ÿç‚¹æ–¹æ¡ˆ");        // â† æŒ‰éœ€æ”¹å›¾å±‚å
 	if (CUtils::EnsureLayer(layerName).isNull()){
-		CUtils::acutPrintf(_T("[CAD ERROR] ´´½¨Í¼²ãÊ§°Ü£¬Çë¼ì²é£¡ %s\n"), layerName);
+		CUtils::acutPrintf(_T("[CAD ERROR] åˆ›å»ºå›¾å±‚å¤±è´¥ï¼Œè¯·æ£€æŸ¥ï¼ %s\n"), layerName);
 		aboutTrans();
-        return;
+        return false;
 	}
-	// Çå³ıµ±Ç°²ã¾ÉÔªËØ£¨pModelSpace ÓÉ»ùÀà¹ÜÀí¿ª¹Ø£¬±¾º¯Êı²»¶¯Ëü£©
+	// æ¸…é™¤å½“å‰å±‚æ—§å…ƒç´ ï¼ˆpModelSpace ç”±åŸºç±»ç®¡ç†å¼€å…³ï¼Œæœ¬å‡½æ•°ä¸åŠ¨å®ƒï¼‰
     int n = CUtils::EraseLayerEntities(this->pModelSpace, layerName); 
 
-	AcDbObjectId styleId=CUtils::EnsureTextStyle( _T("¿±²ì¿×"), _T("ËÎÌå"),1.75,0.7);
+	AcDbObjectId styleId=CUtils::EnsureTextStyle( _T("å‹˜å¯Ÿå­”"), _T("å®‹ä½“"),1.75,0.7);
 	if (styleId.isNull()){
-		CUtils::acutPrintf(_T("[CAD ERROR] ´´½¨ÑùÊ½Ê§°Ü£¬Çë¼ì²é£¡\n"));
+		CUtils::acutPrintf(_T("[CAD ERROR] åˆ›å»ºæ ·å¼å¤±è´¥ï¼Œè¯·æ£€æŸ¥ï¼\n"));
 		aboutTrans();
-        return;
+        return false;
 	}
 
 
-	std::vector<CString> arrUsedHoles;   // ÊÕ¼¯ÓÃµ½µÄ¿éÃû£¨È¥ÖØ£©
+	std::vector<CString> arrUsedHoles;   // æ”¶é›†ç”¨åˆ°çš„å—åï¼ˆå»é‡ï¼‰
 	CString fistCadBlockUrl,firstBlockStyleName; 
 	bool bFirstSaved = false;
 	cJSON* item = NULL;
 	cJSON_ArrayForEach(item, s_pJsonData) {
-        // ´¦ÀíÃ¿¸öÊôĞÔ
+        // å¤„ç†æ¯ä¸ªå±æ€§
         if (item!=NULL) {
-            const char* blockName = (item->string != NULL) ? item->string : "(ÄäÃûÊı×é)";
-            CUtils::acutPrintf(_T("[Êı×é] %hs£¬¹² %d ¸öÔªËØ\n"),
+            const char* blockName = (item->string != NULL) ? item->string : "(åŒ¿åæ•°ç»„)";
+            CUtils::acutPrintf(_T("[æ•°ç»„] %hsï¼Œå…± %d ä¸ªå…ƒç´ \n"),
                             blockName, cJSON_GetArraySize(item));
 
 			ACHAR arrayName[256] = { 0 };
 			CUtils::utf8ToTChar(blockName, arrayName, ARRAYSIZE(arrayName));
 
 			CString blockStyleName;
-			blockStyleName.Format(_T("¿×_%s"),arrayName);
+			blockStyleName.Format(_T("å­”_%s"),arrayName);
 
 			ACHAR holeName[256] = {0};
 			{
-				cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("×ê¿×ÀàĞÍ"));
+				cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("é’»å­”ç±»å‹"));
 				if (columnTry == NULL){
 					continue;  
 				}
@@ -77,15 +87,15 @@ void CCreatePlanView::Execute()
 			}
 			
 
-			// Ãû×Ö ¡ú Í¼ÀıÃû£ºÈç "¼ø±ğ¿×" ¡ú "GKJBK"
+			// åå­— â†’ å›¾ä¾‹åï¼šå¦‚ "é‰´åˆ«å­”" â†’ "GKJBK"
             TCHAR blockSingleName[128] = { 0 };
             if (!CUtils::FindBlockNameByHoleName(s_blockConfigData, holeName,
                                       blockSingleName, ARRAYSIZE(blockSingleName)))
             {
-				//Ä¬ÈÏÖµ
+				//é»˜è®¤å€¼
 				_tcscpy(blockSingleName, _T("GKJBK"));
             }
-			// ¡ï È¥ÖØÊÕ¼¯£¨·ÅÔÚÕâÀï£¬¼´Ê¹ºóĞø continue Ò²ÄÜÊÕ¼¯µ½£©
+			// â˜… å»é‡æ”¶é›†ï¼ˆæ”¾åœ¨è¿™é‡Œï¼Œå³ä½¿åç»­ continue ä¹Ÿèƒ½æ”¶é›†åˆ°ï¼‰
 			bool bExists = false;
 			for (size_t k = 0; k < arrUsedHoles.size(); ++k)
 			{
@@ -105,7 +115,7 @@ void CCreatePlanView::Execute()
 			AcGePoint3d ptInsert;
 			{
 				{
-					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("X×ø±ê(m)"));
+					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("Xåæ ‡(m)"));
 					if (columnTry == NULL){
 						continue;  
 					}
@@ -113,14 +123,14 @@ void CCreatePlanView::Execute()
 
 				}
 				{
-					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("Y×ø±ê(m)"));
+					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("Yåæ ‡(m)"));
 					if (columnTry == NULL){
 						continue;  
 					}
 					ptInsert.y = columnTry->valuedouble;
 				}
 			}
-			// Í¬Ãû¾É¿éÏÈÉ¾£¨º¬Æä²ÎÕÕ£©£¬Ç¿ÖÆ°´×îĞÂ DWG ÖØ½¨
+			// åŒåæ—§å—å…ˆåˆ ï¼ˆå«å…¶å‚ç…§ï¼‰ï¼Œå¼ºåˆ¶æŒ‰æœ€æ–° DWG é‡å»º
             CUtils::EraseBlock(this->pModelSpace, blockStyleName.GetString());
 
 			AcDbObjectId blkDefId = ImportDwgAsBlock(cadBlockUrl.GetString(),ptInsert, blockStyleName);
@@ -132,7 +142,7 @@ void CCreatePlanView::Execute()
 			TCHAR depth_str[128] = { 0 };
 			{
 				{
-					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("¿×¿Ú¸ß³Ì(m)"));
+					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("å­”å£é«˜ç¨‹(m)"));
 					if (columnTry == NULL){
 						continue;  
 					}
@@ -140,7 +150,7 @@ void CCreatePlanView::Execute()
 					_stprintf(elevation_str, _T("%.2f"), elevation);
 				}
 				{
-					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("ÖÕ¿×Éî¶È(m)"));
+					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("ç»ˆå­”æ·±åº¦(m)"));
 					if (columnTry == NULL){
 						continue;
 					}
@@ -148,7 +158,7 @@ void CCreatePlanView::Execute()
     				_stprintf(depth_str, _T("%.2f"), depth);
 				}
 			}
-			// ¡ï ¼ÇÂ¼µÚÒ»¸ö¿×µÄÑùÀı²ÎÊı£¨CString ¸³Öµ = Éî¿½±´£¬Õ»»º³åÇø¸´ÓÃÒ²°²È«£©
+			// â˜… è®°å½•ç¬¬ä¸€ä¸ªå­”çš„æ ·ä¾‹å‚æ•°ï¼ˆCString èµ‹å€¼ = æ·±æ‹·è´ï¼Œæ ˆç¼“å†²åŒºå¤ç”¨ä¹Ÿå®‰å…¨ï¼‰
             if (!bFirstSaved)
             {
 				fistCadBlockUrl = cadBlockUrl;
@@ -168,7 +178,7 @@ void CCreatePlanView::Execute()
 	this->commitTrans();
 	this->actionEnd();
 	this->regen();
-
+	return true;
 }
 void CCreatePlanView::ClearExtDbCache()
 {
@@ -190,7 +200,7 @@ void CCreatePlanView::ChangeText(AcDbObjectId blkDefId,AcDbObjectId styleId, ACH
 
 	double radius = 2.15;
 
-	// ´´½¨ÎÄ±¾ÊµÌå - ¶¥²¿ÎÄ±¾ (holeName)
+	// åˆ›å»ºæ–‡æœ¬å®ä½“ - é¡¶éƒ¨æ–‡æœ¬ (holeName)
 	AcDbObjectId textId = CUtils::AddDbText(pBTR,holeName,
                             AcGePoint3d(radius*2, 1, 0.0),height,pszStyleName,DBTA_LEFT,dWidthFactor);
 
@@ -200,13 +210,13 @@ void CCreatePlanView::ChangeText(AcDbObjectId blkDefId,AcDbObjectId styleId, ACH
 	AcGePoint3d ptDraw;
 	ptDraw.x = radius*2+dW;
 	ptDraw.y =  1-2.5/2;
-	// ´´½¨ÎÄ±¾ÊµÌå -  (elevation)
+	// åˆ›å»ºæ–‡æœ¬å®ä½“ -  (elevation)
 	textId = CUtils::AddDbText(pBTR,elevation,
                             ptDraw,height,pszStyleName,DBTA_LEFT,dWidthFactor);
 	CUtils::SetEntLayer(textId, _T("0")); 
 	CUtils::GetEntExtentById(textId, dW, dH);
 
-	// ´´½¨ÎÄ±¾ÊµÌå -  (depth)
+	// åˆ›å»ºæ–‡æœ¬å®ä½“ -  (depth)
 	ptDraw.y = 1.5+2.5/2;
 	textId = CUtils::AddDbText(pBTR,depth,
                             ptDraw,height,pszStyleName,DBTA_LEFT,dWidthFactor);
@@ -232,7 +242,7 @@ void CCreatePlanView::ChangeText(AcDbObjectId blkDefId,AcDbObjectId styleId, ACH
 	ptOrigin.x=2.15;
 	ptOrigin.y=2.15;
 	if (pBTR->setOrigin(ptOrigin) != Acad::eOk)
-        CUtils::acutPrintf(_T("[CAD ERROR] ÉèÖÃ¿éÔ­µãÊ§°Ü\n"));
+        CUtils::acutPrintf(_T("[CAD ERROR] è®¾ç½®å—åŸç‚¹å¤±è´¥\n"));
 
 
 	pBTR->close();
@@ -244,35 +254,35 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 {
 	if (arrUsedHoles.empty())
 		return;
-	const TCHAR* layerName = _T("¿±²ìµãÍ¼Àı");        // ¡û °´Ğè¸ÄÍ¼²ãÃû
+	const TCHAR* layerName = _T("å‹˜å¯Ÿç‚¹å›¾ä¾‹");        // â† æŒ‰éœ€æ”¹å›¾å±‚å
 	if (CUtils::EnsureLayer(layerName).isNull()){
-		CUtils::acutPrintf(_T("[CAD ERROR] ´´½¨Í¼²ãÊ§°Ü£¬Çë¼ì²é£¡ %s\n"), layerName);
+		CUtils::acutPrintf(_T("[CAD ERROR] åˆ›å»ºå›¾å±‚å¤±è´¥ï¼Œè¯·æ£€æŸ¥ï¼ %s\n"), layerName);
         return;
 	}
-	// Çå³ıµ±Ç°²ã¾ÉÔªËØ£¨pModelSpace ÓÉ»ùÀà¹ÜÀí¿ª¹Ø£¬±¾º¯Êı²»¶¯Ëü£©
+	// æ¸…é™¤å½“å‰å±‚æ—§å…ƒç´ ï¼ˆpModelSpace ç”±åŸºç±»ç®¡ç†å¼€å…³ï¼Œæœ¬å‡½æ•°ä¸åŠ¨å®ƒï¼‰
     int n = CUtils::EraseLayerEntities(this->pModelSpace, layerName); 
 
-	// ---- ¼ÆËãÍ¼ĞÎ·¶Î§£¬È¡µ×²¿ÖĞµã×÷ÎªÍ¼Àı»æÖÆÆğµã ----
+	// ---- è®¡ç®—å›¾å½¢èŒƒå›´ï¼Œå–åº•éƒ¨ä¸­ç‚¹ä½œä¸ºå›¾ä¾‹ç»˜åˆ¶èµ·ç‚¹ ----
     AcDbExtents extAll;
     if (!CUtils::GetModelSpaceBounds(this->pModelSpace, extAll))
     {
-        CUtils::acutPrintf(_T("[CAD ERROR] Í¼ĞÎ·¶Î§Îª¿Õ£¬ÎŞ·¨¶¨Î»Í¼Àı\n"));
+        CUtils::acutPrintf(_T("[CAD ERROR] å›¾å½¢èŒƒå›´ä¸ºç©ºï¼Œæ— æ³•å®šä½å›¾ä¾‹\n"));
         return;
     }
     AcGePoint3d ptMin = extAll.minPoint();
     AcGePoint3d ptMax = extAll.maxPoint();
 
-    AcGePoint3d ptLegend;                        // Í¼ÀıÆğµã£ºÍ¼ĞÎÖĞ¼äµ×²¿
-    ptLegend.x = (ptMin.x + ptMax.x) * 0.5;      // Ë®Æ½¾ÓÖĞ
-    ptLegend.y = ptMin.y;                        // µ×²¿
+    AcGePoint3d ptLegend;                        // å›¾ä¾‹èµ·ç‚¹ï¼šå›¾å½¢ä¸­é—´åº•éƒ¨
+    ptLegend.x = (ptMin.x + ptMax.x) * 0.5;      // æ°´å¹³å±…ä¸­
+    ptLegend.y = ptMin.y;                        // åº•éƒ¨
 
-    double dMargin = 10.0;                        // ÓëÍ¼ĞÎµ×±ßÁôµã¼ä¾à£¬°´Ğèµ÷
+    double dMargin = 10.0;                        // ä¸å›¾å½¢åº•è¾¹ç•™ç‚¹é—´è·ï¼ŒæŒ‰éœ€è°ƒ
     ptLegend.y -= dMargin;
 	Acad::ErrorStatus es;
 	double radius = 2.15;
 
-	//»æ±êÍ·
-	CUtils::AddDbText(pModelSpace,_T("Í¼    Àı"),ptLegend,4.0,NULL,DBTA_CENTER,0.825);
+	//ç»˜æ ‡å¤´
+	CUtils::AddDbText(pModelSpace,_T("å›¾    ä¾‹"),ptLegend,4.0,NULL,DBTA_CENTER,0.825);
 
 	AcGePoint3d ptStart(ptLegend),ptEnd(ptLegend);
 	ptStart.y -=5.0;
@@ -293,7 +303,7 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
     arrPts.push_back(ptEnd);
 	CUtils::AddDbPolyline(pModelSpace, arrPts, 0.75);
 
-	//¿±Ì½¿×Í¼Àı¾ÙÀıËµÃ÷
+	//å‹˜æ¢å­”å›¾ä¾‹ä¸¾ä¾‹è¯´æ˜
 	AcGePoint3d ptDraw(ptStart);
 
 	AcDbObjectId blkDefId = ImportDwgAsBlock(fistCadBlockUrl.GetString(), blockStyleName);
@@ -303,7 +313,7 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 		ptDraw.y -= 15.0;
 		ptDraw.x -= 7.0;
 
-		// 6. ²åÈë¿é²ÎÕÕ
+		// 6. æ’å…¥å—å‚ç…§
         AcDbBlockReference* pBlkRef = new AcDbBlockReference;
         pBlkRef->setBlockTableRecord(blkDefId);
         pBlkRef->setPosition(ptDraw);
@@ -312,8 +322,8 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
         es = pModelSpace->appendAcDbEntity(refId, pBlkRef);
         if (es != Acad::eOk)
         {
-            CUtils::acutPrintf(_T("\n[DWGµ¼Èë] ´íÎó£ºÌí¼Ó¿é²ÎÕÕÊ§°Ü(´íÎóÂë %d)¡£"), (int)es);
-            delete pBlkRef;          // Î´Èë¿â£¬delete£¨²»ÄÜ close£©
+            CUtils::acutPrintf(_T("\n[DWGå¯¼å…¥] é”™è¯¯ï¼šæ·»åŠ å—å‚ç…§å¤±è´¥(é”™è¯¯ç  %d)ã€‚"), (int)es);
+            delete pBlkRef;          // æœªå…¥åº“ï¼Œdeleteï¼ˆä¸èƒ½ closeï¼‰
 			return;
         }
         pBlkRef->close();
@@ -324,7 +334,7 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 	if (!CUtils::FindBlockNameByHoleName(s_blockConfigData, holeName,
 								blockSingleName, ARRAYSIZE(blockSingleName)))
 	{
-		//Ä¬ÈÏÖµ
+		//é»˜è®¤å€¼
 		_tcscpy(blockSingleName, _T("GKJBK"));
 	}
 
@@ -340,7 +350,7 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 	{
 		ptDraw.x = ptStart.x + 15;
 		ptDraw.y -= radius;
-		// 6. ²åÈë¿é²ÎÕÕ
+		// 6. æ’å…¥å—å‚ç…§
         AcDbBlockReference* pBlkRef = new AcDbBlockReference;
         pBlkRef->setBlockTableRecord(blkDefId);
         pBlkRef->setPosition(ptDraw);
@@ -348,33 +358,33 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
         es = pModelSpace->appendAcDbEntity(refId, pBlkRef);
         if (es != Acad::eOk)
         {
-            CUtils::acutPrintf(_T("\n[DWGµ¼Èë] ´íÎó£ºÌí¼Ó¿é²ÎÕÕÊ§°Ü(´íÎóÂë %d)¡£"), (int)es);
-            delete pBlkRef;          // Î´Èë¿â£¬delete£¨²»ÄÜ close£©
+            CUtils::acutPrintf(_T("\n[DWGå¯¼å…¥] é”™è¯¯ï¼šæ·»åŠ å—å‚ç…§å¤±è´¥(é”™è¯¯ç  %d)ã€‚"), (int)es);
+            delete pBlkRef;          // æœªå…¥åº“ï¼Œdeleteï¼ˆä¸èƒ½ closeï¼‰
 			return;
         }
         pBlkRef->close();
 
-		// ´´½¨ÎÄ±¾ÊµÌå - ¶¥²¿ÎÄ±¾ (holeName)
+		// åˆ›å»ºæ–‡æœ¬å®ä½“ - é¡¶éƒ¨æ–‡æœ¬ (holeName)
 		ptDraw.x +=radius*2;
 		ptDraw.y +=1.5;
 
 
-		AcDbObjectId textId = CUtils::AddDbText(pModelSpace,_T("×ê¿×±àºÅ"),
+		AcDbObjectId textId = CUtils::AddDbText(pModelSpace,_T("é’»å­”ç¼–å·"),
 								ptDraw,height_txt,pszStyleName,DBTA_LEFT,dWidthFactor);
 
 		double dW = 0.0, dH = 0.0;						
 		CUtils::GetEntExtentById(textId, dW, dH);
 		ptDraw.x += dW;
 		ptDraw.y -=  1;
-		// ´´½¨ÎÄ±¾ÊµÌå -  (elevation)
-		textId = CUtils::AddDbText(pModelSpace,_T("¿×¿Ú¸ß³Ì"),
+		// åˆ›å»ºæ–‡æœ¬å®ä½“ -  (elevation)
+		textId = CUtils::AddDbText(pModelSpace,_T("å­”å£é«˜ç¨‹"),
 								ptDraw,height_txt,pszStyleName,DBTA_LEFT,dWidthFactor);
 		//double dW_elevation = 0.0, dH_elevation = 0.0;	
 		//CUtils::GetEntExtentById(textId, dW_elevation, dH_elevation);
 
-		// ´´½¨ÎÄ±¾ÊµÌå -  (depth)
+		// åˆ›å»ºæ–‡æœ¬å®ä½“ -  (depth)
 		ptDraw.y += 2.5;
-		CUtils::AddDbText(pModelSpace,_T("¿±Ì½Éî¶È"),
+		CUtils::AddDbText(pModelSpace,_T("å‹˜æ¢æ·±åº¦"),
 								ptDraw,height_txt,pszStyleName,DBTA_LEFT,dWidthFactor);
 
 		AcGePoint3d ptDraw_start(ptDraw);
@@ -401,7 +411,7 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 		if (!CUtils::FindBlockNameByHoleName(s_blockConfigData, holeName,
 								blockSingleName, ARRAYSIZE(blockSingleName)))
 		{
-			//Ä¬ÈÏÖµ
+			//é»˜è®¤å€¼
 			_tcscpy(blockSingleName, _T("GKJBK"));
 		}
 		cadBlockUrl.Format(_T("support/block/%s.dwg"), blockSingleName);
@@ -421,8 +431,8 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
         es = pModelSpace->appendAcDbEntity(refId, pBlkRef);
         if (es != Acad::eOk)
         {
-            CUtils::acutPrintf(_T("\n[DWGµ¼Èë] ´íÎó£ºÌí¼Ó¿é²ÎÕÕÊ§°Ü(´íÎóÂë %d)¡£"), (int)es);
-            delete pBlkRef;          // Î´Èë¿â£¬delete£¨²»ÄÜ close£©
+            CUtils::acutPrintf(_T("\n[DWGå¯¼å…¥] é”™è¯¯ï¼šæ·»åŠ å—å‚ç…§å¤±è´¥(é”™è¯¯ç  %d)ã€‚"), (int)es);
+            delete pBlkRef;          // æœªå…¥åº“ï¼Œdeleteï¼ˆä¸èƒ½ closeï¼‰
 		}else{
 			pBlkRef->close();
 		}
@@ -439,7 +449,7 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 		ptDraw.y -=10.5;
 	}
 
-	//µØÖÊÆÊÃæÏß¼°±àºÅ
+	//åœ°è´¨å‰–é¢çº¿åŠç¼–å·
 	{
 		CUtils::AddDbRect(pModelSpace,ptDraw,16.0,8.0,1.0);
 
@@ -467,14 +477,14 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 
 		AcGePoint3d ptDraw_txt(ptDraw);
 		ptDraw_txt.x +=13.0;
-		CUtils::AddDbText(pModelSpace,_T("µØÖÊÆÊÃæÏß¼°±àºÅ"),
+		CUtils::AddDbText(pModelSpace,_T("åœ°è´¨å‰–é¢çº¿åŠç¼–å·"),
 								ptDraw_txt,height_txt,pszStyleName,DBTA_LEFT,dWidthFactor);
 
 
 		ptDraw.y -=10.5;
 	}
 
-	//ÒÑÓĞ½¨ÖşÎï¼°²ãÊı
+	//å·²æœ‰å»ºç­‘ç‰©åŠå±‚æ•°
 	{
 		CUtils::AddDbRect(pModelSpace,ptDraw,16.0,8.0,1.0);
 
@@ -496,8 +506,8 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
         es = pModelSpace->appendAcDbEntity(refId, pBlkRef);
         if (es != Acad::eOk)
         {
-            CUtils::acutPrintf(_T("\n[DWGµ¼Èë] ´íÎó£ºÌí¼Ó¿é²ÎÕÕÊ§°Ü(´íÎóÂë %d)¡£"), (int)es);
-            delete pBlkRef;          // Î´Èë¿â£¬delete£¨²»ÄÜ close£©
+            CUtils::acutPrintf(_T("\n[DWGå¯¼å…¥] é”™è¯¯ï¼šæ·»åŠ å—å‚ç…§å¤±è´¥(é”™è¯¯ç  %d)ã€‚"), (int)es);
+            delete pBlkRef;          // æœªå…¥åº“ï¼Œdeleteï¼ˆä¸èƒ½ closeï¼‰
 		}else{
 			pBlkRef->close();
 		}
@@ -505,14 +515,14 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 
 		AcGePoint3d ptDraw_txt(ptDraw);
 		ptDraw_txt.x +=13.0;
-		CUtils::AddDbText(pModelSpace,_T("ÒÑÓĞ½¨ÖşÎï¼°²ãÊı"),
+		CUtils::AddDbText(pModelSpace,_T("å·²æœ‰å»ºç­‘ç‰©åŠå±‚æ•°"),
 								ptDraw_txt,height_txt,pszStyleName,DBTA_LEFT,dWidthFactor);
 
 
 		ptDraw.y -=10.5;
 	}
 
-	//Äâ½¨½¨ÖşÎï¼°²ãÊı
+	//æ‹Ÿå»ºå»ºç­‘ç‰©åŠå±‚æ•°
 	{
 		CUtils::AddDbRect(pModelSpace,ptDraw,16.0,8.0,1.0);
 
@@ -534,8 +544,8 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
         es = pModelSpace->appendAcDbEntity(refId, pBlkRef);
         if (es != Acad::eOk)
         {
-            CUtils::acutPrintf(_T("\n[DWGµ¼Èë] ´íÎó£ºÌí¼Ó¿é²ÎÕÕÊ§°Ü(´íÎóÂë %d)¡£"), (int)es);
-            delete pBlkRef;          // Î´Èë¿â£¬delete£¨²»ÄÜ close£©
+            CUtils::acutPrintf(_T("\n[DWGå¯¼å…¥] é”™è¯¯ï¼šæ·»åŠ å—å‚ç…§å¤±è´¥(é”™è¯¯ç  %d)ã€‚"), (int)es);
+            delete pBlkRef;          // æœªå…¥åº“ï¼Œdeleteï¼ˆä¸èƒ½ closeï¼‰
 		}else{
 			pBlkRef->close();
 		}
@@ -543,7 +553,7 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 
 		AcGePoint3d ptDraw_txt(ptDraw);
 		ptDraw_txt.x +=13.0;
-		CUtils::AddDbText(pModelSpace,_T("Äâ½¨½¨ÖşÎï¼°²ãÊı"),
+		CUtils::AddDbText(pModelSpace,_T("æ‹Ÿå»ºå»ºç­‘ç‰©åŠå±‚æ•°"),
 								ptDraw_txt,height_txt,pszStyleName,DBTA_LEFT,dWidthFactor);
 
 
