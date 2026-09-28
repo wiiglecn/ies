@@ -5,6 +5,7 @@
 #include "cJSON.h"
 #include "Utils.h"
 #include "../tools/ToolGlobal.h"
+#include <stdio.h>
 
 struct ToolRouteInfo {
     const char* uriPath;
@@ -259,6 +260,51 @@ void HandleAiTool(struct mg_connection* nc,
             nCommandID = toolRoutes[i].commandID;
             break;
         }
+    }
+
+    if (nCommandID == WM_USER_FEATURE_PLANVIEW) {
+        // Persist this request independently so concurrent HTTP calls cannot overwrite each other.
+        static LONG requestSequence = 0;
+        CString requestDir = CUtils::GetArxFolder();
+        requestDir += _T("runtime");
+        if (!CreateDirectory(requestDir, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+            delete pData;
+            CloseHandle(hEvent);
+            cJSON_Delete(root);
+            AiApiServer::SendJsonResponse(nc, 500, "{\"status\":\"error\",\"message\":\"Failed to create runtime directory\"}");
+            return;
+        }
+        requestDir += _T("\\requests");
+        if (!CreateDirectory(requestDir, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+            delete pData;
+            CloseHandle(hEvent);
+            cJSON_Delete(root);
+            AiApiServer::SendJsonResponse(nc, 500, "{\"status\":\"error\",\"message\":\"Failed to create request directory\"}");
+            return;
+        }
+        CString requestPath;
+        requestPath.Format(_T("%s\\plan_view_%lu_%lu_%ld.json"),
+            requestDir.GetString(), (unsigned long)GetCurrentProcessId(),
+            (unsigned long)GetTickCount(), (long)InterlockedIncrement(&requestSequence));
+        if (requestPath.GetLength() >= MAX_PATH) {
+            delete pData;
+            CloseHandle(hEvent);
+            cJSON_Delete(root);
+            AiApiServer::SendJsonResponse(nc, 500, "{\"status\":\"error\",\"message\":\"Plan view request path is too long\"}");
+            return;
+        }
+        _tcscpy(pData->planViewRequestPath, requestPath.GetString());
+        FILE* requestFile = _tfopen(requestPath.GetString(), _T("wb"));
+        if (requestFile == NULL || fwrite(body.data(), 1, body.size(), requestFile) != body.size()) {
+            if (requestFile) fclose(requestFile);
+            DeleteFile(requestPath.GetString());
+            delete pData;
+            CloseHandle(hEvent);
+            cJSON_Delete(root);
+            AiApiServer::SendJsonResponse(nc, 500, "{\"status\":\"error\",\"message\":\"Failed to write plan view request file\"}");
+            return;
+        }
+        fclose(requestFile);
     }
 
     if (nCommandID == 0) {
