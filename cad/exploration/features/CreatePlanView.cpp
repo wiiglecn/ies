@@ -19,10 +19,18 @@ bool CCreatePlanView::Execute(const TCHAR* requestPath)
 	strFilePath = CUtils::GetArxFolder();
 	strFilePath.Replace(_T("\\"), _T("/"));
 	s_pJsonData = CUtils::LoadJsonFile(requestPath);
-	if (s_pJsonData == NULL || !cJSON_IsArray(s_pJsonData)) {
-		CUtils::acutPrintf(_T("[CAD ERROR] 平面图请求参数必须是 JSON 数组，或参数文件无法读取：%s\n"), requestPath);
+	if (s_pJsonData == NULL) {
+		CUtils::acutPrintf(_T("[CAD ERROR] 平面图请求参数文件无法读取：%s\n"), requestPath);
 		return false;
 	}
+	if (!cJSON_IsObject(s_pJsonData) && !cJSON_IsArray(s_pJsonData)) {
+		CUtils::acutPrintf(_T("[CAD ERROR] 平面图请求参数必须是 JSON 对象或数组：%s\n"), requestPath);
+		return false;
+	}
+	CUtils::acutPrintf(_T("[PLANVIEW] Request File: %s\n"), requestPath);
+	CUtils::acutPrintf(_T("[PLANVIEW] JSON Root Type: %s, Hole Count: %d\n"),
+		cJSON_IsObject(s_pJsonData) ? _T("Object") : _T("Array"),
+		cJSON_GetArraySize(s_pJsonData));
 
 	
 	CString cadHoleConfigUrl= strFilePath + _T("support/block_define.json");
