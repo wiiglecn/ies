@@ -13,7 +13,12 @@ enum DbTextHAlign
     DBTA_CENTER = 1,   // 居中：pt = 文本水平中心（基线高度不变）
     DBTA_RIGHT  = 2    // 右对齐：pt = 文本基线右端
 };
-
+struct RandomPolylineStyle
+{
+    AcDbObjectId linetypeId;
+    Adesk::UInt16 colorIndex;
+    double lineWeight;      // 0.0~0.25 连续线宽（图面单位，走 setConstantWidth）
+};
 #ifdef _CAD2005
     typedef std::string KString;
 
@@ -114,7 +119,9 @@ public:
     static AcDbObjectId AddDbPolyline(AcDbBlockTableRecord* container,
                                    const std::vector<AcGePoint3d>& arrPts,
                                    double dWidth = 0.0,
-                                   bool bClosed = false);
+                                   bool bClosed = false,
+                                   const ACHAR* pszLinetype = NULL,
+                                   Adesk::UInt16 colorIndex = 256);
 	    // 以 ptCenter 为中心画矩形（高 dHeight × 宽 dWidth），dLineWidth = 全局线宽；返回实体 ID，失败 kNull
     static AcDbObjectId AddDbRect(AcDbBlockTableRecord* container,
                                   const AcGePoint3d& ptCenter,
@@ -126,6 +133,15 @@ public:
 	
 	// 把已入库实体改到指定层（"0" 层始终存在，无需 EnsureLayer）
 	static bool SetEntLayer(const AcDbObjectId& id, const ACHAR* pszLayer);
+	//一次性加载lin文件内的全部线型
+	static Acad::ErrorStatus LoadAllLinetypesFromFile(const ACHAR* linFile);
+	static std::vector<CString> GetAvailableLinetypes(bool bSort = true);
+	static bool CreateRandomPolylineStyles(
+		AcDbDatabase* pDb,
+		int count,
+		std::vector<RandomPolylineStyle>& styles);
+	static bool IsShxLinetype(AcDbLinetypeTableRecord* pRecord);
+	static void replaceBlockText(AcDbObjectId blkDefId, LPCTSTR pszPlaceholder, LPCTSTR pszNewVal);
 
 	static cJSON* GetJsonObjectItemUtf8(cJSON* root, const TCHAR* key);
 	static cJSON* GetJsonConfigDirect();

@@ -352,6 +352,10 @@
 				RelativePath=".\src\Utils_ext_01.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\src\Utils_ext_02.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Include Files"

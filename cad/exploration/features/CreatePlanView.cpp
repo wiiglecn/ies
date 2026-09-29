@@ -31,7 +31,6 @@ void CCreatePlanView::Execute()
 		aboutTrans();
 		return;
 	}
-	
 
 	const TCHAR* layerName = _T("勘察点方案");        // ← 按需改图层名
 	if (CUtils::EnsureLayer(layerName).isNull()){

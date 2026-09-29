@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <algorithm>
 #include "cJSON.h"
 
 
@@ -245,7 +246,8 @@ bool CUtils::GetModelSpaceBounds(AcDbBlockTableRecord* pBTR, AcDbExtents& extOut
 }
 AcDbObjectId CUtils::AddDbPolyline(AcDbBlockTableRecord* container,
                                    const std::vector<AcGePoint3d>& arrPts,
-                                   double dWidth, bool bClosed)
+                                   double dWidth, bool bClosed,
+                                   const ACHAR* pszLinetype, Adesk::UInt16 colorIndex)
 {
     if (container == NULL || arrPts.size() < 2)
         return AcDbObjectId::kNull;
@@ -258,6 +260,17 @@ AcDbObjectId CUtils::AddDbPolyline(AcDbBlockTableRecord* container,
     {
         // 顶点是二维点（OCS），Z 由标高决定；平面图直接丢 z 即可
         pPline->addVertexAt((unsigned)i, AcGePoint2d(arrPts[i].x, arrPts[i].y));
+    }
+
+    // 可选颜色：256 = ByLayer（默认不改），其余按 ACI 颜色号设置
+    if (colorIndex != 256)
+        pPline->setColorIndex(colorIndex);
+
+    // 可选线型：按名称设置（setLinetype 内部查线型表），找不到时保持 ByLayer
+    if (pszLinetype != NULL && pszLinetype[0] != _T('\0'))
+    {
+        if (pPline->setLinetype(pszLinetype) != Acad::eOk)
+            CUtils::acutPrintf(_T("[CAD WARN] 线型 \"%s\" 不存在，保持 ByLayer\n"), pszLinetype);
     }
 
     AcDbObjectId plineId = AcDbObjectId::kNull;
@@ -306,4 +319,196 @@ AcDbObjectId CUtils::AddLine(AcDbBlockTableRecord* container,AcGePoint3d& ptStar
 	else
 		delete pLine;                    // 入库失败 → 未入库，只能 delete
 	return lineId;
+}
+/// 
+/// 一次性加载lin文件内的全部线型
+/// </summary>
+Acad::ErrorStatus CUtils::LoadAllLinetypesFromFile(const ACHAR* linFile)
+{
+    TCHAR fullPath[MAX_PATH] = {0};
+    if (ads_findfile(linFile, fullPath) != RTNORM)
+    {
+        acutPrintf(_T("\n错误：未找到线型文件 %s"), linFile);
+        return Acad::eFileNotFound;
+    }
+    // 第一个参数传"*"即可加载文件内所有定义的线型
+    return acdbLoadLineTypeFile(_T("*"), fullPath, NULL);
+}
+/**
+ * @brief 获取当前数据库中所有已加载的线型名称列表 (兼容 VC7/VC8)
+ * @param bSort 是否排序
+ * @return std::vector<CString> 线型名称列表
+ */
+std::vector<CString> CUtils::GetAvailableLinetypes(bool bSort)
+{
+    std::vector<CString> ltList;
+    
+    AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
+    if (!pDb)
+        return ltList;
+
+    AcDbLinetypeTable* pLtTable = NULL;
+    Acad::ErrorStatus es = pDb->getLinetypeTable(pLtTable, AcDb::kForRead);
+    if (es != Acad::eOk || !pLtTable)
+        return ltList;
+
+    AcDbLinetypeTableIterator* pIter = NULL;
+    es = pLtTable->newIterator(pIter);
+    if (es != Acad::eOk || !pIter)
+    {
+        pLtTable->close();
+        return ltList;
+    }
+
+    for (; !pIter->done(); pIter->step())
+    {
+        AcDbLinetypeTableRecord* pLtRecord = NULL;
+        es = pIter->getRecord(pLtRecord, AcDb::kForRead);
+        if (es == Acad::eOk && pLtRecord)
+        {
+            ACHAR* pNameRaw = NULL;
+            pLtRecord->getName(pNameRaw);
+            
+            if (pNameRaw)
+            {
+                // 关键兼容点：在旧版 ARX 中，getName 分配的内存必须手动释放
+                // 我们先复制到一个临时 CString，然后释放原始指针
+                CString strName(pNameRaw);
+                
+                // 释放由 getName 分配的内存
+				acutDelString(pNameRaw);
+                //acutDelString(const_cast<ACHAR*>(pNameRaw));
+                
+                ltList.push_back(strName);
+            }
+            pLtRecord->close();
+        }
+    }
+
+    delete pIter;
+    pLtTable->close();
+
+    if (bSort && !ltList.empty())
+    {
+        // VC7/VC8 的 std::sort 需要严格的弱序比较
+        std::sort(ltList.begin(), ltList.end());
+    }
+
+    return ltList;
+}
+
+ bool CUtils::IsShxLinetype(AcDbLinetypeTableRecord* pRecord)
+{
+    int dashCount = pRecord->numDashes();
+
+    for (int i = 0; i < dashCount; ++i)
+    {
+        // 非 0 表示该线型包含 SHX 形状
+        if (pRecord->shapeNumberAt(i) != 0)
+            return true;
+    }
+
+    return false;
+}
+bool CUtils::CreateRandomPolylineStyles(
+    AcDbDatabase* pDb,
+    int count,
+    std::vector<RandomPolylineStyle>& styles)
+{
+    styles.clear();
+
+    if (pDb == NULL || count <= 0)
+        return false;
+
+    AcDbLinetypeTable* pTable = NULL;
+    if (pDb->getLinetypeTable(pTable, AcDb::kForRead) != Acad::eOk)
+        return false;
+
+    std::vector<AcDbObjectId> linetypes;
+
+    AcDbLinetypeTableIterator* pIter = NULL;
+    if (pTable->newIterator(pIter) != Acad::eOk)
+    {
+        pTable->close();
+        return false;
+    }
+
+    for (; !pIter->done(); pIter->step())
+    {
+        AcDbLinetypeTableRecord* pRecord = NULL;
+
+        if (pIter->getRecord(pRecord, AcDb::kForRead) != Acad::eOk)
+            continue;
+
+        if (!IsShxLinetype(pRecord))
+            linetypes.push_back(pRecord->objectId());
+
+        pRecord->close();
+    }
+
+    delete pIter;
+    pTable->close();
+
+    if (linetypes.empty())
+        return false;
+
+    // ACI 颜色 1~255；不使用 ByLayer、ByBlock
+    const int colorCount = 255;
+    long maxTypeCount = (long)linetypes.size() * colorCount;
+
+    if ((long)count > maxTypeCount)
+        return false;
+
+    // 构造所有“线型 + 颜色”组合
+    std::vector<RandomPolylineStyle> candidates;
+
+    size_t i;
+    for (i = 0; i < linetypes.size(); ++i)
+    {
+        int color;
+
+        for (color = 1; color <= colorCount; ++color)
+        {
+            // 排除绿(3)/蓝(5)/洋红(6)：保留给地质要素线（水位线、设计标高线等）专用
+            if (color == 3 || color == 5 || color == 6)
+                continue;
+
+            RandomPolylineStyle style;
+            style.linetypeId = linetypes[i];
+            style.colorIndex = (Adesk::UInt16)color;
+            style.lineWeight = 0.0;
+            candidates.push_back(style);
+        }
+    }
+
+    // 使用当前时间初始化随机种子
+    static bool seeded = false;
+    if (!seeded)
+    {
+        srand((unsigned int)time(NULL));
+        seeded = true;
+    }
+
+    // Fisher-Yates 洗牌，兼容旧编译器
+    for (int n = (int)candidates.size() - 1; n > 0; --n)
+    {
+        int j = rand() % (n + 1);
+
+        RandomPolylineStyle temp = candidates[n];
+        candidates[n] = candidates[j];
+        candidates[j] = temp;
+    }
+
+    for (int n = 0; n < count; ++n)
+    {
+        RandomPolylineStyle style = candidates[n];
+
+        // 线宽：0.00~0.25 连续随机（不参与类型唯一性判断）
+        // ★0.25 在前：先乘后除，避免 rand()/RAND_MAX 整除为 0
+        style.lineWeight = 0.25 * rand() / RAND_MAX;
+
+        styles.push_back(style);
+    }
+
+    return true;
 }
