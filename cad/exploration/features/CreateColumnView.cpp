@@ -172,6 +172,7 @@ void CCreateColumnView::Execute()
         }
     }
 
+    int holeIdx = 0;
     cJSON_ArrayForEach(item, s_pJsonData) {
         // 处理每个属性
         if (item != NULL) {
@@ -820,6 +821,15 @@ void CCreateColumnView::Execute()
 			//动探击数
 
 			ptInsert.x += space;
+
+			++holeIdx;
+			if (holeIdx % 10 == 0) {
+				MSG msg;
+				while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+					TranslateMessage(&msg);
+					DispatchMessage(&msg);
+				}
+			}
 
 			/*if (_tcscmp(arrayName, _T("ZK3")) == 0){
 				break;

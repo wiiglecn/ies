@@ -5,6 +5,8 @@
 #include "cJSON.h"
 #include "Utils.h"
 #include "../tools/ToolGlobal.h"
+#include <afx.h>
+#include <windows.h>
 
 struct ToolRouteInfo {
     const char* uriPath;
@@ -339,6 +341,177 @@ void HandleAiTool(struct mg_connection* nc,
     cJSON_Delete(root); // Clean up input JSON
     delete pData;       // Clean up the struct
 }
+// ---------- /api/draw: 一次调用出图（一体化，替代外部 python 网关） ----------
+// 把 cJSON 对象序列化成 UTF-8 字符串并写到 project/ 下的指定文件。
+// 返回 true=写成功。
+static CString g_lastFailedPath;
+
+static bool _WriteJsonToProjectFile(const wchar_t* fileNameW, const std::string& contentUtf8)
+{
+    CString arxDir = CUtils::GetArxFolder();
+    arxDir.Replace(_T("\\"), _T("/"));
+    if (arxDir.Right(1) != _T("/")) arxDir += _T("/");
+    CString path = arxDir + CString(fileNameW);
+    g_lastFailedPath = path;
+
+    CStdioFile f;
+    if (!f.Open(path, CFile::modeCreate | CFile::modeWrite | CFile::typeBinary)) {
+        return false;
+    }
+    if (!contentUtf8.empty()) {
+        f.Write((const void*)contentUtf8.data(), (UINT)contentUtf8.size());
+    }
+    f.Close();
+    return true;
+}
+
+// 同步执行一个 tool（PostMessage + WaitForSingleObject），模仿 HandleAiTool 内部逻辑。
+// 返回 0=成功，非 0=失败/超时。
+static int _ExecToolSync(CWnd* pAcadWnd, UINT cmdId, DWORD timeoutMs = 120000)
+{
+    cJSON* root = cJSON_CreateObject();
+    HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (hEvent == NULL) {
+        cJSON_Delete(root);
+        return 1;
+    }
+    AiToolCommandData* pData = new AiToolCommandData();
+    pData->jsonRoot = root;
+    pData->hEvent = hEvent;
+    pData->ret = 1;
+    pData->resultJson = NULL;
+
+    pAcadWnd->PostMessage(WM_USER_TOOL, cmdId, (LPARAM)pData);
+    DWORD wr = WaitForSingleObject(hEvent, timeoutMs);
+
+    int ret = (wr == WAIT_OBJECT_0) ? pData->ret : 2;
+
+    if (pData->resultJson) cJSON_Delete(pData->resultJson);
+    CloseHandle(hEvent);
+    cJSON_Delete(root);
+    delete pData;
+    return ret;
+}
+
+void HandleApiDraw(struct mg_connection* nc,
+                   struct mg_http_message* hm,
+                   const std::map<std::string, std::string>& params,
+                   const std::string& body,
+                   void* user_data)
+{
+    std::string response;
+
+    cJSON* root = cJSON_Parse(body.c_str());
+    if (!root) {
+        AiApiServer::SendJsonResponse(nc, 400, "{\"status\":\"error\",\"message\":\"invalid JSON\"}");
+        return;
+    }
+
+    // 1. borehole_data（必填）
+    cJSON* jBorehole = cJSON_GetObjectItem(root, "borehole_data");
+    if (!jBorehole || !cJSON_IsObject(jBorehole)) {
+        cJSON_Delete(root);
+        AiApiServer::SendJsonResponse(nc, 400, "{\"status\":\"error\",\"message\":\"missing borehole_data object\"}");
+        return;
+    }
+
+    // 2. views（可选，默认全画）
+    std::vector<std::string> views;
+    cJSON* jViews = cJSON_GetObjectItem(root, "views");
+    if (jViews && cJSON_IsArray(jViews)) {
+        cJSON* v;
+        cJSON_ArrayForEach(v, jViews) {
+            if (cJSON_IsString(v) && v->valuestring) views.push_back(v->valuestring);
+        }
+    } else {
+        views.push_back("plan");
+        views.push_back("section");
+        views.push_back("column");
+    }
+
+    // 3. auto_zoom（默认 true）
+    bool autoZoom = true;
+    cJSON* jZoom = cJSON_GetObjectItem(root, "auto_zoom");
+    if (jZoom && cJSON_IsBool(jZoom)) autoZoom = cJSON_IsTrue(jZoom);
+
+    // 4. 拿到 acad 主窗口
+    AiApiRequest* apiRequest = (AiApiRequest*)user_data;
+    CWnd* pAcadWnd = apiRequest ? apiRequest->getAcadWnd() : NULL;
+    if (!pAcadWnd) {
+        cJSON_Delete(root);
+        AiApiServer::SendJsonResponse(nc, 500, "{\"status\":\"error\",\"message\":\"AutoCAD window not available\"}");
+        return;
+    }
+
+    // 5. 写 borehole JSON 落盘
+    char* bhStr = cJSON_PrintUnformatted(jBorehole);
+    std::string bhUtf8 = bhStr ? bhStr : "{}";
+    if (bhStr) free(bhStr);
+    bool bhOk = _WriteJsonToProjectFile(L"project/\u94BB\u63A2\u7F16\u5F55\u8868.json", bhUtf8);
+    if (!bhOk) {
+        cJSON_Delete(root);
+        // 返回实际拼出的 path，方便排查
+        CT2CA pszPath(g_lastFailedPath, CP_UTF8);
+        std::string resp = "{\"status\":\"error\",\"message\":\"failed to write borehole json\",\"path\":\"";
+        resp += pszPath;
+        resp += "\"}";
+        AiApiServer::SendJsonResponse(nc, 500, resp);
+        return;
+    }
+
+    // 6. section_params（可选）
+    cJSON* jSection = cJSON_GetObjectItem(root, "section_params");
+    if (jSection && cJSON_IsObject(jSection)) {
+        char* secStr = cJSON_PrintUnformatted(jSection);
+        std::string secUtf8 = secStr ? secStr : "{}";
+        if (secStr) free(secStr);
+        _WriteJsonToProjectFile(L"project/\u5256\u9762\u56FE\u53C2\u6570.json", secUtf8);
+    }
+
+    // 7. 串行执行 views
+    cJSON* results = cJSON_CreateObject();
+    cJSON* errors = cJSON_CreateObject();
+    for (size_t i = 0; i < views.size(); ++i) {
+        const std::string& v = views[i];
+        UINT cmdId = 0;
+        if (v == "plan")          cmdId = WM_USER_FEATURE_PLANVIEW;
+        else if (v == "section")  cmdId = WM_USER_FEATURE_SECTIONVIEW;
+        else if (v == "column")   cmdId = WM_USER_FEATURE_COLUMNVIEW;
+        else {
+            cJSON_AddStringToObject(errors, v.c_str(), "unknown view");
+            continue;
+        }
+        int ret = _ExecToolSync(pAcadWnd, cmdId, 120000);
+        cJSON* item = cJSON_CreateObject();
+        cJSON_AddStringToObject(item, "status", ret == 0 ? "success" : "error");
+        cJSON_AddItemToObject(results, v.c_str(), item);
+        if (ret != 0) {
+            cJSON_AddStringToObject(errors, v.c_str(), ret == 2 ? "timeout" : "failed");
+        }
+    }
+
+    // 8. auto zoom
+    if (autoZoom && cJSON_GetArraySize(errors) == 0) {
+        _ExecToolSync(pAcadWnd, WM_USER_A_ZOOM_EXTENTS, 30000);
+    }
+
+    // 9. 拼响应
+    cJSON* resp = cJSON_CreateObject();
+    bool allOk = (cJSON_GetArraySize(errors) == 0);
+    cJSON_AddStringToObject(resp, "status", allOk ? "success" : "partial");
+    cJSON_AddItemToObject(resp, "results", results);
+    cJSON_AddItemToObject(resp, "errors", errors);
+
+    char* printed = cJSON_PrintUnformatted(resp);
+    response = printed ? printed : "{}";
+    if (printed) free(printed);
+    cJSON_Delete(resp);
+    cJSON_Delete(root);
+
+    AiApiServer::SendJsonResponse(nc, allOk ? 200 : 207, response);
+}
+
+
 AiApiRequest::AiApiRequest(void):m_Server(NULL),pAcadWnd(NULL)
 {
 }
@@ -363,6 +536,9 @@ void AiApiRequest::Start()
     for (size_t i = 0; i <  routeCount; ++i) {
         m_Server->RegisterRoute("POST", toolRoutes[i].uriPath, HandleAiTool, this);
     }
+
+	// 一体化出图：一次 HTTP 调用完成"收参数 -> 落盘 -> 出 plan/section/column"
+	m_Server->RegisterRoute("POST", "/api/draw", HandleApiDraw, this);
 
 	m_Server->StartHttpServer();
 }
