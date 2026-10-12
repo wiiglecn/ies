@@ -393,6 +393,78 @@ static int _ExecToolSync(CWnd* pAcadWnd, UINT cmdId, DWORD timeoutMs = 120000)
     return ret;
 }
 
+// --- auto-generated english->chinese key renamer ---
+static void RenameChildKey(cJSON* parent, const char* oldKey, const char* newKeyUtf8) {
+    if (!parent || !oldKey || !newKeyUtf8) return;
+    cJSON* c = cJSON_GetObjectItem(parent, oldKey);
+    if (!c) return;
+    if (c->string) { free(c->string); c->string = NULL; }
+    size_t n = strlen(newKeyUtf8);
+    c->string = (char*)malloc(n+1);
+    memcpy(c->string, newKeyUtf8, n);
+    c->string[n] = 0;
+}
+
+static void ConvertBoreholeDataEnToCn(cJSON* root) {
+    if (!root || !cJSON_IsObject(root)) return;
+    cJSON* hole = NULL;
+    cJSON_ArrayForEach(hole, root) {
+        if (!cJSON_IsObject(hole)) continue;
+    RenameChildKey(hole, "hole_no", "\xE9\x92\xBB\xE5\xAD\x94\xE7\xBC\x96\xE5\x8F\xB7");
+    RenameChildKey(hole, "x", "\x58\xE5\x9D\x90\xE6\xA0\x87\x28\x6D\x29");
+    RenameChildKey(hole, "y", "\x59\xE5\x9D\x90\xE6\xA0\x87\x28\x6D\x29");
+    RenameChildKey(hole, "elevation", "\xE5\xAD\x94\xE5\x8F\xA3\xE9\xAB\x98\xE7\xA8\x8B\x28\x6D\x29");
+    RenameChildKey(hole, "depth", "\xE7\xBB\x88\xE5\xAD\x94\xE6\xB7\xB1\xE5\xBA\xA6\x28\x6D\x29");
+    RenameChildKey(hole, "hole_type", "\xE9\x92\xBB\xE5\xAD\x94\xE7\xB1\xBB\xE5\x9E\x8B");
+    RenameChildKey(hole, "project_name", "\xE5\xB7\xA5\xE7\xA8\x8B\xE5\x90\x8D\xE7\xA7\xB0");
+    RenameChildKey(hole, "company", "\xE5\x85\xAC\xE5\x8F\xB8\xE5\x90\x8D\xE7\xA7\xB0");
+    RenameChildKey(hole, "site", "\xE5\xB7\xA5\xE7\xA8\x8B\xE5\x9C\xB0\xE7\x82\xB9");
+    RenameChildKey(hole, "date_start", "\xE5\xBC\x80\xE5\xAD\x94\xE6\x97\xA5\xE6\x9C\x9F");
+    RenameChildKey(hole, "date_end", "\xE7\xBB\x88\xE5\xAD\x94\xE6\x97\xA5\xE6\x9C\x9F");
+    RenameChildKey(hole, "page_current", "\xE5\xBD\x93\xE5\x89\x8D\xE9\xA1\xB5");
+    RenameChildKey(hole, "page_total", "\xE6\x80\xBB\xE9\xA1\xB5\xE7\xA0\x81");
+    RenameChildKey(hole, "water_level_initial", "\xE5\x88\x9D\xE8\xA7\x81\xE6\xB0\xB4\xE4\xBD\x8D\x28\x6D\x29");
+    RenameChildKey(hole, "water_level_stable", "\xE7\xA8\xB3\xE5\xAE\x9A\xE6\xB0\xB4\xE4\xBD\x8D\x28\x6D\x29");
+    RenameChildKey(hole, "manager", "\xE9\xA1\xB9\xE7\x9B\xAE\xE8\xB4\x9F\xE8\xB4\xA3\xE4\xBA\xBA");
+    RenameChildKey(hole, "driller", "\xE9\x92\xBB\xE6\x8E\xA2\xE6\x9C\xBA\xE9\x95\xBF");
+    RenameChildKey(hole, "recorder", "\xE7\xBC\x96\xE5\xBD\x95\xE5\x91\x98");
+        cJSON* layers = cJSON_GetObjectItem(hole, "layers");
+        if (layers && cJSON_IsArray(layers)) {
+            cJSON* layer = NULL;
+            cJSON_ArrayForEach(layer, layers) {
+                if (!cJSON_IsObject(layer)) continue;
+    RenameChildKey(layer, "layer_id", "\xE5\x9C\xB0\xE5\xB1\x82\xE7\xBC\x96\xE5\x8F\xB7");
+    RenameChildKey(layer, "from", "\xE8\xBF\x9B\xE5\xB0\xBA\xE8\x87\xAA\x28\x6D\x29");
+    RenameChildKey(layer, "to", "\xE8\xBF\x9B\xE5\xB0\xBA\xE8\x87\xB3\x28\x6D\x29");
+    RenameChildKey(layer, "name", "\xE5\x9C\xB0\xE5\xB1\x82\xE5\x90\x8D\xE7\xA7\xB0");
+    RenameChildKey(layer, "color", "\xE9\xA2\x9C\xE8\x89\xB2");
+    RenameChildKey(layer, "state", "\xE7\x8A\xB6\xE6\x80\x81");
+    RenameChildKey(layer, "density", "\xE5\xAF\x86\xE5\xAE\x9E\xE5\xBA\xA6");
+    RenameChildKey(layer, "moisture", "\xE6\xB9\xBF\xE5\xBA\xA6");
+    RenameChildKey(layer, "description", "\xE6\x88\x90\xE5\x88\x86\xE5\x8F\x8A\xE5\x85\xB6\xE4\xBB\x96");
+                cJSON* sample = cJSON_GetObjectItem(layer, "sample");
+                if (sample && cJSON_IsObject(sample)) {
+    RenameChildKey(sample, "no", "\xE7\xBC\x96\xE5\x8F\xB7");
+    RenameChildKey(sample, "depth", "\xE5\x8F\x96\xE6\xA0\xB7\xE6\xB7\xB1\xE5\xBA\xA6");
+                    RenameChildKey(layer, "sample", "\xE5\x8F\x96\xE5\xB2\xA9\x28\xE5\x9C\x9F\xE3\x80\x81\xE6\xB0\xB4\x29\xE6\xA0\xB7");
+                }
+                cJSON* test = cJSON_GetObjectItem(layer, "test");
+                if (test && cJSON_IsObject(test)) {
+    RenameChildKey(test, "type", "\xE7\xB1\xBB\xE5\x9E\x8B");
+    RenameChildKey(test, "from", "\xE8\xB5\xB7\x28\x6D\x29");
+    RenameChildKey(test, "to", "\xE6\xAD\xA2\x28\x6D\x29");
+    RenameChildKey(test, "rod_length", "\xE6\x9D\x86\xE9\x95\xBF\x28\x6D\x29");
+    RenameChildKey(test, "hits", "\xE9\x94\xA4\xE5\x87\xBB\xE6\x95\xB0\x28\xE5\x87\xBB\x29");
+                    RenameChildKey(layer, "test", "\xE5\x8E\x9F\xE4\xBD\x8D\xE6\xB5\x8B\xE8\xAF\x95");
+                }
+            }
+            // finally rename layers key itself
+            RenameChildKey(hole, "layers", "\xE5\x9C\xB0\xE5\xB1\x82\xE5\x88\x97\xE8\xA1\xA8");
+        }
+    }
+}
+// --- end auto-generated ---
+
 void HandleApiDraw(struct mg_connection* nc,
                    struct mg_http_message* hm,
                    const std::map<std::string, std::string>& params,
@@ -406,6 +478,9 @@ void HandleApiDraw(struct mg_connection* nc,
         AiApiServer::SendJsonResponse(nc, 400, "{\"status\":\"error\",\"message\":\"invalid JSON\"}");
         return;
     }
+
+    // 0. convert english keys to chinese (UTF-8 keys for C++ downstream)
+    if (root) ConvertBoreholeDataEnToCn(cJSON_GetObjectItem(root, "borehole_data"));
 
     // 1. borehole_data（必填）
     cJSON* jBorehole = cJSON_GetObjectItem(root, "borehole_data");
