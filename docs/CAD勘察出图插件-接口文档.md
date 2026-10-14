@@ -3,7 +3,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档名称 | CAD 勘察出图插件（KsExploration.arx）对外接口文档 |
-| 版本 | **V1.0** |
+| 版本 | **V1.1** |
 | 日期 | 2026-10-14 |
 | 适用 | AutoCAD 2005 / 2007 + 勘察三图（平面图 / 柱状图 / 剖面图）出图 |
 | 基线 | 《勘探点平面布置图·底图导入与出图比例 详细设计》**V1.6**；《CAD 勘察出图插件·勘察三图生成 需求规格说明书》**V1.3**；《CAD 勘察出图插件·勘察三图生成 需求文档》**V2.4** |
@@ -79,8 +79,9 @@
 - **三接口独立**：柱状图、剖面图、平面图各自一个端点，按需调用。
 - **平面图底图支持**：DWG 文件上传（`multipart/form-data` 字段 `base_map`）或可访问链接（`base_map_url`，http/https）二选一，**均由网关端下载并落盘到 `ARX_DIR/support/底图/`**，插件端**不联网**。
 - **告警必达**：底图不可用**绝不**返回 5xx，统一 `HTTP 200 + warnings[] + degraded_to`，由 CAD 端显式告知用户（避免静默）。
+- **SSRF 启动参数**：网关支持 `--ssrf-whitelist-cidr <CIDR列表>` 启动参数（默认空 = 全放行；非空时仅放行白名单内；回环地址一律拒），由部署层按需配置。
 
-> 实现状态：在 `cad_server/draw_gateway.py` 当前代码（`draw_gateway.py:184`）仍为单接口 `/api/draw`；形态 B 三接口为详设 V1.6 §9.3 定稿，**本版待实现**。
+> 实现状态：在 `cad_server/draw_gateway.py` 当前代码（`draw_gateway.py:184`）仍为单接口 `/api/draw`；形态 B 三接口为详设 V1.7 §9.3 定稿，**本版实施中**（A1~A7/G1~G5 任务派单已发，详见 `评审-P0 改造蓝图-2026-10-14.md`）。
 
 ---
 
@@ -147,11 +148,12 @@
 | # | 接口 | 形态 | 状态 | Content-Type | 必填字段 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | `POST /api/draw` | A | **✅ 已实现**（`cad_server/API.md` v2.1） | `application/json` | `borehole_data` | 单接口一次调用多图；视图由 `views` 数组选择 |
-| 2 | `POST /api/draw/column` | B | 🔜 待实现 | `application/json` / `multipart/form-data` | `borehole_data` | 柱状图端点；本版待实现（详设 V1.6 §9.3） |
-| 3 | `POST /api/draw/section` | B | 🔜 待实现 | `application/json` / `multipart/form-data` | `borehole_data` | 剖面图端点；本版待实现 |
-| 4 | `POST /api/draw/plan` | B | 🔜 待实现（**重点**） | `application/json` / `multipart/form-data` | `borehole_data`；`base_map` 或 `base_map_url` 二选一（流程二；底图字段**仅**支持 `multipart/form-data`，详见 §7.2） | 平面图端点；支持底图两种提交方式；详情见第 7 章 |
+| 2 | `POST /api/draw/column` | B | 🛠 **实施中** | `application/json` / `multipart/form-data` | `borehole_data` | 柱状图端点；本版实施中（详设 V1.7 §9.3，代码任务 G1/G3 派单已发） |
+| 3 | `POST /api/draw/section` | B | 🛠 **实施中** | `application/json` / `multipart/form-data` | `borehole_data` | 剖面图端点；本版实施中 |
+| 4 | `POST /api/draw/plan` | B | 🛠 **实施中**（**重点**） | `application/json` / `multipart/form-data` | `borehole_data`；`base_map` 或 `base_map_url` 二选一（流程二；底图字段**仅**支持 `multipart/form-data`，详见 §7.2） | 平面图端点；支持底图两种提交方式；详情见第 7 章 |
 
-> 形态 A 现状实现位于 ARX 内嵌 HTTP 服务；形态 B 现状代码仍为单接口 `/api/draw`，三接口为详设 V1.6 定稿，**改造在 `cad_server/draw_gateway.py` 落地**。
+> **注**：第 2~4 行三接口的"🛠 实施中"状态与 **P0-1**（`ImportDwgAsBlock` 6 参重载用语核验）、**P0-3**（`base_map_url` JSON body 静默忽略——已由 §7.2 D1 决策落地）关联——网关落地时同步消除。
+> 形态 A 现状实现位于 ARX 内嵌 HTTP 服务；形态 B 现状代码仍为单接口 `/api/draw`，三接口为详设 V1.7 定稿，**改造在 `cad_server/draw_gateway.py` 落地**。
 
 ---
 
@@ -357,7 +359,7 @@ Content-Type: multipart/form-data        # 推荐：文件上传场景
 | `auto_zoom` | bool | 否 | JSON body / form 字段 | `true` | 出图后是否自动全图缩放 |
 
 > **`base_map` 与 `base_map_url` 二选一**：同时提交 → `HTTP 400 + {"status":"error","message":"base_map 与 base_map_url 互斥，二选一"}`。
-> **底图字段仅支持 `multipart/form-data`**：`base_map`（文件）与 `base_map_url`（string）**只从 `request.form` 读取**（详设 V1.6 §9.2 `_save_base_map()`）；`application/json` 提交时 `request.form` 为空，**`base_map` / `base_map_url` 会被静默忽略**，网关按"调用方未给底图"走流程一正常路径（**这本身就是"告警必达"的漏洞场景——本版已记录为待评估项**，不返 400、亦不告警）。**调用方若需提供底图，必须使用 `multipart/form-data`**。
+> **底图字段仅支持 `multipart/form-data`**：`base_map`（文件）与 `base_map_url`（string）**只从 `request.form` / `request.files` 读取**（详设 V1.7 §9.2 `_save_base_map()`）；`application/json` 提交时 `request.form` 为空——**若 JSON body 中仍包含 `base_map` / `base_map_url` 键，视为"调用方式错误"，网关返 `HTTP 400 + {"status":"error","message":"base_map / base_map_url 仅支持 multipart/form-data 提交"}`**（与"同传 / 扩展名错误"同类处理，详见 §8.2 第 5 行；本项即 **D1 决策**——`base_map_url requires multipart/form-data`，属"调用方式错误"语义，**不是流程一降级**）。**调用方若需提供底图，必须使用 `multipart/form-data`**。
 > **未提供底图与 `plan_base`** → 走流程一，响应 `degraded_to="process1_no_basemap"`（流程一正常路径，与"降级"无关）。
 > **`plan_base`** 可与底图同传；亦可不传（流程一不走底图、不走对齐，插件按当前数据出图）。
 
@@ -412,7 +414,7 @@ Content-Type: multipart/form-data        # 推荐：文件上传场景
 | `null` | 未走流程一（即本次出图按流程二路径，底图已生效） | 底图成功落盘且生效 |
 | `"process1_no_basemap"` | 本次按流程一继续出图 | 调用方**根本没给底图**，或**给了但不可用**（命中告警必达） |
 
-- `degraded_to` 字段语义为"本次实际走的流程标识"，**与"降级/兜底"无关**——流程一与流程二**地位对等**（详设 V1.6 §1.1、《需规》V1.3 §2.1）。
+- `degraded_to` 字段语义为"本次实际走的流程标识"，**与"降级/兜底"无关**——流程一与流程二**地位对等**（详设 V1.7 §1.1、《需规》V1.3 §2.1）。
 - 即使调用方未给底图（流程一正常路径），仍返回 `"process1_no_basemap"`，不是错误。
 
 ### 7.5 `plan_base` 字段表（详设 V1.6 §2）
@@ -461,7 +463,7 @@ Content-Type: multipart/form-data        # 推荐：文件上传场景
 | `source_points` | array | 配准时必填 | 底图（DWG 内部坐标）上已知点；**`[x, y]` 数组**格式（如 `[[x1, y1], [x2, y2]]`），1 或 2 个点，单位米 |
 | `target_points` | array | 配准时必填 | 上述点在钻孔坐标系下的对应坐标；数组格式同上，数量与 `source_points` 一致，单位米 |
 
-> ⚠️ 与详设 V1.6 §2.1 JSON 定稿对齐（V1.6 P0-2 修复）：`registration` 中点为 **`[x, y]` 数组**，**不是** `{"x":..,"y":..}` 对象。
+> ⚠️ 与详设 V1.7 §2.1 JSON 定稿对齐（V1.6 P0-2 修复）：`registration` 中点为 **`[x, y]` 数组**，**不是** `{"x":..,"y":..}` 对象。**坐标对齐**（消除底图与钻孔的坐标系/单位差异）相关字段与 §7.6 "对齐 `scale`" 对应。
 
 ### 7.6 出图比例 `plot_scale` 语义（与对齐 `scale` 的区别）
 
@@ -629,7 +631,7 @@ curl -X POST http://<gateway>/api/draw/plan \
 
 | 状态码 | 触发条件 | 响应形态 | 说明 |
 | --- | --- | --- | --- |
-| `200 OK` | 正常（含底图不可用走告警必达） | `{status, results, warnings, degraded_to}`（plan）/ `{status, results}`（column / section） | 底图不可用**绝不**返 5xx |
+| `200 OK` | 正常（含底图不可用走告警必达） | `{status, results, warnings, degraded_to}`（plan）/ `{status, results}`（column / section） | 底图不可用**绝不**返 5xx（PM 决策 9 加粗：告警必达是本系统硬约束） |
 | `400 Bad Request` | 调用方式错误 | `{status:"error", message:...}` | 仅以下场景：① `base_map` 与 `base_map_url` 同传；② 文件扩展名非 `.dwg`；③ `borehole_data` / `plan_base` / `section_params` 缺失或非法 JSON |
 | `413 Request Entity Too Large` | multipart 体超过 50MB（Flask `MAX_CONTENT_LENGTH`） | Flask 默认错误页 | 见详设 V1.6 §9.1 |
 | `504 Gateway Timeout` | `draw_plan` 调用 `_call_cad` 超时（300s） | `{status:"error", message:"plan view timed out (300s)", warnings, degraded_to}` | 仅 plan 视图可能；column/section 默认 120s |
@@ -643,6 +645,7 @@ curl -X POST http://<gateway>/api/draw/plan \
 | 2 | `base_map` / `base_map_url` 扩展名非 `.dwg` | 400 | `only .dwg allowed` / `base_map_url must point to .dwg` |
 | 3 | `borehole_data` 缺失或非法 JSON | 400 | `missing required field: borehole_data` / `borehole_data invalid JSON in body` / `... in form` |
 | 4 | `plan_base` / `section_params` 非法 JSON | 400 | `<field> invalid JSON in body/form` |
+| 5 | `application/json` 请求 body 含 `base_map` / `base_map_url` 键（V1.1 新增 · **D1 决策**） | 400 | `base_map / base_map_url 仅支持 multipart/form-data 提交` |
 
 ### 8.3 底图不可用枚举（200 + `warnings[]`）
 
@@ -895,8 +898,8 @@ curl -X POST http://<gateway>/api/draw/section \
 | 400 `borehole_data invalid JSON in body/form` | JSON 体或 form 字段非合法 JSON | 用 `python -m json.tool` 校验 |
 | 413 Request Entity Too Large | 上传超过 50MB（Flask `MAX_CONTENT_LENGTH`） | 压缩或拆分底图；详设 V1.6 §9.1 |
 | 504 `plan view timed out (300s)` | 大底图 + 配准 + 出图比例超 300s | 客户端重试；适当缩放或简化底图 |
-| 200 + `warnings: ["底图未被采用：..."]` | 底图不可用，按流程一继续出图 | 检查底图路径 / 链接 / 体积 / 网络可达性；**CAD 端已显式告知用户**（详设 V1.6 §9.3） |
-| `application/json` 提交 `base_map_url` 无任何反应，平面图按流程一照常出图 | `base_map_url` **只从 `request.form` 读取**（详设 V1.6 §9.2），JSON body 提交时 `request.form` 为空 → **静默忽略** | 改用 `multipart/form-data` 提交（见 §7.11.3 / §10.4）。**本漏洞场景：与"告警必达"原则冲突，列为待评估项**（是否在网关侧对 `application/json` 请求体中包含 `base_map_url` 键时返 400） |
+| 200 + `warnings: ["底图未被采用：..."]` | 底图不可用，按流程一继续出图 | 检查底图路径 / 链接 / 体积 / 网络可达性；**CAD 端已显式告知用户**（详设 V1.7 §9.3） |
+| 400 `base_map / base_map_url 仅支持 multipart/form-data 提交` | `application/json` 请求 body 含底图键（V1.1 D1 决策） | 改用 `multipart/form-data` 提交（见 §7.11.2 / §7.11.3 / §10.3 / §10.4） |
 | `warnings: ["底图未被采用：base_map_url 校验未通过（详见网关日志）"]` | SSRF 命中回环 / 协议非 http(s) | 在网关 `--ssrf-whitelist-cidr` 配置或改用 http(s) |
 | `degraded_to: "process1_no_basemap"` 且 `warnings: []` | 调用方**没给底图**，走流程一正常路径 | 非错误，是流程一对等路径 |
 | 并发调用耗时叠加 | 网关 `_lock` 串行 | 按需由部署层分项目分目录；本版不承诺多项目隔离 |
@@ -920,6 +923,7 @@ curl -X POST http://<gateway>/api/draw/section \
 | --- | --- | --- |
 | 2026-10-14 | **V1.0** | 初版。整合 `cad_server/API.md` v2.1（形态 A：单接口 `POST /api/draw` 已实现）与详设 V1.6 §9（形态 B：三接口 `POST /api/draw/{column,section,plan}` 待实现）。覆盖平面图流程一/流程二并列、底图两种提交方式、SSRF 策略、告警必达（绝不返 5xx + `warnings[]` + `degraded_to`）、出图比例 `plot_scale` 与对齐 `scale` 的区别、单项目/单 CAD 实例假设。基线：详设 V1.6 / 需规 V1.3 / 需求文档 V2.4。 |
 | 2026-10-14 | **V1.0**（初版核验修正） | 主理人核验发现两处与基线不符：① `base_map_url` 提交位置笔误——基线 `_save_base_map()` 仅从 `request.form` 读取，文档误写为"JSON body / form 字段"。修正：§7.2 表格行改为"仅 form 字段（multipart/form-data）"，新增"底图字段仅支持 multipart/form-data"表注（含"JSON body 提交会被静默忽略并按流程一继续出图"漏洞场景说明）；§3 接口清单总表第 4 行备注同步；§7.11.3 / §10.4 URL 底图示例由 `application/json` 改为 `multipart/form-data`；§11.2 排查表新增"静默忽略"行。② §1.2 ASCII 架构图"（仅网关端 · · 不阻塞 CAD）"重复点号。版本号维持 V1.0。 |
+| 2026-10-14 | **V1.1** | **P0 修复落地版**。含：① **D1 决策（§7.2 / §8.2 第 5 行 / §11.2）**——`base_map_url` JSON body 静默忽略漏洞修复：JSON 请求体含 `base_map` / `base_map_url` 键视为"调用方式错误"返 HTTP 400（`base_map / base_map_url 仅支持 multipart/form-data 提交`），消除"告警必达"漏洞场景，**明确为"调用方式错误"而非流程一降级**；② **§3 接口清单总表**第 2~4 行状态由"🔜 待实现"翻为"🛠 实施中"（A1~A7/G1~G5 任务派单已发，详见 `评审-P0 改造蓝图-2026-10-14.md`），新增 P0-1/P0-3 关联注脚；③ **§1.2 架构段**补 SSRF 启动参数 `--ssrf-whitelist-cidr` 落地说明；④ **§7.5.3 末段**"坐标对齐"加粗与对齐 `scale` 区分；⑤ **§7.4 `degraded_to` 语义段**"与"降级/兜底"无关"加粗；⑥ **§8.1 状态码总览**"绝不"加粗；⑦ **§11.2 排查表**删除"JSON 提交 `base_map_url` 无任何反应"行（已由 D1 方案 A 修复）。基线：详设 V1.7 / 需规 V1.3 / 需求文档 V2.4。 |
 
 ---
 
