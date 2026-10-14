@@ -16,3 +16,6 @@ __pycache__
 *.dwl
 *.tmp
 logs/
+
+# WorkBuddy agent workspace (memory / skills), not part of the product
+.workbuddy/
