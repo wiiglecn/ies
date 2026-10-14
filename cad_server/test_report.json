@@ -1,0 +1,79 @@
+[
+  {
+    "id": "HEALTH",
+    "form": "B",
+    "purpose": "网关 /health",
+    "status": "PASS",
+    "note": "cad=True cad_http=http://localhost:7100"
+  },
+  {
+    "id": "D01-B",
+    "form": "B",
+    "purpose": "D1: JSON含底图键→400",
+    "status": "PASS",
+    "note": "HTTP 400 body={\"message\":\"base_map / base_map_url \\u4ec5\\u652f\\u6301 multipart/form-data \\u63d0\\u4ea4\\uff0c\\u8bf7\\u5728 JSON body \\u4e"
+  },
+  {
+    "id": "E01-B",
+    "form": "B",
+    "purpose": "非法JSON→400",
+    "status": "PASS",
+    "note": "HTTP 400 body={\"message\":\"missing required field: borehole_data\",\"status\":\"error\"}\n"
+  },
+  {
+    "id": "E02-B",
+    "form": "B",
+    "purpose": "非.dwg→400",
+    "status": "PASS",
+    "note": "HTTP 400 body={\"message\":\"only .dwg allowed\",\"status\":\"error\"}\n"
+  },
+  {
+    "id": "E03-B",
+    "form": "B",
+    "purpose": "file+url互斥→400",
+    "status": "PASS",
+    "note": "HTTP 400 body={\"message\":\"base_map \\u4e0e base_map_url \\u4e92\\u65a5\\uff0c\\u4e8c\\u9009\\u4e00\",\"status\":\"error\"}\n"
+  },
+  {
+    "id": "SS01-B",
+    "form": "B",
+    "purpose": "SSRF回环→200+warnings",
+    "status": "PASS",
+    "note": "HTTP 200 warnings=['底图未被采用：base_map_url 校验未通过（详见网关日志）'] degraded_to=process1_no_basemap"
+  },
+  {
+    "id": "P02-B",
+    "form": "B",
+    "purpose": "平面流程一 degraded_to=process1",
+    "status": "PASS",
+    "note": "HTTP 200 degraded_to=process1_no_basemap warnings=[]"
+  },
+  {
+    "id": "C01-B",
+    "form": "B",
+    "purpose": "柱状图37孔 (2.8s)",
+    "status": "PASS",
+    "note": "HTTP 200 body={\"results\":{\"column\":{\"status\":\"success\"}},\"status\":\"success\"}\n"
+  },
+  {
+    "id": "S01-B",
+    "form": "B",
+    "purpose": "剖面图 A-A'",
+    "status": "PASS",
+    "note": "HTTP 200 body={\"results\":{\"section\":{\"status\":\"success\"}},\"status\":\"success\"}\n"
+  },
+  {
+    "id": "P01-B-UP",
+    "form": "B",
+    "purpose": "上传底图流程二 (4.2s)",
+    "status": "PASS",
+    "note": "HTTP 200 degraded_to=process2_with_basemap warnings=[]"
+  },
+  {
+    "id": "M01-B",
+    "form": "B",
+    "purpose": "旧/api/draw并存",
+    "status": "PASS",
+    "note": "status_codes={'/api/draw': 200}"
+  }
+]
