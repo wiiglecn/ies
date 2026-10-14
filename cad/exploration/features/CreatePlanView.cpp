@@ -25,19 +25,7 @@ const TCHAR* kBaseMapShadowLayer    = _T("底图-拟建阴影");
 const Adesk::UInt16 kDimColor       = 253;
 
 // 底图配置（蓝图 §2.4 冻结）；ImportBaseMap 写入、ApplyPlotScale 读取 BASEPOINT
-struct BaseMapCfg {
-    CString     dwg;                              // 底图 DWG 路径（相对 ARX_DIR）
-    double      insertX       = 0.0;              // 块插入点 X（米）
-    double      insertY       = 0.0;                // 块插入点 Y（米）
-    double      scale        = 1.0;               // 对齐缩放（坐标对齐用，与 plot_scale 分离）
-    double      rotation     = 0.0;               // 对齐旋转（弧度）
-    CString     layer        = kBaseMapLayer;     // 块参照所在图层
-    bool        dim          = false;             // 是否置灰
-    double      plotScale    = 0.0;               // 出图比例分母（<=0 = 未配置）
-    // BASEPOINT：源 DWG 块基点；==(0,0) 且 hasBasePoint=true 视为按原点处理
-    AcGePoint3d sourceBasePoint = AcGePoint3d::kOrigin;
-    bool        hasBasePoint = false;             // 是否成功读出 BASEPOINT
-};
+// BaseMapCfg moved to CreatePlanView.h (VS2005 needs complete type)
 
 // 遍历模型空间，按"层名 ∈ 给定层名集合"过滤累加 extent。
 // 返回是否成功（任一实体可读即视为成功；空集返回 false）。
@@ -56,7 +44,7 @@ static bool ComputeLayerUnionBounds(AcDbBlockTableRecord* pBtr,
     for (; !pIt->done() && !bQuit; pIt->step()) {
         if (pIt->getEntity(pEnt, AcDb::kForRead) != Acad::eOk) continue;
         for (int i = 0; i < nLayers; ++i) {
-            if (CompareNoCase(pEnt->layer(), layers[i]) == 0) {
+            if (CString(pEnt->layer()).CompareNoCase(layers[i]) == 0) {
                 AcDbExtents extEnt;
                 if (pEnt->getGeomExtents(extEnt) == Acad::eOk) {
                     if (!bAny) {
@@ -85,6 +73,7 @@ CCreatePlanView::CCreatePlanView():CCreateBaseView()
 {
 	pszStyleName = _T("勘察孔");
 	m_pBaseMapBlkRefId = AcDbObjectId::kNull;
+	m_plotScale = 0.0; m_regMode = false;
 }
 
 // ============================================================================
@@ -677,7 +666,7 @@ bool CCreatePlanView::DrawBaseMap()
 
     // 3. 解析 base_map（可选；缺省即流程一）
     bool imported = false;
-    cJSON* bm = CUtils::GetJsonObjectItemUtf8(cfg, _T("base_map"));
+    cJSON* bm = CUtils::GetJsonObjectItemUtf8(const_cast<cJSON*>(cfg), _T("base_map"));
     if (bm != NULL) {
         imported = ImportBaseMap(bm);
         // 4. 记录出图比例分母（供 Execute 末尾 ApplyPlotScale 使用）
@@ -715,7 +704,7 @@ void CCreatePlanView::EraseBaseMapLayers()
 double CCreatePlanView::GetJsonNumber(const cJSON* obj, const TCHAR* key, double def)
 {
     if (obj == NULL) return def;
-    cJSON* item = CUtils::GetJsonObjectItemUtf8(obj, key);
+    cJSON* item = CUtils::GetJsonObjectItemUtf8(const_cast<cJSON*>(obj), key);
     if (item == NULL || !cJSON_IsNumber(item)) return def;
     return item->valuedouble;
 }
@@ -733,7 +722,7 @@ bool CCreatePlanView::ParseRegistration(const cJSON* bm,
     if (bm == NULL) return false;
 
     // V1.6 P0-6：registration 可选；缺省 → false，走手动参数
-    cJSON* reg = CUtils::GetJsonObjectItemUtf8(bm, _T("registration"));
+    cJSON* reg = CUtils::GetJsonObjectItemUtf8(const_cast<cJSON*>(bm), _T("registration"));
     if (reg == NULL || !cJSON_IsObject(reg)) return false;
 
     cJSON* src = CUtils::GetJsonObjectItemUtf8(reg, _T("source_points"));
@@ -872,11 +861,11 @@ AcGeMatrix3d CCreatePlanView::BuildImportMatrix(
         double dRotation,
         const AcGePoint3d& sourceBasePoint)
 {
-    AcGeMatrix3d mT  = AcGeMatrix3d::translation(ptInsert);
+    AcGeMatrix3d mT  = AcGeMatrix3d::translation(AcGeVector3d(ptInsert.x, ptInsert.y, ptInsert.z));
     AcGeMatrix3d mR  = AcGeMatrix3d::rotation(dRotation, AcGeVector3d::kZAxis, AcGePoint3d::kOrigin);
     AcGeMatrix3d mS  = AcGeMatrix3d::scaling(dScale, AcGePoint3d::kOrigin);
-    AcGeMatrix3d mTp = AcGeMatrix3d::translation(sourceBasePoint);
-    AcGeMatrix3d mTn = AcGeMatrix3d::translation(-sourceBasePoint);
+    AcGeMatrix3d mTp = AcGeMatrix3d::translation(AcGeVector3d(sourceBasePoint.x, sourceBasePoint.y, sourceBasePoint.z));
+    AcGeMatrix3d mTn = AcGeMatrix3d::translation(AcGeVector3d(-sourceBasePoint.x, -sourceBasePoint.y, -sourceBasePoint.z));
     // 列向量约定（M·P）：从右往左施加变换
     return mT * mR * mS * mTp * mTn;
 }
@@ -887,7 +876,7 @@ AcGeMatrix3d CCreatePlanView::BuildImportMatrix(
 bool CCreatePlanView::ImportBaseMap(const cJSON* cfg)
 {
     // 1. 路径（相对 ARX_DIR；缺/空字符串 → 流程一跳过底图环节）
-    cJSON* dwgItem = (cfg != NULL) ? CUtils::GetJsonObjectItemUtf8(cfg, _T("dwg")) : NULL;
+    cJSON* dwgItem = (cfg != NULL) ? CUtils::GetJsonObjectItemUtf8(const_cast<cJSON*>(cfg), _T("dwg")) : NULL;
     if (dwgItem == NULL || !cJSON_IsString(dwgItem) ||
         dwgItem->valuestring == NULL || dwgItem->valuestring[0] == _T('\0'))
     {
@@ -908,23 +897,23 @@ bool CCreatePlanView::ImportBaseMap(const cJSON* cfg)
     m_baseCfg.insertY = GetJsonNumber(cfg, _T("insert_y"), 0.0);
     m_baseCfg.scale   = GetJsonNumber(cfg, _T("scale"), 1.0);
     m_baseCfg.rotation= GetJsonNumber(cfg, _T("rotation"), 0.0);
-    cJSON* layerItem  = CUtils::GetJsonObjectItemUtf8(cfg, _T("layer"));
+    cJSON* layerItem  = CUtils::GetJsonObjectItemUtf8(const_cast<cJSON*>(cfg), _T("layer"));
     if (layerItem && cJSON_IsString(layerItem) && layerItem->valuestring) {
         m_baseCfg.layer = CString(layerItem->valuestring);
     } else {
         m_baseCfg.layer = kBaseMapLayer;
     }
-    cJSON* dimItem = CUtils::GetJsonObjectItemUtf8(cfg, _T("dim"));
+    cJSON* dimItem = CUtils::GetJsonObjectItemUtf8(const_cast<cJSON*>(cfg), _T("dim"));
     // V1.6 P0-7：cJSON_True → cJSON_IsTrue（项目惯例）
     if (dimItem && cJSON_IsBool(dimItem)) m_baseCfg.dim = cJSON_IsTrue(dimItem);
     else m_baseCfg.dim = false;
 
     // 3.5 对齐决策（FR-2.1 默认行为）
     bool hasExplicit =
-        CUtils::GetJsonObjectItemUtf8(cfg, _T("insert_x")) != NULL ||
-        CUtils::GetJsonObjectItemUtf8(cfg, _T("insert_y")) != NULL ||
-        CUtils::GetJsonObjectItemUtf8(cfg, _T("scale"))    != NULL ||
-        CUtils::GetJsonObjectItemUtf8(cfg, _T("rotation")) != NULL;
+        CUtils::GetJsonObjectItemUtf8(const_cast<cJSON*>(cfg), _T("insert_x")) != NULL ||
+        CUtils::GetJsonObjectItemUtf8(const_cast<cJSON*>(cfg), _T("insert_y")) != NULL ||
+        CUtils::GetJsonObjectItemUtf8(const_cast<cJSON*>(cfg), _T("scale"))    != NULL ||
+        CUtils::GetJsonObjectItemUtf8(const_cast<cJSON*>(cfg), _T("rotation")) != NULL;
 
     bool hasReg = ParseRegistration(cfg, m_regSourcePoints, m_regTargetPoints);
     m_regMode = hasReg;
@@ -1126,7 +1115,7 @@ bool CCreatePlanView::ApplyPlotScale(double plotScaleDenom)
         if (pIt->getEntity(pEnt, AcDb::kForRead) != Acad::eOk) continue;
         // V1.6 P0-7：图层名比对 CompareNoCase（与 EraseLayerEntities 一致）
         for (int i = 0; i < 3; ++i) {
-            if (CompareNoCase(pEnt->layer(), kLayers[i]) == 0) {
+            if (CString(pEnt->layer()).CompareNoCase(kLayers[i]) == 0) {
                 ids.push_back(pEnt->objectId());
                 break;
             }

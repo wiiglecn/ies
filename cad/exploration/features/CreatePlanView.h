@@ -2,9 +2,23 @@
 #include "arxHeaders.h"
 #include "./CreateBaseView.h"
 
-// Ç°ÏòÉùÃ÷ BaseMapCfg£¨Êµ¼Ê¶¨Òå¼û .cpp ÄäÃû namespace£©
-// ¸Ã½á¹¹Ìå½öÔÚ CCreatePlanView ÄÚ²¿Ê¹ÓÃ£¬²»ÎÛÈ¾Í·ÎÄ¼þ
-struct BaseMapCfg;
+// V1.6 P0-4 åº•å›¾é…ç½®ï¼ˆè¯¦è®¾ Â§2.4ï¼‰
+// å¿…é¡»åœ¨å¤´æ–‡ä»¶é‡Œå®Œæ•´å®šä¹‰ï¼šCCreatePlanView æœ‰å€¼ç±»åž‹æˆå‘˜ m_baseCfg
+struct BaseMapCfg {
+    CString     dwg;                              // åº•å›¾ DWG è·¯å¾„ï¼ˆç›¸å¯¹ ARX_DIRï¼‰
+    double      insertX;                           // æ’å…¥ç‚¹ X åæ ‡
+    double      insertY;                           // æ’å…¥ç‚¹ Y åæ ‡
+    double      scale;                            // ç¼©æ”¾æ¯”ä¾‹ï¼ˆæœªé…ç½®æ—¶é»˜è®¤1ï¼‰
+    double      rotation;                         // æ—‹è½¬è§’åº¦ï¼ˆå¼§åº¦ï¼‰
+    CString     layer;                            // ç›®æ ‡å›¾å±‚ï¼ˆç©º=ç”¨é»˜è®¤"åº•å›¾-çŽ°çŠ¶"ï¼‰
+    bool        dim;                              // æ˜¯å¦ç½®ç°
+    double      plotScale;                        // å‡ºå›¾æ¯”ä¾‹åˆ†æ¯ï¼ˆ<=0=æœªé…ç½®ï¼‰
+    AcGePoint3d sourceBasePoint;                  // BASEPOINT
+    bool        hasBasePoint;                     // æ˜¯å¦æˆåŠŸè¯»åˆ° BASEPOINT
+    BaseMapCfg() : insertX(0.0), insertY(0.0), scale(1.0), rotation(0.0),
+                   dim(false), plotScale(0.0),
+                   sourceBasePoint(AcGePoint3d::kOrigin), hasBasePoint(false) {}
+};
 
 class CCreatePlanView : public CCreateBaseView
 {
@@ -22,44 +36,44 @@ protected:
 
 	virtual void ClearExtDbCache();
 	void ChangeText(AcDbObjectId blkDefId,AcDbObjectId styleId, ACHAR* holeName,ACHAR* elevation,ACHAR* depth);
-	//´´½¨Í¼Àý
-	//´´½¨Í¼Àý£¨ÑùÀý¿×µÄ¿×ºÅ/±ê¸ß/¿×ÉîÈ¡µÚÒ»¸ö¿×µÄÖµ£©
+	//ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½
+	//ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×µÄ¿×ºï¿½/ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½Ò»ï¿½ï¿½ï¿½×µï¿½Öµï¿½ï¿½
     void CreateLegend(std::vector<CString>& arrUsedHoles,
 					const CString& fistCadBlockUrl,
                     const CString& blockStyleName);
 
-    // ---- µ×Í¼µ¼Èë + ³öÍ¼±ÈÀý£¨V1.6 P0-4£©----
-    // Ö÷Èë¿Ú£¨Á÷³ÌÒ»/¶þ¹²ÓÃ£©£ºÁ÷³ÌÒ»ÎÞµ×Í¼Ê±ÄÚ²¿´òÓ¡¸æ¾¯²¢Ìø¹ý£¬·µ»Ø false
+    // ---- ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ + ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½V1.6 P0-4ï¿½ï¿½----
+    // ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½ï¿½ï¿½Ò»/ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Þµï¿½Í¼Ê±ï¿½Ú²ï¿½ï¿½ï¿½Ó¡ï¿½æ¾¯ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ false
     bool DrawBaseMap();
-    // µ¼ÈëÎ¯ÍÐ·½µ×Í¼ DWG£¨º¬¶ÔÆë¾ö²ß¡¢BASEPOINT Ð£Õý¡¢¹Ì¶¨Ãû¿é²ÎÕÕÖÃ»Ò£©
+    // ï¿½ï¿½ï¿½ï¿½Î¯ï¿½Ð·ï¿½ï¿½ï¿½Í¼ DWGï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¡ï¿½BASEPOINT Ð£ï¿½ï¿½ï¿½ï¿½ï¿½Ì¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»Ò£ï¿½
     bool ImportBaseMap(const cJSON* cfg);
-    // ³öÍ¼±ÈÀý£º¶ÔÕûÌå³ÉÍ¼Í³Ò»Ëõ·Å£»D6 ¼×·½°¸¡ª¡ªÎÞ BASEPOINT ÌØÅÐ
+    // ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼Í³Ò»ï¿½ï¿½ï¿½Å£ï¿½D6 ï¿½×·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ BASEPOINT ï¿½ï¿½ï¿½ï¿½
     bool ApplyPlotScale(double plotScaleDenom);
-    // Çå¾Éµ×Í¼-ÏÖ×´Í¼²ã + ¾Éµ×Í¼¿é¶¨Òå£¨ÃÝµÈÖØ½¨£©
+    // ï¿½ï¿½Éµï¿½Í¼-ï¿½ï¿½×´Í¼ï¿½ï¿½ + ï¿½Éµï¿½Í¼ï¿½é¶¨ï¿½å£¨ï¿½Ýµï¿½ï¿½Ø½ï¿½ï¿½ï¿½
     void EraseBaseMapLayers();
-    // µ×Í¼¿é²ÎÕÕÖÃ»Ò£¨ÄÚ²¿¸¨Öú£¬dim=true Ê±µ÷ÓÃ£©
+    // ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»Ò£ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½dim=true Ê±ï¿½ï¿½ï¿½Ã£ï¿½
     void DimBaseMapReference();
-    // V1.6 BASEPOINT Ð£Õý¾ØÕó£¨¾²Ì¬´¿º¯Êý£»D6 ¼×·½°¸ÖÐÔÚ ApplyPlotScale ²»µ÷ÓÃ£¬
-    //   ½ö×÷Îª BASEPOINT Ð£ÕýÓïÒåµÄ¿É¸´ÓÃÊýÑ§¹¤¾ß£¬Ö÷Ð£ÕýÓÉ ImportBaseMap ÄÚ"²åÈëµã
-    //   Ç°ÐÞÕý"Íê³É¡£·µ»Ø¾ØÕó M = T(insert)¡¤R(¦È)¡¤S¡¤T(B)¡¤T(-B)£¬¶ÔÔ´ BASEPOINT=B
-    //   µÄµã P Ê©¼Ó M¡¤P ¿ÉµÃ "¿Û»ùµãºóÔÙËõ·ÅÐý×ªÆ½ÒÆ" µÄÄ¿±êÎ»ÖÃ£©
+    // V1.6 BASEPOINT Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ó£¨¾ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½D6 ï¿½×·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ApplyPlotScale ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½
+    //   ï¿½ï¿½ï¿½ï¿½Îª BASEPOINT Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿É¸ï¿½ï¿½ï¿½ï¿½ï¿½Ñ§ï¿½ï¿½ï¿½ß£ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ ImportBaseMap ï¿½ï¿½"ï¿½ï¿½ï¿½ï¿½ï¿½
+    //   Ç°ï¿½ï¿½ï¿½ï¿½"ï¿½ï¿½É¡ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ï¿½ï¿½ M = T(insert)ï¿½ï¿½R(ï¿½ï¿½)ï¿½ï¿½Sï¿½ï¿½T(B)ï¿½ï¿½T(-B)ï¿½ï¿½ï¿½ï¿½Ô´ BASEPOINT=B
+    //   ï¿½Äµï¿½ P Ê©ï¿½ï¿½ Mï¿½ï¿½P ï¿½Éµï¿½ "ï¿½Û»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªÆ½ï¿½ï¿½" ï¿½ï¿½Ä¿ï¿½ï¿½Î»ï¿½Ã£ï¿½
     static AcGeMatrix3d BuildImportMatrix(
         const AcGePoint3d& ptInsert,
         double dScale,
         double dRotation,
         const AcGePoint3d& sourceBasePoint);
-    // °²È«¶Á JSON Êý×Ö×Ö¶Î£ºÈ±¼ü / ·Ç number ¡ú ·µ»ØÄ¬ÈÏÖµ£»ÎÞ¸æ¾¯
+    // ï¿½ï¿½È«ï¿½ï¿½ JSON ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶Î£ï¿½È±ï¿½ï¿½ / ï¿½ï¿½ number ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½ï¿½Öµï¿½ï¿½ï¿½Þ¸æ¾¯
     static double GetJsonNumber(const cJSON* obj, const TCHAR* key, double def);
 
-    // ---- Á½µãÅä×¼£¨V1.6 P0-6 Êý×é»¯£©----
-    // ½âÎö base_map.registration ½Úµã£¬Ð£Ñé [x,y] Êý×é¸ñÊ½£»
-    // 1~2 ¶Ô£»ÈÎÒ»½âÎöÊ§°Ü ¡ú ·µ»Ø false£¨²»¸æ¾¯£¬ÓÉµ÷ÓÃ·½Í³Ò» WARN£©
+    // ---- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½V1.6 P0-6 ï¿½ï¿½ï¿½é»¯ï¿½ï¿½----
+    // ï¿½ï¿½ï¿½ï¿½ base_map.registration ï¿½Úµã£¬Ð£ï¿½ï¿½ [x,y] ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½
+    // 1~2 ï¿½Ô£ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ falseï¿½ï¿½ï¿½ï¿½ï¿½æ¾¯ï¿½ï¿½ï¿½Éµï¿½ï¿½Ã·ï¿½Í³Ò» WARNï¿½ï¿½
     static bool ParseRegistration(const cJSON* bm,
                                   std::vector<AcGePoint2d>& source,
                                   std::vector<AcGePoint2d>& target);
-    // ËÄ²ÎÊýÏàËÆ±ä»»×îÐ¡¶þ³Ë£¨Á½µã mode£ºs, ¦È, T£»Èý²ÎÊý»ØÌî£©£»
-    // 1 ¶Ôµã mode£ºs, ¦È È¡ cfg ÏÔÊ½Öµ£¬½öËã T£»
-    // Á½µã¾à <1e-6 / ½á¹û·ÇÓÐÏÞÖµ / s¡Ü0 ¡ú ·µ»Ø false
+    // ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ±ä»»ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½Ë£ï¿½ï¿½ï¿½ï¿½ï¿½ modeï¿½ï¿½s, ï¿½ï¿½, Tï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½î£©ï¿½ï¿½
+    // 1 ï¿½Ôµï¿½ modeï¿½ï¿½s, ï¿½ï¿½ È¡ cfg ï¿½ï¿½Ê½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Tï¿½ï¿½
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ <1e-6 / ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ / sï¿½ï¿½0 ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ false
     static bool ComputeRegistration(double sAlign,
                                     double rotAlign,
                                     const std::vector<AcGePoint2d>& source,
@@ -69,17 +83,17 @@ protected:
                                     double& insertXOut,
                                     double& insertYOut);
 
-    // ---- ³ÉÔ±£¨V1.6 P0-4£»class ¼¶£¬À¶Í¼ ¡ì2.4 ¶³½áÍâÂ¶¿Ú¾¶£©----
-    // µ×Í¼ÅäÖÃ£»ImportBaseMap Ð´Èë¡¢ApplyPlotScale ¶ÁÈ¡ BASEPOINT/insert
+    // ---- ï¿½ï¿½Ô±ï¿½ï¿½V1.6 P0-4ï¿½ï¿½class ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ ï¿½ï¿½2.4 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¶ï¿½Ú¾ï¿½ï¿½ï¿½----
+    // ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ã£ï¿½ImportBaseMap Ð´ï¿½ë¡¢ApplyPlotScale ï¿½ï¿½È¡ BASEPOINT/insert
     BaseMapCfg m_baseCfg;
-    // ³öÍ¼±ÈÀý·ÖÄ¸£»DrawBaseMap Ð´Èë£¨¡Ü0 = Î´ÅäÖÃ£¬²»Ëõ·Å£©¡¢Execute Ä©Î²´«¸ø ApplyPlotScale
-    double     m_plotScale       = 0.0;
-    // µ×Í¼¿é²ÎÕÕ ObjectId£¨Á÷³Ì¶þÂ·¾¶ÓÐÐ§£¬Á÷³ÌÒ»Îª null£©
+    // ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½ï¿½DrawBaseMap Ð´ï¿½ë£¨ï¿½ï¿½0 = Î´ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å£ï¿½ï¿½ï¿½Execute Ä©Î²ï¿½ï¿½ï¿½ï¿½ ApplyPlotScale
+    double     m_plotScale;
+    // ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ ObjectIdï¿½ï¿½ï¿½ï¿½ï¿½Ì¶ï¿½Â·ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»Îª nullï¿½ï¿½
     AcDbObjectId m_pBaseMapBlkRefId;
-    // ÊÇ·ñÆôÓÃÁ½µãÅä×¼£¨m_regSourcePoints/m_regTargetPoints ½öÔÚ true Ê±ÓÐÒâÒå£©
-    bool       m_regMode        = false;
-    // Åä×¼Ô´µã£¨DWG ÄÚ²¿×ø±ê£©£¬1~2 ¸öµã
+    // ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½m_regSourcePoints/m_regTargetPoints ï¿½ï¿½ï¿½ï¿½ true Ê±ï¿½ï¿½ï¿½ï¿½ï¿½å£©
+    bool       m_regMode;
+    // ï¿½ï¿½×¼Ô´ï¿½ã£¨DWG ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ê£©ï¿½ï¿½1~2 ï¿½ï¿½ï¿½ï¿½
     std::vector<AcGePoint2d> m_regSourcePoints;
-    // Åä×¼Ä¿±êµã£¨×ê¿××ø±êÏµ×ø±ê£©£¬Óë m_regSourcePoints Í¬µãÊý
+    // ï¿½ï¿½×¼Ä¿ï¿½ï¿½ã£¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ê£©ï¿½ï¿½ï¿½ï¿½ m_regSourcePoints Í¬ï¿½ï¿½ï¿½ï¿½
     std::vector<AcGePoint2d> m_regTargetPoints;
 };
