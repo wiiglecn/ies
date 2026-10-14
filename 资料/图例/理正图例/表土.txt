@@ -1,0 +1,2 @@
+*biaotu
+A,1.5,0,[biaotu,biaotu.shx,s=2,y=0],1.5
