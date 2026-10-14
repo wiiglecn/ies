@@ -601,7 +601,7 @@ curl -X POST http://<gateway>/api/draw/plan \
 
 #### 7.11.3 流程二 URL 底图（multipart/form-data）
 
-> ⚠️ `base_map_url` **只从 `request.form` 读取**（详设 V1.6 §9.2），**必须使用 `multipart/form-data`**；用 `application/json` 提交该字段会被静默忽略并按流程一继续出图。
+> ⚠️ `base_map_url` **只从 `request.form` 读取**（详设 V1.6 §9.2），**必须使用 `multipart/form-data`**；用 `application/json` 提交底图键将返回 **HTTP 400**（`base_map / base_map_url 仅支持 multipart/form-data 提交`，须改用 `multipart/form-data`；D1 决策，详见 §8.2 第 5 行 / §7.2）。
 
 ```bash
 curl -X POST http://<gateway>/api/draw/plan \
@@ -829,7 +829,7 @@ curl -X POST http://<gateway>/api/draw/plan \
 
 ### 10.4 形态 B · `POST /api/draw/plan` 流程二 URL 底图（multipart/form-data）
 
-> ⚠️ `base_map_url` **只从 `request.form` 读取**（详设 V1.6 §9.2），**必须使用 `multipart/form-data`**；`application/json` 提交该字段会被静默忽略。
+> ⚠️ `base_map_url` **只从 `request.form` 读取**（详设 V1.6 §9.2），**必须使用 `multipart/form-data`**；用 `application/json` 提交底图键将返回 **HTTP 400**（`base_map / base_map_url 仅支持 multipart/form-data 提交`，须改用 `multipart/form-data`；D1 决策，详见 §8.2 第 5 行）。
 
 ```bash
 curl -X POST http://<gateway>/api/draw/plan \
