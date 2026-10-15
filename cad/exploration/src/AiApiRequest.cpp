@@ -940,6 +940,24 @@ void HandleAiFeatureView(struct mg_connection* nc,
                 }
             }
 
+            // 结构化 JSON 路径：服务端内部做 X/Y 轴交换
+            // （测量北=x / 测量东=y → CAD 东=x / 北=y）
+            // 二维数组路径已在 NormalizeOneHole 里做过交换，跳过
+            if (!is2D) {
+                cJSON* holeIt = NULL;
+                cJSON_ArrayForEach(holeIt, jBoreholeEn) {
+                    if (!cJSON_IsObject(holeIt)) continue;
+                    cJSON* jx = cJSON_GetObjectItem(holeIt, "x");
+                    cJSON* jy = cJSON_GetObjectItem(holeIt, "y");
+                    if (jx && jy && cJSON_IsNumber(jx) && cJSON_IsNumber(jy)) {
+                        double tmp = jx->valuedouble;
+                        jx->valuedouble = jy->valuedouble;
+                        jy->valuedouble = tmp;
+                    }
+                }
+                _LogToFile(L"7100.log", "applied X/Y axis swap (structured input)");
+            }
+
             // 英译中键名
             ConvertBoreholeDataEnToCn(jBoreholeEn);
 
