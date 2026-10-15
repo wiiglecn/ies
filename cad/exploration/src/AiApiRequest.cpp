@@ -474,14 +474,14 @@ static void ConvertBoreholeDataEnToCn(cJSON* root) {
             cJSON_ArrayForEach(layer, layers) {
                 if (!cJSON_IsObject(layer)) continue;
     RenameChildKey(layer, "layer_id", "\xE5\x9C\xB0\xE5\xB1\x82\xE7\xBC\x96\xE5\x8F\xB7");
-    RenameChildKey(layer, "from", "\xE8\xBF\x9B\xE5\xB0\xBA\xE8\x87\xAA\x28\x6D\x29");
-    RenameChildKey(layer, "to", "\xE8\xBF\x9B\xE5\xB0\xBA\xE8\x87\xB3\x28\x6D\x29");
-    RenameChildKey(layer, "name", "\xE5\x9C\xB0\xE5\xB1\x82\xE5\x90\x8D\xE7\xA7\xB0");
+    RenameChildKey(layer, "from", "\xE8\xBF\x9B\xE5\xBA\x95\x87\xAA\x28\x6D\x29");
+    RenameChildKey(layer, "to", "\xE5\x88\xB0\xE5\xBA\x95\xE6\xB7\xB1\xE5\xBA\xA6\x28\x6D\x29");
+    RenameChildKey(layer, "name", "\xE5\x9C\xB0\xE5\xB1\x82\xE5\x90\x8D");
     RenameChildKey(layer, "color", "\xE9\xA2\x9C\xE8\x89\xB2");
     RenameChildKey(layer, "state", "\xE7\x8A\xB6\xE6\x80\x81");
     RenameChildKey(layer, "density", "\xE5\xAF\x86\xE5\xAE\x9E\xE5\xBA\xA6");
     RenameChildKey(layer, "moisture", "\xE6\xB9\xBF\xE5\xBA\xA6");
-    RenameChildKey(layer, "description", "\xE6\x88\x90\xE5\x88\x86\xE5\x8F\x8A\xE5\x85\xB6\xE4\xBB\x96");
+    RenameChildKey(layer, "description", "\xE6\x8F\x8F\xE8\xBF\xB0\xE5\x86\x85\xE5\xAE\xB9");
                 cJSON* sample = cJSON_GetObjectItem(layer, "sample");
                 if (sample && cJSON_IsObject(sample)) {
     RenameChildKey(sample, "no", "\xE7\xBC\x96\xE5\x8F\xB7");
