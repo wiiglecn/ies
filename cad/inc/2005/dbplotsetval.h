@@ -33,7 +33,7 @@
 //////////////////////////////////////////////////////////////////////////////
 //
 #pragma pack (push, 8)
-class AcArray;
+template <class T> class AcArray;
 class AcDbPlotSettings;
 
 typedef AcDbPlotSettings::PlotPaperUnits PlotPaperUnits;
