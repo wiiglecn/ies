@@ -469,6 +469,7 @@ static void ConvertBoreholeDataEnToCn(cJSON* root) {
     RenameChildKey(hole, "driller", "\xE9\x92\xBB\xE6\x8E\xA2\xE6\x9C\xBA\xE9\x95\xBF");
     RenameChildKey(hole, "recorder", "\xE7\xBC\x96\xE5\xBD\x95\xE5\x91\x98");
         cJSON* layers = cJSON_GetObjectItem(hole, "layers");
+        if (!layers) layers = cJSON_GetObjectItem(hole, "\xE5\x9C\xB0\xE5\xB1\x82\xE5\x88\x97\xE8\xA1\xA8");
         if (layers && cJSON_IsArray(layers)) {
             cJSON* layer = NULL;
             cJSON_ArrayForEach(layer, layers) {
