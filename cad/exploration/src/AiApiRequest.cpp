@@ -373,7 +373,9 @@ static void _LogToFile(const wchar_t* fileNameW, const std::string& contentUtf8)
     CString path = arxDir + CString(fileNameW);
 
     CStdioFile f;
-    if (!f.Open(path, CFile::modeCreate | CFile::modeNoTruncate | CFile::modeWrite | CFile::typeBinary)) {
+    BOOL ok = f.Open(path, CFile::modeCreate | CFile::modeNoTruncate | CFile::modeWrite | CFile::typeBinary);
+    if (!ok) {
+        acutPrintf(_T("[LOG DEBUG] failed to open log file: %s\n"), (LPCTSTR)path);
         return;
     }
     f.SeekToEnd();
@@ -387,6 +389,8 @@ static void _LogToFile(const wchar_t* fileNameW, const std::string& contentUtf8)
     f.Write(contentUtf8.data(), (UINT)contentUtf8.size());
     f.Write("\r\n", 2);
     f.Close();
+
+    acutPrintf(_T("[LOG DEBUG] wrote %d bytes to %s\n"), (int)contentUtf8.size(), (LPCTSTR)path);
 }
 
 // 同步执行一个 tool（PostMessage + WaitForSingleObject），模仿 HandleAiTool 内部逻辑。
