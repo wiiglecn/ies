@@ -10,13 +10,15 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <float.h>
 
 // VS2005 兼容
 #define snprintf _snprintf
 #define isnan _isnan
 
 #ifndef NAN
-static const double g_NaN = (double)(0.0 / 0.0);
+static const unsigned char g_nanBits[8] = {0, 0, 0, 0, 0, 0, 0xf8, 0x7f};
+static const double g_NaN = *(const double*)g_nanBits;
 #define NAN g_NaN
 #endif
 
