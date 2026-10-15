@@ -2,14 +2,14 @@
 #include "StdAfx.h"
 #include "..\inc\2005\aduiPalette.h"
 
-// CAdUiPalette::GetClassName - 实现缺失的类名获取函数
+// 实现GetClassName（MFC自动映射为GetClassNameA，匹配链接器符号）
 CString CAdUiPalette::GetClassName()
 {
     return CString(_T("AdUiPalette"));
 }
 
-// CAdUiPalette::SetName - 实现缺失的名称设置函数（空实现，不访问私有成员）
-void CAdUiPalette::SetName(CString strName)
+// 实现SetName，参数类型和头文件声明保持一致：LPCTSTR
+void CAdUiPalette::SetName(LPCTSTR pszName)
 {
-    UNREFERENCED_PARAMETER(strName);
+    // 空实现，业务接口不调用侧边栏面板功能
 }

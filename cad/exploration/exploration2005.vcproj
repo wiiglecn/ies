@@ -66,7 +66,7 @@
 				UsePrecompiledHeader="0"
 				WarningLevel="1"
 				Detect64BitPortabilityProblems="false"
-				DebugInformationFormat="4"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -82,8 +82,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions="/FORCE"
-				AdditionalDependencies="rxapi.lib acdb16.lib acge16.lib acgiapi.lib achapi16.lib acISMobj16.lib acad.lib acedapi.lib adui16.lib acui16.lib Oleacc.lib mongoose.lib crypt32.lib shlwapi.lib"
+				AdditionalOptions="/FORCE /NODEFAULTLIB:atlsd.lib"
+				AdditionalDependencies="rxapi.lib acdb16.lib acge16.lib acgiapi.lib achapi16.lib acISMobj16.lib acad.lib acedapi.lib adui16.lib acui16.lib Oleacc.lib mongoose.lib crypt32.lib shlwapi.lib atls.lib"
 				OutputFile="$(outdir)/KsExploration.arx"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib;..\lib\2005"
@@ -189,8 +189,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions="/FORCE"
-				AdditionalDependencies="rxapi.lib acdb16.lib acge16.lib acgiapi.lib achapi16.lib acISMobj16.lib acad.lib acedapi.lib adui16.lib acui16.lib Oleacc.lib mongoose.lib crypt32.lib shlwapi.lib"
+				AdditionalOptions="/FORCE /NODEFAULTLIB:atlsd.lib"
+				AdditionalDependencies="rxapi.lib acdb16.lib acge16.lib acgiapi.lib achapi16.lib acISMobj16.lib acad.lib acedapi.lib adui16.lib acui16.lib Oleacc.lib mongoose.lib crypt32.lib shlwapi.lib atls.lib"
 				OutputFile="$(outdir)/KsExploration.arx"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib;..\lib\2005"
@@ -265,18 +265,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\CPalette.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\CPalette_cmd.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\HtmlPaletteView.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\src\HttpClient.cpp"
 				>
 			</File>
@@ -298,18 +286,6 @@
 			</File>
 			<File
 				RelativePath="src\OwnerMenu.cpp"
-				>
-			</File>
-			<File
-				RelativePath="src\Palette2005.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\PaletteCleanup.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\PaletteSet.cpp"
 				>
 			</File>
 			<File
