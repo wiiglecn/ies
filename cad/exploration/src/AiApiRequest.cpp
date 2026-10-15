@@ -364,6 +364,31 @@ static bool _WriteJsonToProjectFile(const wchar_t* fileNameW, const std::string&
     return true;
 }
 
+// 追加写日志文件（UTF-8），自动加时间戳
+static void _LogToFile(const wchar_t* fileNameW, const std::string& contentUtf8)
+{
+    CString arxDir = CUtils::GetArxFolder();
+    arxDir.Replace(_T("\\"), _T("/"));
+    if (arxDir.Right(1) != _T("/")) arxDir += _T("/");
+    CString path = arxDir + CString(fileNameW);
+
+    CStdioFile f;
+    if (!f.Open(path, CFile::modeCreate | CFile::modeNoTruncate | CFile::modeWrite | CFile::typeBinary)) {
+        return;
+    }
+    f.SeekToEnd();
+
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    char timeBuf[64];
+    snprintf(timeBuf, sizeof(timeBuf), "[%04d-%02d-%02d %02d:%02d:%02d] ",
+             st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+    f.Write(timeBuf, (UINT)strlen(timeBuf));
+    f.Write(contentUtf8.data(), (UINT)contentUtf8.size());
+    f.Write("\r\n", 2);
+    f.Close();
+}
+
 // 同步执行一个 tool（PostMessage + WaitForSingleObject），模仿 HandleAiTool 内部逻辑。
 // 返回 0=成功，非 0=失败/超时。
 static int _ExecToolSync(CWnd* pAcadWnd, UINT cmdId, DWORD timeoutMs = 120000)
@@ -870,10 +895,19 @@ void HandleAiFeatureView(struct mg_connection* nc,
     cJSON* root = NULL;
     bool wroteBorehole = false;
 
+    // === 日志：收到请求 ===
+    {
+        std::string logLine = "=== RECEIVED " + uri + " ===\n";
+        logLine += "body length: " + std::to_string(body.size()) + "\n";
+        logLine += "body content:\n" + body + "\n";
+        _LogToFile(L"7100.log", logLine);
+    }
+
     // 3. 如果 body 非空，尝试解析 borehole_data
     if (!body.empty()) {
         root = cJSON_Parse(body.c_str());
         if (!root) {
+            _LogToFile(L"7100.log", "ERROR: invalid JSON body\n");
             AiApiServer::SendJsonResponse(nc, 400, "{\"status\":\"error\",\"message\":\"invalid JSON body\"}");
             return;
         }
@@ -883,15 +917,26 @@ void HandleAiFeatureView(struct mg_connection* nc,
             // 判定形态：二维数组 → 归一化；结构化 → 直接英译中
             cJSON* jBoreholeEn = jBorehole;
             std::string err;
-            if (Is2DArrayBorehole(jBorehole)) {
+            bool is2D = Is2DArrayBorehole(jBorehole);
+            _LogToFile(L"7100.log", std::string("borehole_data format: ") + (is2D ? "2D_ARRAY" : "STRUCTURED"));
+
+            if (is2D) {
                 jBoreholeEn = NormalizeBorehole2DArray(jBorehole, err);
                 if (!jBoreholeEn) {
+                    std::string errMsg = "NORMALIZE FAILED: " + err;
+                    _LogToFile(L"7100.log", errMsg);
                     std::string resp = "{\"status\":\"error\",\"message\":\"borehole_data normalize failed: ";
                     resp += err;
                     resp += "\"}";
                     AiApiServer::SendJsonResponse(nc, 400, resp);
                     cJSON_Delete(root);
                     return;
+                }
+                // 日志：归一化后的英文 JSON
+                char* normStr = cJSON_PrintUnformatted(jBoreholeEn);
+                if (normStr) {
+                    _LogToFile(L"7100.log", std::string("normalized (EN):\n") + normStr);
+                    free(normStr);
                 }
             }
 
@@ -903,12 +948,16 @@ void HandleAiFeatureView(struct mg_connection* nc,
             std::string bhUtf8 = bhStr ? bhStr : "{}";
             if (bhStr) free(bhStr);
 
+            // 日志：落盘内容（中文键）
+            _LogToFile(L"7100.log", std::string("written to project/钻探编录表.json (CN keys):\n") + bhUtf8);
+
             bool bhOk = _WriteJsonToProjectFile(L"project/\u94BB\u63A2\u7F16\u5F55\u8868.json", bhUtf8);
             if (!bhOk) {
                 CT2CA pszPath(g_lastFailedPath, CP_UTF8);
                 std::string resp = "{\"status\":\"error\",\"message\":\"failed to write borehole json\",\"path\":\"";
                 resp += pszPath;
                 resp += "\"}";
+                _LogToFile(L"7100.log", std::string("WRITE FAILED: ") + pszPath);
                 AiApiServer::SendJsonResponse(nc, 500, resp);
                 if (jBoreholeEn != jBorehole) cJSON_Delete(jBoreholeEn);
                 cJSON_Delete(root);
@@ -923,6 +972,7 @@ void HandleAiFeatureView(struct mg_connection* nc,
 
     // 4. 执行出图（PostMessage + 等待完成）
     int ret = _ExecToolSync(pAcadWnd, cmdId, 120000);
+    _LogToFile(L"7100.log", std::string("draw result: ") + (ret == 0 ? "SUCCESS" : (ret == 2 ? "TIMEOUT" : "FAILED")));
 
     // 5. auto zoom（默认 true；只有出图成功才 zoom）
     if (ret == 0) {
@@ -939,6 +989,8 @@ void HandleAiFeatureView(struct mg_connection* nc,
     response = printed ? printed : "{}";
     if (printed) free(printed);
     cJSON_Delete(resp);
+
+    _LogToFile(L"7100.log", std::string("=== RESPONSE: ") + response + " ===\n\n");
 
     if (root) cJSON_Delete(root);
 
