@@ -79,17 +79,20 @@ def main():
     with open(data_path, "r", encoding="utf-8") as f:
         rows_borehole = json.load(f)
 
-    # 只取指定孔号
-    if args.hole:
-        rows_borehole = {args.hole: rows_borehole[args.hole]}
-        log(f"filtered to hole: {args.hole}")
-
-    hole_count = len(rows_borehole)
-    log(f"hole count: {hole_count}")
-
-    # 2. 二维数组 → 结构化 k-v JSON（x=北, y=东，不交换）
+    # 2. 二维数组 → 结构化 k-v JSON（x=北, y=东，不交换），先全量归一化
     structured = to_structured_kev(rows_borehole)
     log(f"converted to structured k-v JSON")
+
+    # 归一化完成后再按孔号过滤（之前在归一化前过滤，会被归一化函数忽略全量处理）
+    if args.hole:
+        if args.hole not in structured:
+            log(f"ERROR: hole {args.hole} not found in normalized data, available holes: {list(structured.keys())}")
+            sys.exit(1)
+        structured = {args.hole: structured[args.hole]}
+        log(f"filtered to hole: {args.hole}")
+
+    hole_count = len(structured)
+    log(f"hole count: {hole_count}")
 
     # 打印单孔坐标核对
     for hole_no, hole in structured.items():

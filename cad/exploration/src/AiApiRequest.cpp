@@ -986,10 +986,12 @@ void HandleAiFeatureView(struct mg_connection* nc,
             std::string bhUtf8 = bhStr ? bhStr : "{}";
             if (bhStr) free(bhStr);
 
+            // 先删除旧的落盘文件，避免残留旧全量数据污染本次出图
+            DeleteFileW(L"D:/project/ies/cad/exploration/Debug/project/\u94BB\u63A2\u7F16\u5F55\u8868.json");
             // 日志：落盘内容（中文键）
-            _LogToFile(L"7100.log", std::string("written to project/钻探编录表.json (CN keys):\n") + bhUtf8);
+            _LogToFile(L"7100.log", std::string("written to D:/project/ies/cad/exploration/Debug/project/钻探编录表.json (CN keys):\n") + bhUtf8);
 
-            bool bhOk = _WriteJsonToProjectFile(L"project/\u94BB\u63A2\u7F16\u5F55\u8868.json", bhUtf8);
+            bool bhOk = _WriteJsonToProjectFile(L"D:/project/ies/cad/exploration/Debug/project/\u94BB\u63A2\u7F16\u5F55\u8868.json", bhUtf8);
             if (!bhOk) {
                 CT2CA pszPath(g_lastFailedPath, CP_UTF8);
                 std::string resp = "{\"status\":\"error\",\"message\":\"failed to write borehole json\",\"path\":\"";
