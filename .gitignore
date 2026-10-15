@@ -19,3 +19,7 @@ logs/
 
 # WorkBuddy agent workspace (memory / skills), not part of the product
 .workbuddy/
+
+# 构建 / 运行日志（临时产物，勿入库）
+*.log
+.build_log.txt
