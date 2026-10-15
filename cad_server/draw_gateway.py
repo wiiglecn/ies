@@ -30,6 +30,8 @@ import socket
 import urllib.request
 import urllib.parse
 import urllib.error
+from typing import Any
+
 import requests
 from flask import Flask, request, jsonify
 
@@ -51,7 +53,7 @@ PROJECT_DIR = os.path.join(ARX_DIR, "project")
 BOREHOLE_FILE = os.path.join(PROJECT_DIR, "钻探编录表.json")
 SECTION_FILE = os.path.join(PROJECT_DIR, "剖面图参数.json")
 PLAN_BASE_FILE = os.path.join(PROJECT_DIR, "plan_base.json")
-BASE_MAP_DIR = os.path.join(ARX_DIR, "support", "底图")
+BASE_MAP_DIR = os.path.join(ARX_DIR, "support", "base_map")
 
 # 视图路由
 VIEW_ROUTES = {
@@ -174,6 +176,193 @@ def _translate_borehole(eng):
                 new_layers.append(layer_cn)
             hole_cn["地层列表"] = new_layers
         out[hole_no] = hole_cn
+    return out
+
+
+# ============================================================
+# 二维数组 JSON → 英文键结构化（归一化层；P2 修复：兼容形态A形态B）
+# ============================================================
+# 形态A：英文键结构化（既有 _translate_borehole 直接消费）
+# 形态B：二维数组 JSON（cad_client/excel_to_json 直出）：
+#         {"ZK1": [[row], [row], ...], "ZK2": [...]} —— 顶层 key=孔号，value=行列表
+#
+# 归一化仅当形态B命中时触发；形态A 原样返回。
+#
+# 行 / 列偏移（权威映射，0-based；勿用设计文档 §2.2/§2.3 列号）
+# ------------------------------------------------------------
+# Row 0          公司名（忽略）
+# Row 1          表标题（忽略）
+# Row 2          col1=工程名称 / col11=孔口高程 / col14=钻孔类型 / col18=终孔深度
+# Row 3          col1=工程地点 / col11=开孔日期 / col14=初见水位
+# Row 4          col0=标识"钻孔编号" / col1=孔号 / col4=测量X(北)→y / col9=测量Y(东)→x
+#                col11=终孔日期 / col14=稳定水位
+# Row 5          地层表头起首（"地层编号"）
+# Row 6          地层字段表头
+# Row 7..N-1     每条地层一行；末两行："项目负责人…" / "终孔"终止
+#
+# 地层字段列（Row 7+ 起）
+#   col0=地层编号 / col1=进尺自(float) / col2=进尺至(float)
+#   col3=地层名称 / col4=颜色 / col5=状态 / col6=密实度 / col7=湿度 / col8=成分及其他
+#   col13=取样编号 / col14=取样深度
+#   col15=原位类型 / col16=原位起(float) / col17=原位止(float)
+#   col18=原位杆长(float) / col19=原位击数(float/str)
+#
+# ★ test.from / to / rod_length / hits **必须为 string**（str() 转换）
+
+def _is_2d_array_format(bh: Any) -> bool:
+    """判定 borehole_data 是否为形态B（二维数组 JSON）。
+
+    判定规则：取第一个 value，isinstance(list) 即形态B。
+    空 dict / 空 value → 视为形态A（让下游兜底）。
+    """
+    if not isinstance(bh, dict) or not bh:
+        return False
+    first = next(iter(bh.values()), None)
+    return isinstance(first, list)
+
+
+def _cell(row: list, col: int) -> Any:
+    """安全取列：超出范围返回 None。"""
+    if col < 0 or col >= len(row):
+        return None
+    return row[col]
+
+
+def _to_str(v: Any) -> str | None:
+    """test.from/to/rod_length/hits 专用：转 str；None/"" → None。"""
+    if v is None or v == "":
+        return None
+    return str(v)
+
+
+def _to_float(v: Any) -> float | None:
+    """elevation/depth/water_level/from/to 专用：转 float；空/None/非数字 → None。"""
+    if v is None or v == "":
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_one_hole(hole_no: str, rows: list) -> dict[str, Any]:
+    """单孔 rows（list[list[Any]]）→ 英文键结构化 dict。"""
+    if not isinstance(rows, list) or len(rows) < 7:
+        raise ValueError(
+            f"孔 {hole_no}: 行数 {len(rows) if isinstance(rows, list) else 'N/A'} < 7，模板异常"
+        )
+
+    # 校验：孔号双校验（必须 row[4][0]=="钻孔编号" 且 row[4][1]==顶层 key）
+    row4 = rows[4]
+    if not (len(row4) > 1 and row4[0] == "钻孔编号" and row4[1] == hole_no):
+        raise ValueError(
+            f"孔 {hole_no}: 标识校验失败（row[4][0]={row4[0] if len(row4)>0 else None!r} "
+            f"≠ '钻孔编号' 或 row[4][1]={row4[1] if len(row4)>1 else None!r} ≠ 顶层 key {hole_no!r}）"
+        )
+
+    row2 = rows[2]
+    row3 = rows[3]
+
+    # ----- X/Y 交换：测量 X=北 → y；测量 Y=东 → x -----
+    x_cad = _to_float(_cell(row4, 9))   # AutoCAD 横向 X = 测量东
+    y_cad = _to_float(_cell(row4, 4))   # AutoCAD 纵向 Y = 测量北
+
+    node: dict[str, Any] = {
+        "hole_no":            str(row4[1]),
+        "x":                  x_cad,
+        "y":                  y_cad,
+        "elevation":          _to_float(_cell(row2, 11)),
+        "depth":              _to_float(_cell(row2, 18)),
+        "hole_type":          (str(_cell(row2, 14)).strip() if _cell(row2, 14) is not None else ""),
+        "project_name":       (str(_cell(row2, 1)).strip() if _cell(row2, 1) is not None else ""),
+        "site":               (str(_cell(row3, 1)).strip() if _cell(row3, 1) is not None else ""),
+        "date_start":         (str(_cell(row3, 11)).strip() if _cell(row3, 11) is not None else ""),
+        "date_end":           (str(_cell(row4, 11)).strip() if _cell(row4, 11) is not None else ""),
+        "water_level_initial":_to_float(_cell(row3, 14)),
+        "water_level_stable": _to_float(_cell(row4, 14)),
+    }
+
+    # ----- 地层列表：从 row[7] 起 -----
+    layers: list[dict[str, Any]] = []
+    for r in range(7, len(rows)):
+        row = rows[r]
+        # 空行跳过
+        if not any(v is not None and str(v).strip() for v in row):
+            continue
+        # 终止行：col3=="终孔" 跳过
+        if _cell(row, 3) is not None and str(_cell(row, 3)).strip() == "终孔":
+            continue
+        # 负责人行：col0 含"项目负责人" 跳过
+        c0 = _cell(row, 0)
+        if c0 is not None and "项目负责人" in str(c0):
+            continue
+        # 无效进尺跳过
+        s_from = _to_float(_cell(row, 1))
+        s_to = _to_float(_cell(row, 2))
+        if s_from is None and s_to is None:
+            continue
+
+        layer: dict[str, Any] = {
+            "layer_id":   (str(_cell(row, 0)).strip() if _cell(row, 0) is not None else ""),
+            "from":       s_from,
+            "to":         s_to,
+            "name":       (str(_cell(row, 3)).strip() if _cell(row, 3) is not None else ""),
+            "color":      (str(_cell(row, 4)).strip() if _cell(row, 4) is not None else ""),
+            "state":      (str(_cell(row, 5)).strip() if _cell(row, 5) is not None else ""),
+            "density":    (str(_cell(row, 6)).strip() if _cell(row, 6) is not None else ""),
+            "moisture":   (str(_cell(row, 7)).strip() if _cell(row, 7) is not None else ""),
+            "description":(str(_cell(row, 8)).strip() if _cell(row, 8) is not None else ""),
+        }
+
+        # 取样（皆空不输出 sample）
+        s_no = _cell(row, 13)
+        s_dep = _cell(row, 14)
+        s_no_s = str(s_no).strip() if s_no is not None and str(s_no).strip() else ""
+        s_dep_s = str(s_dep).strip() if s_dep is not None and str(s_dep).strip() else ""
+        if s_no_s or s_dep_s:
+            layer["sample"] = {
+                "no":    s_no_s,
+                "depth": s_dep_s,
+            }
+
+        # 原位测试（type 空不输出 test；from/to/rod_length/hits 必为 string）
+        t_type = _cell(row, 15)
+        t_type_s = str(t_type).strip() if t_type is not None and str(t_type).strip() else ""
+        t_from = _to_str(_cell(row, 16))
+        t_to = _to_str(_cell(row, 17))
+        t_rod = _to_str(_cell(row, 18))
+        t_hits = _to_str(_cell(row, 19))
+        if t_type_s or t_from is not None or t_to is not None or t_rod is not None or t_hits is not None:
+            layer["test"] = {
+                "type":      t_type_s,
+                "from":      t_from,
+                "to":        t_to,
+                "rod_length":t_rod,
+                "hits":      t_hits,
+            }
+
+        layers.append(layer)
+
+    node["layers"] = layers
+    return node
+
+
+def _normalize_borehole(raw: dict[str, list]) -> dict[str, dict[str, Any]]:
+    """二维数组 JSON → 英文键结构化（适配 _translate_borehole 下游）。
+
+    参数:
+        raw: 形态B borehole_data；{hole_no: rows(list[list[Any]]), ...}
+    返回:
+        形态A borehole_data；{hole_no: node(dict), ...}
+        其中 node 是 _translate_borehole 直接消费的英文键结构。
+    异常:
+        ValueError: 行数不足 / 孔号双校验失败 / 行数据结构异常。
+    """
+    if not isinstance(raw, dict):
+        raise ValueError("borehole_data must be a JSON object")
+    out: dict[str, dict[str, Any]] = {}
+    for hole_no, rows in raw.items():
+        out[hole_no] = _normalize_one_hole(hole_no, rows)
     return out
 
 
@@ -467,13 +656,13 @@ def _save_base_map():
         if len(data) == 0:
             return None, ["底图未被采用：base_map 为空文件"]
         os.makedirs(BASE_MAP_DIR, exist_ok=True)
-        dst = os.path.join(BASE_MAP_DIR, safe)  # 同名即覆盖（D2）
+        dst = os.path.join(BASE_MAP_DIR, "basemap.dwg")  # 固定 ASCII 名，避免 ARX 端 UTF-8/GBK 乱码
         try:
             with open(dst, "wb") as w:
                 w.write(data)
         except OSError as e:
             return None, [f"底图未被采用：落盘失败（{e}）"]
-        return f"support/底图/{safe}", []
+        return "support/base_map/basemap.dwg", []
 
     # URL 下载
     if url:
@@ -495,13 +684,13 @@ def _save_base_map():
         if not data:
             return None, ["底图未被采用：base_map_url 响应为空"]
         os.makedirs(BASE_MAP_DIR, exist_ok=True)
-        dst = os.path.join(BASE_MAP_DIR, name)
+        dst = os.path.join(BASE_MAP_DIR, "basemap.dwg")  # 固定 ASCII 名
         try:
             with open(dst, "wb") as w:
                 w.write(data)
         except OSError as e:
             return None, [f"底图未被采用：URL 内容落盘失败（{e}）"]
-        return f"support/底图/{name}", []
+        return "support/base_map/basemap.dwg", []
 
     # 未提供 → 流程一
     return None, []
@@ -526,6 +715,10 @@ def draw_column():
 
     请求：borehole_data（必填）；auto_zoom（可选，默认 True）。
     响应：{status, results: {column: <CAD>}}。
+
+    borehole_data 兼容两种形态：
+      - 形态A：英文键结构化 {hole_no: dict, ...}  → 原样
+      - 形态B：二维数组 JSON {hole_no: rows, ...}    → 先 _normalize_borehole
     """
     try:
         bh = _resolve_form_json("borehole_data", required=True)
@@ -534,6 +727,11 @@ def draw_column():
     if not isinstance(bh, dict):
         return jsonify({"status": "error",
                         "message": "borehole_data must be a JSON object"}), 400
+    if _is_2d_array_format(bh):
+        try:
+            bh = _normalize_borehole(bh)
+        except ValueError as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
     az = _resolve_auto_zoom()
 
     with _lock:
@@ -561,6 +759,8 @@ def draw_section():
 
     请求：borehole_data（必填）；section_params（可选）；auto_zoom（可选，默认 True）。
     响应：{status, results: {section: <CAD>}}。
+
+    borehole_data 兼容两种形态（见 draw_column 注释）。
     """
     try:
         bh = _resolve_form_json("borehole_data", required=True)
@@ -570,6 +770,11 @@ def draw_section():
     if not isinstance(bh, dict):
         return jsonify({"status": "error",
                         "message": "borehole_data must be a JSON object"}), 400
+    if _is_2d_array_format(bh):
+        try:
+            bh = _normalize_borehole(bh)
+        except ValueError as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
     az = _resolve_auto_zoom()
 
     with _lock:
@@ -640,6 +845,16 @@ def draw_plan():
     if not isinstance(bh, dict):
         return jsonify({"status": "error",
                         "message": "borehole_data must be a JSON object"}), 400
+    if _is_2d_array_format(bh):
+        try:
+            bh = _normalize_borehole(bh)
+        except ValueError as e:
+            return jsonify({
+                "status": "error",
+                "message": str(e),
+                "warnings": [],
+                "degraded_to": None,
+            }), 400
 
     # ===== 底图获取（锁外，告警必达） =====
     warnings = []
@@ -731,6 +946,13 @@ def draw():
 
     section_params = body.get("section_params")
     auto_zoom = body.get("auto_zoom", True)
+
+    # borehole_data 兼容形态B（二维数组 JSON）
+    if _is_2d_array_format(borehole):
+        try:
+            borehole = _normalize_borehole(borehole)
+        except ValueError as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
 
     with _lock:
         # 1. 英->中 转换并落盘

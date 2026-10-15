@@ -35,8 +35,8 @@ xlsx 中每个 sheet 对应一个孔号（"ZK1"/"ZK2"/…），每孔 11+ 行：
                 col15            "原位类型"
                 col16            "原位起(m)"
                 col17            "原位止(m)"
-                col18            "原位击数"
-                col19            "原位校正值"
+                col18            "原位杆长(m)"
+                col19            "原位击数"
   Row 6         重复表头
   Row 7~N+1   每个地层一行
   …
@@ -76,8 +76,8 @@ xlsx 中每个 sheet 对应一个孔号（"ZK1"/"ZK2"/…），每孔 11+ 行：
           "类型":         "xlsx rowN col15",
           "起(m)":        "xlsx rowN col16",
           "止(m)":        "xlsx rowN col17",
-          "击数":         "xlsx rowN col18",
-          "校正值(击)": "xlsx rowN col19"
+          "杆长(m)":      "xlsx rowN col18",
+          "锤击数(击)": "xlsx rowN col19"
         }
       },
       …
@@ -165,8 +165,8 @@ COL_SAMPLE_DEPTH      = 14  # 取样深度
 COL_TEST_TYPE         = 15  # 原位类型
 COL_TEST_FROM         = 16  # 原位起(m)
 COL_TEST_TO           = 17  # 原位止(m)
-COL_TEST_HITS         = 18  # 原位击数
-COL_TEST_CORRECTED    = 19  # 原位校正值
+COL_TEST_ROD_LENGTH   = 18  # 原位杆长(m)
+COL_TEST_HITS         = 19  # 原位击数（注意：原 COL_TEST_CORRECTED=19 是误读，已改 COL_TEST_HITS=19，校正值语义改为杆长）
 
 
 def _get_str(row: list[Any], col: int) -> str:
@@ -256,19 +256,19 @@ def convert_sheet_to_borehole(zk_id: str, rows: list[list[Any]]) -> dict[str, An
                 "编号": sample_no,
                 "取样深度": sample_depth,
             }
-        # 原位测试（类型 + 起止 + 击数 + 校正值）
+        # 原位测试（类型 + 起止 + 杆长 + 击数）
         test_type = _get_str(row, COL_TEST_TYPE)
         test_from = _get_num(row, COL_TEST_FROM)
         test_to = _get_num(row, COL_TEST_TO)
+        test_rod = _get_num(row, COL_TEST_ROD_LENGTH)
         test_hits = _get_num(row, COL_TEST_HITS)
-        test_corr = _get_num(row, COL_TEST_CORRECTED)
-        if test_type or test_from is not None or test_to is not None or test_hits is not None:
+        if test_type or test_from is not None or test_to is not None or test_rod is not None or test_hits is not None:
             layer["原位测试"] = {
                 "类型": test_type,
                 "起(m)": test_from,
                 "止(m)": test_to,
-                "击数": test_hits,
-                "校正值(击)": test_corr,
+                "杆长(m)": test_rod,
+                "锤击数(击)": test_hits,
             }
         strata.append(layer)
 
