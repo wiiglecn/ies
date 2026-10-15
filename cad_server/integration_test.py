@@ -45,8 +45,10 @@ def parse_boreholes(path):
             depth = rows[2][18]
             hole_type = rows[2][14] or ""
             date_start = rows[3][11] or ""
-            x = rows[4][4]
-            y = rows[4][8]
+            # 注意：钻孔数据里"X坐标(m)"实际是北向(CAD Y)，"Y坐标(m)"是东向(CAD X)
+            # 底图角点(X=36525101东向, Y=2747388北向) 验证了这一点
+            x = rows[4][9]   # 东向 → CAD X
+            y = rows[4][4]   # 北向 → CAD Y
             date_end = rows[4][11] or ""
             wl_init = rows[3][14] if rows[3][14] is not None else ""
             wl_stab = rows[4][14] if rows[4][14] is not None else ""
