@@ -14,13 +14,11 @@
 
 // VS2005 兼容
 #define snprintf _snprintf
-#define isnan _isnan
 
-#ifndef NAN
-static const unsigned char g_nanBits[8] = {0, 0, 0, 0, 0, 0, 0xf8, 0x7f};
-static const double g_NaN = *(const double*)g_nanBits;
-#define NAN g_NaN
-#endif
+// 用特殊值标记无效坐标（不依赖系统 NAN/isnan，避免 VS2005 兼容问题）
+static const double kInvalidCoord = -999999.0;
+#define IsInvalid(v) ((v) <= -999999.0)
+#define kNAN kInvalidCoord
 
 struct ToolRouteInfo {
     const char* uriPath;
@@ -564,12 +562,12 @@ static std::string JsonToStringSafe(cJSON* item) {
 }
 
 static double JsonToFloatSafe(cJSON* item) {
-    if (!item) return NAN;
+    if (!item) return kNAN;
     if (cJSON_IsNumber(item)) return item->valuedouble;
     if (cJSON_IsString(item) && item->valuestring && item->valuestring[0] != '\0') {
         return atof(item->valuestring);
     }
-    return NAN;
+    return kNAN;
 }
 
 // --- 形态判定：第一个 value 是 array → 二维数组形态 ---
@@ -625,14 +623,14 @@ static cJSON* NormalizeOneHole(cJSON* rows, const char* holeNo, std::string& out
 
     cJSON* hole = cJSON_CreateObject();
     cJSON_AddStringToObject(hole, "hole_no", holeNoInRow.c_str());
-    if (!isnan(xCad)) cJSON_AddNumberToObject(hole, "x", xCad);
-    if (!isnan(yCad)) cJSON_AddNumberToObject(hole, "y", yCad);
+    if (!IsInvalid(xCad)) cJSON_AddNumberToObject(hole, "x", xCad);
+    if (!IsInvalid(yCad)) cJSON_AddNumberToObject(hole, "y", yCad);
 
     double elev = JsonToFloatSafe(cJSON_GetArrayItem(row2, COL_ELEVATION));
-    if (!isnan(elev)) cJSON_AddNumberToObject(hole, "elevation", elev);
+    if (!IsInvalid(elev)) cJSON_AddNumberToObject(hole, "elevation", elev);
 
     double depth = JsonToFloatSafe(cJSON_GetArrayItem(row2, COL_DEPTH));
-    if (!isnan(depth)) cJSON_AddNumberToObject(hole, "depth", depth);
+    if (!IsInvalid(depth)) cJSON_AddNumberToObject(hole, "depth", depth);
 
     cJSON_AddStringToObject(hole, "hole_type",
         JsonToStringSafe(cJSON_GetArrayItem(row2, COL_HOLE_TYPE)).c_str());
@@ -646,11 +644,11 @@ static cJSON* NormalizeOneHole(cJSON* rows, const char* holeNo, std::string& out
         JsonToStringSafe(cJSON_GetArrayItem(row4, COL_DATE_END)).c_str());
 
     double wInit = JsonToFloatSafe(cJSON_GetArrayItem(row3, COL_WATER_INIT));
-    if (!isnan(wInit)) cJSON_AddNumberToObject(hole, "water_level_initial", wInit);
+    if (!IsInvalid(wInit)) cJSON_AddNumberToObject(hole, "water_level_initial", wInit);
     else cJSON_AddStringToObject(hole, "water_level_initial", "");
 
     double wStable = JsonToFloatSafe(cJSON_GetArrayItem(row4, COL_WATER_STABLE));
-    if (!isnan(wStable)) cJSON_AddNumberToObject(hole, "water_level_stable", wStable);
+    if (!IsInvalid(wStable)) cJSON_AddNumberToObject(hole, "water_level_stable", wStable);
     else cJSON_AddStringToObject(hole, "water_level_stable", "");
 
     // 地层列表：从 row[ROW_STRATA_START] 起
@@ -680,12 +678,12 @@ static cJSON* NormalizeOneHole(cJSON* rows, const char* holeNo, std::string& out
         // from/to 都为空跳过
         double sFrom = JsonToFloatSafe(cJSON_GetArrayItem(row, COL_STRATA_FROM));
         double sTo = JsonToFloatSafe(cJSON_GetArrayItem(row, COL_STRATA_TO));
-        if (isnan(sFrom) && isnan(sTo)) continue;
+        if (IsInvalid(sFrom) && IsInvalid(sTo)) continue;
 
         cJSON* layer = cJSON_CreateObject();
         cJSON_AddStringToObject(layer, "layer_id", idCell.c_str());
-        if (!isnan(sFrom)) cJSON_AddNumberToObject(layer, "from", sFrom);
-        if (!isnan(sTo)) cJSON_AddNumberToObject(layer, "to", sTo);
+        if (!IsInvalid(sFrom)) cJSON_AddNumberToObject(layer, "from", sFrom);
+        if (!IsInvalid(sTo)) cJSON_AddNumberToObject(layer, "to", sTo);
         cJSON_AddStringToObject(layer, "name", nameCell.c_str());
         cJSON_AddStringToObject(layer, "color",
             JsonToStringSafe(cJSON_GetArrayItem(row, COL_STRATA_COLOR)).c_str());
