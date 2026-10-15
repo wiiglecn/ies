@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <ProjectGuid>{4774A453-18F5-42BB-A61C-98D1B145D943}</ProjectGuid>
+    <RootNamespace>exploration</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+    <UseOfMfc>Dynamic</UseOfMfc>
+    <UseOfAtl>Dynamic</UseOfAtl>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+    <UseOfMfc>Dynamic</UseOfMfc>
+    <UseOfAtl>Dynamic</UseOfAtl>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>18.0.12106.202</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>Debug2005\</OutDir>
+    <IntDir>Debug2005\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>Release2005\</OutDir>
+    <IntDir>Release2005\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <PreBuildEvent>
+      <Command />
+    </PreBuildEvent>
+    <CustomBuildStep>
+      <Command />
+    </CustomBuildStep>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <GenerateStublessProxies>true</GenerateStublessProxies>
+      <GenerateTypeLibrary>true</GenerateTypeLibrary>
+      <TypeLibraryName>$(IntDir)AsdkCustPalette.tlb</TypeLibraryName>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <DllDataFileName />
+      <InterfaceIdentifierFileName>CustPalette_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>CustPalette_p.c</ProxyFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\include;..\inc\2005;.\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CAD2005;WIN32;_DEBUG;_WINDOWS;_AFXEXT;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>false</StringPooling>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PrecompiledHeader />
+      <WarningLevel>Level1</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>rxapi.lib;acdb16.lib;acge16.lib;acgiapi.lib;achapi16.lib;acISMobj16.lib;acad.lib;acedapi.lib;adui16.lib;acui16.lib;Oleacc.lib;mongoose.lib;crypt32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)KsExploration.arx</OutputFile>
+      <AdditionalLibraryDirectories>..\lib;..\lib\2007;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkDLL>true</LinkDLL>
+      <ModuleDefinitionFile>..\inc\2005\AcRxDefault.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)CustPalette.pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <ImportLibrary>$(OutDir)CustPalette.lib</ImportLibrary>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /D "$(ProjectDir)..\lib\2007\libcurl.dll" "$(OutDir)"
+xcopy /Y /D "$(ProjectDir)res\tools.json" "$(OutDir)"
+xcopy /Y /D "$(ProjectDir)res\tools.lsp" "$(OutDir)"
+xcopy /Y /D /E /I "$(ProjectDir)res\page" "$(OutDir)page"
+xcopy /Y /D /E /I "$(ProjectDir)res\support" "$(OutDir)support"
+
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <GenerateStublessProxies>true</GenerateStublessProxies>
+      <GenerateTypeLibrary>true</GenerateTypeLibrary>
+      <TypeLibraryName>$(IntDir)AsdkCustPalette.tlb</TypeLibraryName>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <DllDataFileName />
+      <InterfaceIdentifierFileName>CustPalette_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>CustPalette_p.c</ProxyFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories>..\include;..\inc\2005;.\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CAD2005;WIN32;_WINDOWS;NDEBUG;_AFXEXT;_ACRXAPP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PrecompiledHeader />
+      <WarningLevel>Level1</WarningLevel>
+      <DebugInformationFormat />
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>rxapi.lib;acdb16.lib;acge16.lib;acgiapi.lib;achapi16.lib;acISMobj16.lib;acad.lib;acedapi.lib;adui16.lib;acui16.lib;Oleacc.lib;mongoose.lib;crypt32.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)KsExploration.arx</OutputFile>
+      <AdditionalLibraryDirectories>..\lib;..\lib\2007;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkDLL>true</LinkDLL>
+      <ModuleDefinitionFile>..\inc\2005\AcRxDefault.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <ProgramDatabaseFile />
+      <SubSystem>Windows</SubSystem>
+      <ImportLibrary>$(OutDir)CustPalette.lib</ImportLibrary>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /D "$(ProjectDir)res\PalettePage.html" "$(OutDir)"
+xcopy /Y /D "$(ProjectDir)res\PalettePage.css" "$(OutDir)"
+xcopy /Y /D "$(ProjectDir)res\PalettePage.js" "$(OutDir)"
+xcopy /Y /D "$(ProjectDir)res\tools.json" "$(OutDir)"
+xcopy /Y /D "$(ProjectDir)res\tools.lsp" "$(OutDir)"
+xcopy /Y /D "$(ProjectDir)res\chat.bin" "$(OutDir)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="features\BaseDataSet.cpp" />
+    <ClCompile Include="features\CreateBaseView.cpp" />
+    <ClCompile Include="features\CreateColumnView.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)%(Filename)1.obj</ObjectFileName>
+      <XMLDocumentationFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)%(Filename)1.xdc</XMLDocumentationFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename)1.obj</ObjectFileName>
+      <XMLDocumentationFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename)1.xdc</XMLDocumentationFileName>
+    </ClCompile>
+    <ClCompile Include="features\CreatePlanView.cpp" />
+    <ClCompile Include="features\CreateSectionView.cpp" />
+    <ClCompile Include="features\PatHatchLoader.cpp" />
+    <ClCompile Include="src\AiApiRequest.cpp" />
+    <ClCompile Include="src\AiApiServer.cpp" />
+    <ClCompile Include="src\AiChat.cpp" />
+    <ClCompile Include="src\ApiMessageWnd.cpp" />
+    <ClCompile Include="src\BaseMarker.cpp" />
+    <ClCompile Include="src\CircleFilter.cpp" />
+    <ClCompile Include="src\cJSON.c" />
+    <ClCompile Include="src\CPalette.cpp" />
+    <ClCompile Include="src\CPalette_cmd.cpp" />
+    <ClCompile Include="src\CustPalette.cpp" />
+    <ClCompile Include="src\HtmlPaletteView.cpp" />
+    <ClCompile Include="src\HttpClient.cpp" />
+    <ClCompile Include="src\HttpClientCurl.cpp" />
+    <ClCompile Include="src\Init.cpp" />
+    <ClCompile Include="src\LineHolePlacer.cpp" />
+    <ClCompile Include="src\LineJig.cpp" />
+    <ClCompile Include="src\Logger.cpp" />
+    <ClCompile Include="src\MySafeHtmlView.cpp" />
+    <ClCompile Include="src\OwnerMenu.cpp" />
+    <ClCompile Include="src\Palette.cpp" />
+    <ClCompile Include="src\PaletteCleanup.cpp" />
+    <ClCompile Include="src\PaletteSet.cpp" />
+    <ClCompile Include="src\PolylineMarker.cpp" />
+    <ClCompile Include="src\PreSelectScale.cpp" />
+    <ClCompile Include="src\rxdebug.cpp" />
+    <ClCompile Include="src\StdAfx.cpp" />
+    <ClCompile Include="src\Utils.cpp" />
+    <ClCompile Include="src\Utils_ext_01.cpp" />
+    <ClCompile Include="src\Utils_ext_02.cpp" />
+    <ClCompile Include="tools\AcadFrameHook.cpp" />
+    <ClCompile Include="tools\ToolAnnotation.cpp" />
+    <ClCompile Include="tools\ToolBlock.cpp" />
+    <ClCompile Include="tools\ToolDraw.cpp" />
+    <ClCompile Include="tools\ToolDrawBase.cpp" />
+    <ClCompile Include="tools\ToolEntity.cpp" />
+    <ClCompile Include="tools\ToolGlobal.cpp" />
+    <ClCompile Include="tools\ToolLayer.cpp" />
+    <ClCompile Include="tools\ToolStyle.cpp" />
+    <ClCompile Include="tools\ToolView.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="CustPalette.idl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CustPalette.h" />
+    <ClInclude Include="features\BaseDataSet.h" />
+    <ClInclude Include="features\CreateBaseView.h" />
+    <ClInclude Include="features\CreateColumnView.h" />
+    <ClInclude Include="features\CreatePlanView.h" />
+    <ClInclude Include="features\CreateSectionView.h" />
+    <ClInclude Include="features\PatHatchLoader.h" />
+    <ClInclude Include="include\AiApiRequest.h" />
+    <ClInclude Include="include\AiApiServer.h" />
+    <ClInclude Include="include\AiChat.h" />
+    <ClInclude Include="include\ApiMessageWnd.h" />
+    <ClInclude Include="include\BaseMarker.h" />
+    <ClInclude Include="include\CircleFilter.h" />
+    <ClInclude Include="include\cJSON.h" />
+    <ClInclude Include="include\CPalette.h" />
+    <ClInclude Include="include\declare.h" />
+    <ClInclude Include="include\HtmlPaletteView.h" />
+    <ClInclude Include="include\HttpClient.h" />
+    <ClInclude Include="include\HttpClientCurl.h" />
+    <ClInclude Include="include\Init.h" />
+    <ClInclude Include="include\LineHolePlacer.h" />
+    <ClInclude Include="include\LineJig.h" />
+    <ClInclude Include="include\Logger.h" />
+    <ClInclude Include="include\MySafeHtmlView.h" />
+    <ClInclude Include="include\OwnerMenu.h" />
+    <ClInclude Include="include\PaletteCleanup.h" />
+    <ClInclude Include="include\PaletteSet.h" />
+    <ClInclude Include="include\PolylineMarker.h" />
+    <ClInclude Include="include\PreSelectScale.h" />
+    <ClInclude Include="include\resource.h" />
+    <ClInclude Include="include\rxdebug.h" />
+    <ClInclude Include="include\StdAfx.h" />
+    <ClInclude Include="include\StdAfx2007.h" />
+    <ClInclude Include="include\Utils.h" />
+    <ClInclude Include="tools\AcadFrameHook.h" />
+    <ClInclude Include="tools\ToolAnnotation.h" />
+    <ClInclude Include="tools\ToolBlock.h" />
+    <ClInclude Include="tools\ToolDraw.h" />
+    <ClInclude Include="tools\ToolDrawBase.h" />
+    <ClInclude Include="tools\ToolEntity.h" />
+    <ClInclude Include="tools\ToolGlobal.h" />
+    <ClInclude Include="tools\ToolLayer.h" />
+    <ClInclude Include="tools\ToolStyle.h" />
+    <ClInclude Include="tools\ToolView.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="CustPalette.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CustPalette.rgs" />
+    <None Include="DWGPreview.rgs" />
+    <None Include="InspData1.rgs" />
+    <None Include="res\tools.json">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

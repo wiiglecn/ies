@@ -1,0 +1,293 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{88a3a9a1-47e2-411e-9895-8f55598bac19}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;idl;odl</Extensions>
+    </Filter>
+    <Filter Include="Include Files">
+      <UniqueIdentifier>{9c716494-0e09-4c41-920d-5765568c34ac}</UniqueIdentifier>
+      <Extensions>h;hh;hxx</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{fa3c2240-8089-458d-92c8-50e8b5e7717f}</UniqueIdentifier>
+      <Extensions>rc;ico;bmp;cur;jpg;gif</Extensions>
+    </Filter>
+    <Filter Include="Miscellaneous Files">
+      <UniqueIdentifier>{861278f8-0c40-4726-be2d-42175928e9cd}</UniqueIdentifier>
+      <Extensions>reg;rgs;mak;clw;vsdir;vsz;css;inf;vcproj;csproj</Extensions>
+    </Filter>
+    <Filter Include="tools">
+      <UniqueIdentifier>{1f1d21e3-f07e-45a3-a085-75b8e9eaa6ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="static">
+      <UniqueIdentifier>{b6015b5f-f61c-4428-9644-b1352089659f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="features">
+      <UniqueIdentifier>{f9c1a70e-ab93-4a71-b42f-556b0d9641b8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\AiApiRequest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\AiApiServer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\AiChat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\BaseMarker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CircleFilter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cJSON.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CPalette.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CPalette_cmd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\HtmlPaletteView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\HttpClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Init.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LineHolePlacer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LineJig.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Logger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\OwnerMenu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Palette2005.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PaletteCleanup.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PaletteSet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PolylineMarker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PreSelectScale.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rxdebug2005.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\StdAfx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Utils_ext_01.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="tools\ToolAnnotation.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="tools\ToolBlock.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="tools\ToolDraw.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="tools\ToolDrawBase.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="tools\ToolEntity.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="tools\ToolGlobal.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="tools\ToolLayer.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="tools\ToolStyle.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="tools\ToolView.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="features\BaseDataSet.cpp">
+      <Filter>features</Filter>
+    </ClCompile>
+    <ClCompile Include="features\CreateBaseView.cpp">
+      <Filter>features</Filter>
+    </ClCompile>
+    <ClCompile Include="features\CreateColumnView.cpp">
+      <Filter>features</Filter>
+    </ClCompile>
+    <ClCompile Include="features\CreatePlanView.cpp">
+      <Filter>features</Filter>
+    </ClCompile>
+    <ClCompile Include="features\CreateSectionView.cpp">
+      <Filter>features</Filter>
+    </ClCompile>
+    <ClCompile Include="features\PatHatchLoader.cpp">
+      <Filter>features</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\AiApiRequest.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AiApiServer.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AiChat.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\BaseMarker.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\CircleFilter.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cJSON.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\CPalette.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CustPalette.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\declare.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\HtmlPaletteView.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\HttpClient.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Init.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\LineHolePlacer.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\LineJig.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Logger.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OwnerMenu.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PaletteCleanup.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PaletteSet.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PolylineMarker.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PreSelectScale.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\resource.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\rxdebug2005.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\StdAfx.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\StdAfx2005.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Utils.h">
+      <Filter>Include Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tools\ToolAnnotation.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="tools\ToolBlock.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="tools\ToolDraw.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="tools\ToolDrawBase.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="tools\ToolEntity.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="tools\ToolGlobal.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="tools\ToolLayer.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="tools\ToolStyle.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="tools\ToolView.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="features\BaseDataSet.h">
+      <Filter>features</Filter>
+    </ClInclude>
+    <ClInclude Include="features\CreateBaseView.h">
+      <Filter>features</Filter>
+    </ClInclude>
+    <ClInclude Include="features\CreateColumnView.h">
+      <Filter>features</Filter>
+    </ClInclude>
+    <ClInclude Include="features\CreatePlanView.h">
+      <Filter>features</Filter>
+    </ClInclude>
+    <ClInclude Include="features\CreateSectionView.h">
+      <Filter>features</Filter>
+    </ClInclude>
+    <ClInclude Include="features\PatHatchLoader.h">
+      <Filter>features</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="CustPalette.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CustPalette.rgs">
+      <Filter>Miscellaneous Files</Filter>
+    </None>
+    <None Include="DWGPreview.rgs">
+      <Filter>Miscellaneous Files</Filter>
+    </None>
+    <None Include="InspData1.rgs">
+      <Filter>Miscellaneous Files</Filter>
+    </None>
+    <None Include="res\PalettePage.html">
+      <Filter>static</Filter>
+    </None>
+    <None Include="res\tools.json">
+      <Filter>static</Filter>
+    </None>
+  </ItemGroup>
+</Project>

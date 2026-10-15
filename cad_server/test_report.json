@@ -51,29 +51,29 @@
   {
     "id": "C01-B",
     "form": "B",
-    "purpose": "柱状图37孔 (2.8s)",
-    "status": "PASS",
-    "note": "HTTP 200 body={\"results\":{\"column\":{\"status\":\"success\"}},\"status\":\"success\"}\n"
+    "purpose": "柱状图37孔 (52.1s)",
+    "status": "FAIL",
+    "note": "HTTP 500 body={\"message\":\"ConnectionError: ('Connection aborted.', ConnectionResetError(10054, '\\u8fdc\\u7a0b\\u4e3b\\u673a\\u5f3a\\u8feb\\u5173\\u95ed\\u4e86\\u4e00\\u4e2a\\u"
   },
   {
     "id": "S01-B",
     "form": "B",
-    "purpose": "剖面图 A-A'",
-    "status": "PASS",
-    "note": "HTTP 200 body={\"results\":{\"section\":{\"status\":\"success\"}},\"status\":\"success\"}\n"
+    "purpose": "剖面图",
+    "status": "SKIP",
+    "note": "CAD :7100 未启动"
   },
   {
     "id": "P01-B-UP",
     "form": "B",
-    "purpose": "上传底图流程二 (4.2s)",
-    "status": "PASS",
-    "note": "HTTP 200 degraded_to=process2_with_basemap warnings=[]"
+    "purpose": "平面流程二上传底图",
+    "status": "SKIP",
+    "note": "CAD :7100 未启动"
   },
   {
     "id": "M01-B",
     "form": "B",
-    "purpose": "旧/api/draw并存",
-    "status": "PASS",
-    "note": "status_codes={'/api/draw': 200}"
+    "purpose": "四接口并存",
+    "status": "SKIP",
+    "note": "CAD :7100 未启动"
   }
 ]
