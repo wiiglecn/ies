@@ -3,8 +3,8 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档名称 | CAD 勘察出图插件（KsExploration.arx）对外接口文档 |
-| 版本 | **V1.1** |
-| 日期 | 2026-10-14 |
+| 版本 | **V1.2** |
+| 日期 | 2026-10-15 |
 | 适用 | AutoCAD 2005 / 2007 + 勘察三图（平面图 / 柱状图 / 剖面图）出图 |
 | 基线 | 《勘探点平面布置图·底图导入与出图比例 详细设计》**V1.6**；《CAD 勘察出图插件·勘察三图生成 需求规格说明书》**V1.3**；《CAD 勘察出图插件·勘察三图生成 需求文档》**V2.4** |
 | 编写目的 | 作为业务系统/调用方对接出图能力的统一接口文档；**同时覆盖当前已实现形态与目标待实现形态**，对每条接口明确标注实现状态（✅ 已实现 / 🔜 待实现） |
@@ -27,7 +27,7 @@
 6. [`POST /api/draw/section`（形态 B · 🔜 待实现）](#6-post-apidrawsection形态-b--待实现)
 7. [`POST /api/draw/plan`（形态 B · 🔜 待实现）](#7-post-apidrawplan形态-b--待实现)
 8. [状态码与错误处理](#8-状态码与错误处理)
-9. [`borehole_data` 数据格式（两种形态共用）](#9-borehole_data-数据格式两种形态共用)
+9. [`borehole_data` 数据格式（形态 B 二维数组 · 推荐；形态 A 结构化 · 遗留）](#9-borehole_data-数据格式形态-b-二维数组--推荐形态-a-结构化--遗留)
 10. [完整 curl 调用示例](#10-完整-curl-调用示例)
 11. [错误排查](#11-错误排查)
 12. [变更记录](#12-变更记录)
@@ -63,7 +63,8 @@
 ┌──────────────────────────────────────────┐
 │  Flask 网关 cad_server/draw_gateway.py   │
 │  · 参数解析（JSON body 优先 / form 兜底） │
-│  · borehole_data 英文→中文键             │
+│  · borehole_data 二维数组→英文键（_normalize_borehole）│
+│  · borehole_data 英文键→中文键（_translate_borehole）│
 │  · 底图下载/落盘（仅网关端 · 不阻塞 CAD）│
 │  · 单项目/单 CAD 实例，_lock 串行         │
 └──────────────────┬───────────────────────┘
@@ -77,6 +78,7 @@
 ```
 
 - **三接口独立**：柱状图、剖面图、平面图各自一个端点，按需调用。
+- **`borehole_data` 入参为二维数组 JSON**（顶层 key=孔号，value=xlsx 行数组）；网关内 `_normalize_borehole()` 自动归一化为英文键结构化 JSON，再走 `_translate_borehole()` 英译中键落盘。调用方**无需**自行结构化转换。详见 §9。
 - **平面图底图支持**：DWG 文件上传（`multipart/form-data` 字段 `base_map`）或可访问链接（`base_map_url`，http/https）二选一，**均由网关端下载并落盘到 `ARX_DIR/support/底图/`**，插件端**不联网**。
 - **告警必达**：底图不可用**绝不**返回 5xx，统一 `HTTP 200 + warnings[] + degraded_to`，由 CAD 端显式告知用户（避免静默）。
 - **SSRF 启动参数**：网关支持 `--ssrf-whitelist-cidr <CIDR列表>` 启动参数（默认空 = 全放行；非空时仅放行白名单内；回环地址一律拒），由部署层按需配置。
@@ -147,10 +149,10 @@
 
 | # | 接口 | 形态 | 状态 | Content-Type | 必填字段 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `POST /api/draw` | A | **✅ 已实现**（`cad_server/API.md` v2.1） | `application/json` | `borehole_data` | 单接口一次调用多图；视图由 `views` 数组选择 |
-| 2 | `POST /api/draw/column` | B | 🛠 **实施中** | `application/json` / `multipart/form-data` | `borehole_data` | 柱状图端点；本版实施中（详设 V1.7 §9.3，代码任务 G1/G3 派单已发） |
-| 3 | `POST /api/draw/section` | B | 🛠 **实施中** | `application/json` / `multipart/form-data` | `borehole_data` | 剖面图端点；本版实施中 |
-| 4 | `POST /api/draw/plan` | B | 🛠 **实施中**（**重点**） | `application/json` / `multipart/form-data` | `borehole_data`；`base_map` 或 `base_map_url` 二选一（流程二；底图字段**仅**支持 `multipart/form-data`，详见 §7.2） | 平面图端点；支持底图两种提交方式；详情见第 7 章 |
+| 1 | `POST /api/draw` | A | **✅ 已实现**（`cad_server/API.md` v2.2） | `application/json` | `borehole_data`（**结构化 dict**，形态 A 遗留） | 单接口一次调用多图；视图由 `views` 数组选择 |
+| 2 | `POST /api/draw/column` | B | 🛠 **实施中** | `application/json` / `multipart/form-data` | `borehole_data`（**二维数组 JSON**，网关自动归一化） | 柱状图端点；本版实施中（详设 V1.7 §9.3，代码任务 G1/G3 派单已发） |
+| 3 | `POST /api/draw/section` | B | 🛠 **实施中** | `application/json` / `multipart/form-data` | `borehole_data`（**二维数组 JSON**，网关自动归一化） | 剖面图端点；本版实施中 |
+| 4 | `POST /api/draw/plan` | B | 🛠 **实施中**（**重点**） | `application/json` / `multipart/form-data` | `borehole_data`（**二维数组 JSON**，网关自动归一化）；`base_map` 或 `base_map_url` 二选一（流程二；底图字段**仅**支持 `multipart/form-data`，详见 §7.2） | 平面图端点；支持底图两种提交方式；详情见第 7 章 |
 
 > **注**：第 2~4 行三接口的"🛠 实施中"状态与 **P0-1**（`ImportDwgAsBlock` 6 参重载用语核验）、**P0-3**（`base_map_url` JSON body 静默忽略——已由 §7.2 D1 决策落地）关联——网关落地时同步消除。
 > 形态 A 现状实现位于 ARX 内嵌 HTTP 服务；形态 B 现状代码仍为单接口 `/api/draw`，三接口为详设 V1.7 定稿，**改造在 `cad_server/draw_gateway.py` 落地**。
@@ -529,7 +531,7 @@ Content-Type: multipart/form-data        # 推荐：文件上传场景
 | URL 响应为空 | `底图未被采用：base_map_url 响应为空` |
 | URL 内容 > 50MB | `底图未被采用：<size message>` |
 | URL 重定向超过 3 次 | `底图未被采用：too many redirects (>3)` |
-| SSRF 命中回环 / 协议非 http(s) | `底图未被采用：base_map_url 校验未通过（详见网关日志）`（不写明拒因，避免给攻击者反馈；详见 §9.4） |
+| SSRF 命中回环 / 协议非 http(s) | `底图未被采用：base_map_url 校验未通过（详见网关日志）`（不写明拒因，避免给攻击者反馈；详见 §7.10） |
 
 > **CAD 端行为**（详设 V1.6 §9.3 / §9.4 告警必达口径）：`_call_cad` 成功返回后**必须**解析 `warnings[]` 并通过 `acedAlert` / 命令行 `acutPrintf` **显式**告知用户；**禁止仅打印到 CAD 日志窗口**。
 
@@ -653,11 +655,270 @@ curl -X POST http://<gateway>/api/draw/plan \
 
 ---
 
-## 9. `borehole_data` 数据格式（两种形态共用）
+## 9. `borehole_data` 数据格式（形态 B 二维数组 · 推荐；形态 A 结构化 · 遗留）
 
-> 本节内容取自 `cad_server/API.md` v2.1 §4，并按 V1.3 需规口径措辞（"流程一/流程二"等）保持一致。
+> **V1.2 修订要点**（产品经理 Alice 同步，基于 `docs/评审-转换层下沉网关-增量设计-V1.1.md` 落地 D-A / D-B 决策）：
+>
+> - **形态 B 三接口**（`POST /api/draw/{column,section,plan}` · Flask 网关）的 `borehole_data` 入参**改为"二维数组 JSON"**：顶层 key = 孔号，value = 该孔 xlsx 原始行数组（`{"ZK1": [[row0], [row1], ...]}`）。
+> - 网关侧 `cad_server/draw_gateway.py::_normalize_borehole()` **自动**将二维数组归一化为英文键结构化 JSON（`hole_no / x / y / elevation / depth / layers[]`），再走既有 `_translate_borehole()` 英译中键落盘；**调用方无需自行结构化转换**。
+> - **形态 A**（`POST /api/draw` · ARX 内嵌 :7100）保留**结构化英文键 dict 输入**作为遗留兼容（详见 §9.7），**新接入推荐走形态 B**。
+> - 详细行义表 / 字段映射表 / 容错规则 / 完整 ZK1 样例（二维数组 + 归一化对照）：见 §9.1.2 ~ §9.1.3 / §9.3 / §9.6；详细转换契约（函数签名 / 输入输出 / 集成到 4 接口）：见 `评审-转换层下沉网关-增量设计-V1.1 §3`。
 
-### 9.1 整体结构
+### 9.1 二维数组 JSON 输入格式（形态 B 网关 · 推荐）
+
+#### 9.1.1 顶层结构
+
+```json
+{
+  "<孔号 1>": [[row_0], [row_1], [row_2], ...],
+  "<孔号 2>": [[row_0], [row_1], [row_2], ...],
+  ...
+}
+```
+
+| 约束 | 规则 |
+| --- | --- |
+| 顶层 | object，顶层 key = 孔号（字符串，**原样保留**——不规范化、不强转大写） |
+| 每个 value | list[list[any]]——每行是一个 list，列宽不固定（按 xlsx 实际列数） |
+| 行数 | 每孔 ≥ 7 行（基本信息 4 行 + 表头 1 行 + 字段表头 1 行 + 至少 1 个地层） |
+| 单元格 | string / number / null 三种；数字格按 JS Number（int / float）解析；空缺为 `null` |
+| 字符编码 | UTF-8，JSON 无 BOM |
+| 顺序 | 顶层 key 顺序**不要求**；地层行顺序按 zk 内部 row 顺序处理 |
+
+#### 9.1.2 单孔二维数组的行义（基于 `cad_client/阳光幸福里-钻探编录表.json` 真实 ZK1 反推 · V1.1 勘误后）
+
+| 行索引 | 内容 | 中文标签位置（列号 → 标签） | 用途 |
+| --- | --- | --- | --- |
+| **Row 0** | 公司名称 | col 0 = "广西昇龙工程勘察设计检测有限公司"（或同类公司名） | 仅作存在性校验，**不进入 borehole_data** |
+| **Row 1** | 表名 + 页码 | col 0 = "工 程 勘 察 钻 探 现 场 编 录 表"；col 18 = "第 N 页共 M 页" | 仅作存在性校验 |
+| **Row 2** | 工程基本信息 | col 0 = "工程名称" / col 1 = `<工程名称值>`；col 10 = "孔口高程（m）" / col 11 = `<高程值>`；col 12 = "钻孔类型" / col 14 = `<类型值>`（"技术孔"/"鉴别孔"）；col 16 = "终孔深度（m）" / col 18 = `<深度值>` | **基础信息行**，4 个核心字段 + 工程名称 |
+| **Row 3** | 工程地点 + 开孔日期 + 初见水位 | col 0 = "工程地点" / col 1 = `<地点值>`；col 10 = "开孔日期" / col 11 = `<日期值>`；col 12 = "初见水位（m）" / col 14 = `<值或空字符串>` | 工程地点、开孔日期、可选水位 1 |
+| **Row 4** | 孔号 + 测量学 X/Y + 终孔日期 + 稳定水位 | col 0 = "钻孔编号" / col 1 = `<孔号值>`；col 3 = "X坐标（m）" / col 4 = `<测量 X = 北 N 值>`；col 8 = "Y坐标（m）" / col 9 = `<测量 Y = 东 E 值>`；col 10 = "终孔日期" / col 11 = `<日期值>`；col 12 = "稳定水位（m）" / col 14 = `<值或空字符串>` | **孔号 + 坐标（关键）** + 终孔日期 + 可选水位 2 |
+| **Row 5** | 地层表头起首 + 字段表头汇总 | col 0 = "地层编号" / col 1 = "进尺（m）" / col 3 = "岩性描述" / col 12 = "岩芯\n采取率（%）" / col 13 = "取岩（土、水）样" / col 15 = "原位测试" | 仅作存在性校验 |
+| **Row 6** | 地层字段表头（详细列名） | col 1 = "自" / col 2 = "至" / col 3 = "地层名称" / col 4 = "颜色" / col 5 = "状态" / col 6 = "密实度" / col 7 = "湿度" / col 8 = "成分及其他" / col 13 = "编号" / col 14 = "取样深度" / col 15 = "类型" / col 16 = "起（m）" / col 17 = "止（m）" / col 18 = "杆长（m）" / col 19 = "锤击数（击）" | **字段表头定稿**——所有后续地层行按此表头取列偏移 |
+| **Row 7~N** | 每个地层一行 | 按 Row 6 表头列偏移取字段值 | 地层数据，N 至少为 7 |
+| **Row N+1** | 终止行 | col 1 / col 2 为终止进尺数字；col 3 = "终孔" | 网关**跳过**，不进入 borehole_data |
+| **Row N+2** | 项目负责人 / 机长 / 编录员 | col 0 = "项目负责人：xxx  钻探机长：xxx  编录员：xxx" | **跳过**（不进入 borehole_data） |
+
+#### 9.1.3 字段映射表（中文标签 → 结构化字段名 → 列位置 → 必填 · V1.1 勘误后）
+
+> **约定**：列位置指单孔二维数组中的列索引（0-based）；"必填"指**进入 borehole_data 必须存在**（缺则 400）。
+
+| # | 中文标签 | 二维数组位置 | 必填 | 结构化字段（英） | 类型 | 转换/取值说明 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | "钻孔编号" / `<孔号值>` | Row 4 col 0 / col 1 | **是** | `hole_no` | string | 取 row[4][1]；与顶层 key 双校验（应一致） |
+| 2 | "X坐标（m）" / `<测量 X>` | Row 4 col 3 / col 4 | 平面必填 | `y`（注意映射） | number | **测量学 X = 北 N → AutoCAD Y = 纵**；row[4][4] 转 float |
+| 3 | "Y坐标（m）" / `<测量 Y>` | Row 4 col 8 / col 9 | 平面必填 | `x`（注意映射） | number | **测量学 Y = 东 E → AutoCAD X = 横**；row[4][9] 转 float |
+| 4 | "孔口高程（m）" / `<值>` | Row 2 col 10 / col 11 | **是** | `elevation` | number | row[2][11] 转 float |
+| 5 | "终孔深度（m）" / `<值>` | Row 2 col 16 / col 18 | **是** | `depth` | number | row[2][18] 转 float |
+| 6 | "钻孔类型" / `<值>` | Row 2 col 12 / col 14 | 否 | `hole_type` | string | row[2][14] 转 str（值仍传中文："技术孔"/"鉴别孔"） |
+| 7 | "工程名称" / `<值>` | Row 2 col 0 / col 1 | 否 | `project_name` | string | row[2][1] 转 str |
+| 8 | "工程地点" / `<值>` | Row 3 col 0 / col 1 | 否 | `site` | string | row[3][1] 转 str |
+| 9 | "开孔日期" / `<值>` | Row 3 col 10 / col 11 | 否 | `date_start` | string | row[3][11] 转 str（值仍传中文："2025年09月27日"） |
+| 10 | "终孔日期" / `<值>` | Row 4 col 10 / col 11 | 否 | `date_end` | string | row[4][11] 转 str |
+| 11 | "初见水位（m）" / `<值>` | Row 3 col 12 / col 14 | 否 | `water_level_initial` | number \| string | row[3][14]：数字则转 float；空字符串/null 则 null |
+| 12 | "稳定水位（m）" / `<值>` | Row 4 col 12 / col 14 | 否 | `water_level_stable` | number \| string | row[4][14]：数字则转 float；空字符串/null 则 null |
+| 13 | "地层编号" / `<值>` | Row 7+ col 0 | **是**（地层行） | `layer_id` | string | row[ri][0] 转 str |
+| 14 | 进尺"自" / `<值>` | Row 7+ col 1 | **是**（地层行） | `from` | number | row[ri][1] 转 float（层顶深度） |
+| 15 | 进尺"至" / `<值>` | Row 7+ col 2 | **是**（地层行） | `to` | number | row[ri][2] 转 float（层底深度） |
+| 16 | "地层名称" / `<值>` | Row 7+ col 3 | **是**（地层行） | `name` | string | row[ri][3] 转 str（用于匹配填充图案） |
+| 17 | "颜色" / `<值>` | Row 7+ col 4 | 否 | `color` | string | row[ri][4] |
+| 18 | "状态" / `<值>` | Row 7+ col 5 | 否 | `state` | string | row[ri][5] |
+| 19 | "密实度" / `<值>` | Row 7+ col 6 | 否 | `density` | string | row[ri][6] |
+| 20 | "湿度" / `<值>` | Row 7+ col 7 | 否 | `moisture` | string | row[ri][7] |
+| 21 | "成分及其他" / `<值>` | Row 7+ col 8 | 否 | `description` | string | row[ri][8] |
+| 22 | "编号" / 取样编号 | Row 7+ col 13 | 否 | `sample.no` | string | row[ri][13]；空值不输出 sample 子对象 |
+| 23 | "取样深度" | Row 7+ col 14 | 否 | `sample.depth` | string | row[ri][14] |
+| 24 | "类型" / 原位类型 | Row 7+ col 15 | 否 | `test.type` | string | row[ri][15]（"标贯"/"重型动探"）；空则 test 不输出 |
+| 25 | "起（m）" | Row 7+ col 16 | 否 | `test.from` | **string** | row[ri][16] 转 str（接口 §9.7.3.2 明确为 string，不是 number） |
+| 26 | "止（m）" | Row 7+ col 17 | 否 | `test.to` | **string** | row[ri][17] 转 str |
+| 27 | "杆长（m）" | Row 7+ col 18 | 否 | `test.rod_length` | **string** | row[ri][18] 转 str |
+| 28 | "锤击数（击）" | Row 7+ col 19 | 否 | `test.hits` | **string** | row[ri][19] 转 str（数字需 str(2) → "2"） |
+
+#### 9.1.4 网关自动归一化流程
+
+```
+二维数组 JSON（§9.1.1 输入）
+   │
+   ▼
+`_normalize_borehole(raw)`  ← cad_server/draw_gateway.py（新增）
+                              §9.1.3 字段映射表逐列取数 + 关键标签校验
+                              V1.1 勘误后常量：
+                                ROW_STRATA_START = 7
+                                COL_ELEVATION / COL_DATE_START = 11
+   │
+   ▼
+英文键结构化 JSON（与 §9.7.2 同结构——`hole_no / x / y / elevation / depth / layers[]`）
+   │
+   ▼
+`_translate_borehole()`  ← 既有代码，未动
+   │
+   ▼
+中文键结构化 JSON → 落盘 ARX 端 `project/钻探编录表.json`
+```
+
+> 调用方**只关心** §9.1.1（顶层二维数组结构）+ §9.1.2（行义表，正确填 xlsx 即可）+ §9.1.3（字段映射，知道每个字段来自哪一列）。其余归一化 / 翻译 / 落盘流程由网关和 ARX 端透明完成。
+
+#### 9.1.5 完整二维数组样例（ZK1 · `cad_client/阳光幸福里-钻探编录表.json`）
+
+```json
+{
+  "ZK1": [
+    ["广西昇龙工程勘察设计检测有限公司", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    ["工  程  勘  察  钻  探  现  场  编  录  表", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, "第1页共37页", null],
+    ["工程名称", "阳光幸福里", null, null, null, null, null, null, null, null, "孔口高程（m）", 206.05, "钻孔类型", null, "技术孔", null, "终孔深度（m）", null, 19.2, null],
+    ["工程地点", "广西壮族自治区河池市环江毛南族自治县思恩镇民族路东侧", null, null, null, null, null, null, null, null, "开孔日期", "2025年09月27日", "初见水位（m）", null, "", null, "初见水位观测时间", null, null, null],
+    ["钻孔编号", "ZK1", null, "X坐标（m）", 2747346.764, null, null, null, "Y坐标（m）", 36524930.708, "终孔日期", "2025年09月28日", "稳定水位（m）", null, "", null, "稳定水位观测时间", null, null, null],
+    ["地层编号", "进尺（m）", null, "岩性描述", null, null, null, null, null, null, null, null, "岩芯\n采取率（%）", "取岩（土、水）样", null, "原位测试", null, null, null, null],
+    [null, "自", "至", "地层名称", "颜色", "状态", "密实度", "湿度", "成分及其他", null, null, null, null, "编号", "取样深度", "类型", "起（m）", "止（m）", "杆长（m）", "锤击数（击）"],
+    ["1-0-0", 0, 7.5, "填土-素填土", "褐黄色", "", "松散", "", "地层年代:第四纪,堆积年代:近十年堆积,地层成因:人工填土,均匀性:一般,主要成份:粘性土,次要成份:碎砖,", null, null, null, null, "QY-001", "13-13.3", "标贯", 9.15, 9.25, 10, 2],
+    ["2-0-0", 7.5, 11.7, "黏性土-黏土", "褐黄色", "可塑", "", "", "地层年代:第四纪,地层成因:残积,刀切面光滑，中干强度，韧性中等，无摇振反应", null, null, null, null, null, null, "标贯", 9.25, 9.35, 10, 3],
+    ["4-0-0", 11.7, 19.2, "岩石-泥灰岩", "灰黑色", "", "", "", "地层年代:石炭纪,坚硬程度:较硬岩,基本质量等级:III级,风化程度:中风化,可挖行:干钻不易钻进,结构类型:层状,泥质结构，中厚层状构造，节理裂隙较发育，岩体较完整，岩芯呈短柱状、块状，具易崩解性，浸水易软化，采取率为70%～82%，RQD=55%～63%。", null, null, null, null, null, null, "标贯", 9.35, 9.45, 10, 3]
+  ]
+}
+```
+
+#### 9.1.6 curl 示例（形态 B · 平面图 · 二维数组入参 · `application/json`）
+
+```bash
+curl -X POST http://<gateway>/api/draw/plan \
+  -H "Content-Type: application/json; charset=utf-8" \
+  -d '{
+    "borehole_data": {
+      "ZK1": [
+        ["广西昇龙工程勘察设计检测有限公司", null, ..., null],
+        ["工  程  勘  察  钻  探  现  场  编  录  表", null, ..., "第1页共37页", null],
+        ["工程名称", "阳光幸福里", null, ..., "孔口高程（m）", 206.05, "钻孔类型", null, "技术孔", null, "终孔深度（m）", null, 19.2, null],
+        ["工程地点", "广西壮族自治区河池市环江毛南族自治县思恩镇民族路东侧", null, ..., "开孔日期", "2025年09月27日", ...],
+        ["钻孔编号", "ZK1", null, "X坐标（m）", 2747346.764, ..., "Y坐标（m）", 36524930.708, ...],
+        ["地层编号", "进尺（m）", ...],
+        [null, "自", "至", "地层名称", "颜色", ...],
+        ["1-0-0", 0, 7.5, "填土-素填土", "褐黄色", "", "松散", "", "...", ..., "标贯", 9.15, 9.25, 10, 2]
+      ]
+    },
+    "auto_zoom": true
+  }'
+```
+
+> 实际提交时建议用 `python -m json.tool` 校验二维数组 JSON 的合法性；网关侧的 `ValueError` 会以 `HTTP 400 + {"status":"error","message":...}` 透传。multipart/form-data 提交方式见 §10.3 / §10.4（形态 B 柱状/剖面/平面接口同样支持）。
+
+### 9.2 地层列表组装规则（地层 / 取样 / 原位测试三段 · 网关归一化时按此组装）
+
+按 §9.1.3 字段映射表 13~28 行，地层行 `r` 从 `ROW_STRATA_START (= 7)` 开始扫描，到 `len(rows) - 1` 结束：
+
+1. **空行跳过**：`row` 中所有单元格均为 `null` / 空字符串 / 仅空白 → 跳过；
+2. **终止行跳过**：col 3 == "终孔" → 跳过；
+3. **无效进尺跳过**：`s_from == null and s_to == null` → 跳过（防御非法行）；
+4. **地层基本段**（必填+可选）：`layer_id, from, to, name, color, state, density, moisture, description` —— 即使空字符串也输出（**保持字段存在性**），仅 `null` 才省略；
+5. **取样段**：仅当 `sample.no` 或 `sample.depth` **任一非空**时输出 `sample: { no, depth }`；
+6. **原位测试段**：仅当 `test.type` 或 `test.from/to/rod_length/hits` **任一非空**时输出 `test: { type, from, to, rod_length, hits }`；
+7. **结构（与 §9.7.3 / §9.7.3.2 对齐）**：
+
+```json
+{
+  "layer_id": "1-0-0",
+  "from": 0,
+  "to": 7.5,
+  "name": "填土-素填土",
+  "color": "褐黄色",
+  "state": "",
+  "density": "松散",
+  "moisture": "",
+  "description": "地层年代:第四纪,堆积年代:近十年堆积,...",
+  "sample": { "no": "QY-001", "depth": "13-13.3" },
+  "test":   { "type": "标贯", "from": "9.15", "to": "9.25", "rod_length": "10", "hits": "2" }
+}
+```
+
+### 9.3 容错规则（二维数组 JSON · 网关侧 `_normalize_borehole`）
+
+| 异常 | 处理 | HTTP 状态 |
+| --- | --- | --- |
+| 顶层不是 object | `borehole_data must be a JSON object` | **400** |
+| 顶层为空 object（无孔） | 静默跳过（落空 borehole_data.json）；日志 `[WARN] no holes in borehole_data` | 200 |
+| 某孔行数 `< ROW_STRATA_START (=7)` | `borehole_data['<孔号>']: 行数 < 7，模板异常` | **400** |
+| 关键标签不存在（如 row 4 col 0 != "钻孔编号"） | `borehole_data['<孔号>']: row 4 col 0 标签缺失（期望"钻孔编号"）` | **400** |
+| `hole_no`（row 4 col 1）与顶层 key 不一致 | `borehole_data['<孔号>']: row 4 col 1 '<值>' 与 key '<key>' 不一致` | **400**（**双校验**，防调用方把孔号搞错） |
+| `elevation` / `depth` 非数字 | `borehole_data['<孔号>']: 字段 <字段名> 非数字（"<raw>"）` | **400** |
+| `x` / `y` 测量学坐标非数字 | `borehole_data['<孔号>']: 测量 <X|Y>(m) 非数字` | **400**（平面必填） |
+| 地层行 `from` / `to` 非数字且非"终孔" | 跳过该行 + 日志 `[WARN] layer row skipped: from/to 非数字` | 200（仅警告） |
+| `sample.no/depth` / `test.type/from/to/rod_length/hits` 全部为空 | 不输出 `sample` / `test` 子对象 | 200 |
+| `test.from/to/rod_length/hits` 为数字 | **强制 str() 转字符串**（接口契约 §9.7.3.2 明确） | 200 |
+| 终止行（col 3 == "终孔"）| 跳过 | 200 |
+| 负责人/机长/编录员行 | 跳过 | 200 |
+
+### 9.4 网关注入实现（V1.1 §3.1 / §3.5 定稿 · 概要）
+
+新增函数：
+
+```python
+def _normalize_borehole(raw: dict[str, list[list[Any]]]) -> dict[str, dict[str, Any]]:
+    """二维数组 borehole_data JSON → 英文键结构化 borehole_data JSON。"""
+```
+
+行/列偏移常量（详见 `评审-转换层下沉网关-增量设计-V1.1 §3.5`）：
+
+```python
+# 行索引常量
+ROW_HEADER, ROW_INFO_1, ROW_INFO_2, ROW_INFO_3 = 0, 2, 3, 4
+ROW_STRATA_HEADER, ROW_STRATA_COL, ROW_STRATA_START = 5, 6, 7
+
+# 基础信息列偏移（V1.1 勘误：COL_ELEVATION / COL_DATE_START 由 12 → 11）
+COL_HOLE_NO, COL_X_SURVEY, COL_Y_SURVEY, COL_ELEVATION, COL_DEPTH = 1, 4, 9, 11, 18
+COL_HOLE_TYPE, COL_PROJ_NAME, COL_PROJ_LOC, COL_DATE_START, COL_DATE_END = 14, 1, 1, 11, 11
+COL_WATER_INIT, COL_WATER_STABLE = 14, 14
+
+# 地层字段列偏移（与 Row 6 表头对齐）
+COL_STRATA_ID, COL_STRATA_FROM, COL_STRATA_TO = 0, 1, 2
+COL_STRATA_NAME, COL_STRATA_COLOR, COL_STRATA_STATE = 3, 4, 5
+COL_STRATA_DENS, COL_STRATA_MOIST, COL_STRATA_DESC = 6, 7, 8
+COL_SAMPLE_NO, COL_SAMPLE_DEPTH = 13, 14
+COL_TEST_TYPE, COL_TEST_FROM, COL_TEST_TO = 15, 16, 17
+COL_TEST_ROD, COL_TEST_HITS = 18, 19
+```
+
+调用链改造（V1.1 §3.2 / §3.3）：
+
+```
+4 接口 (column / section / plan)
+  → _resolve_form_json("borehole_data")     # 拿到二维数组 JSON
+  → _normalize_borehole(二维数组)            # 新增，本设计核心
+  → _translate_borehole(英文键)              # 既有代码，未动
+  → _write_json(BOREHOLE_FILE, 中文键)
+  → _call_cad
+```
+
+形态 A（`POST /api/draw`）**保留**结构化 dict 输入兼容；详见 §9.7。
+
+### 9.5 错误处理（详细）
+
+| 异常源 | 文案 | HTTP | 文档引用 |
+| --- | --- | --- | --- |
+| `raw` 非 object | `borehole_data must be a JSON object` | 400 | §9.3 第 1 行 |
+| `raw[zk_id]` 非 list | `borehole_data['<zk>']: 必须为 list（实际 <type>）` | 400 | §9.3 第 2 行 |
+| 行数不足 | `borehole_data['<zk>']: 行数 <n> < 7，模板异常` | 400 | §9.3 第 3 行 |
+| 关键标签缺失 | `borehole_data['<zk>']: row <r> col <c> 标签缺失（期望"<label>"）` | 400 | §9.3 第 4 行 |
+| `hole_no` 与 key 不一致 | `borehole_data['<zk>']: row 4 col 1 '<v>' 与 key '<k>' 不一致` | 400 | §9.3 第 5 行 |
+| 必填字段非数字（elevation/depth/x/y） | `borehole_data['<zk>']: 字段 <field> 非数字或缺失` | 400 | §9.3 第 6/7 行 |
+
+> **非阻塞警告**（不返 4xx/5xx，仅日志）：
+> - 地层行 `from/to` 非法且非"终孔" → 日志 `[WARN] layer row skipped: from/to 非数字`，跳过该行；
+> - `test.from/to/rod_length/hits` 为数字 → **强制 str()**，不警告（契约要求）。
+
+### 9.6 与设计文档的引用
+
+- 行义表 / 字段映射表 / 容错规则 / ZK1 真实样例（二维数组 + 结构化对照）的**定稿版**：见 `docs/评审-转换层下沉网关-增量设计-V1.1.md` §2（含 V1.1 勘误，列号与行号已与真实数据自洽）。
+- 函数签名 / 输入输出契约 / 关键路径伪代码 / 集成到 4 接口的代码段：见同文档 §3。
+- 与形态 A 的兼容关系：见 §9.7。
+- 文档影响面清单：见 `评审-转换层下沉网关-增量设计-V1.1.md` §6。
+
+### 9.7 兼容：结构化 dict 输入（形态 A 遗留 · 不推荐新接入）
+
+> ⚠️ **本节描述的是形态 A（`POST /api/draw` · ARX 内嵌 :7100）遗留输入格式**。新接入请使用 §9.1 ~ §9.6 描述的二维数组 JSON 输入；网关自动归一化为等价结构。
+>
+> 形态 A 与形态 B 的关系：形态 A 是已实现的 ARX 内嵌 HTTP 服务，**无独立网关**——转换逻辑由调用方保证；形态 B 是新增的 Flask 网关，转换逻辑由网关 `_normalize_borehole` 透明承担。两种形态不并存；详细理由见 `评审-转换层下沉网关-增量设计-V1.1.md` §4.2 / §4.3。
+
+#### 9.7.1 整体结构
 
 ```
 borehole_data (object)
@@ -675,7 +936,7 @@ borehole_data (object)
 
 > JSON 编码：UTF-8，无 BOM。字段名英文 snake_case。
 
-### 9.2 单孔字段
+#### 9.7.2 单孔字段
 
 | 字段名 | 类型 | 必填 | 平面 | 柱状 | 备注（落盘中文 key） |
 | --- | --- | --- | --- | --- | --- |
@@ -697,9 +958,9 @@ borehole_data (object)
 | `manager` | string | 否 | — | — | 项目负责人 |
 | `driller` | string | 否 | — | — | 钻探机长 |
 | `recorder` | string | 否 | — | — | 编录员 |
-| `layers` | array | 柱状必填 | — | ✓ | 地层列表，见 §9.3 |
+| `layers` | array | 柱状必填 | — | ✓ | 地层列表，见 §9.7.3 |
 
-### 9.3 `layers[]` 地层字段
+#### 9.7.3 `layers[]` 地层字段
 
 | 字段名 | 类型 | 必填 | 备注（落盘中文 key） |
 | --- | --- | --- | --- |
@@ -712,17 +973,17 @@ borehole_data (object)
 | `density` | string | 否 | 密实度（松散 / 中密等） |
 | `moisture` | string | 否 | 湿度 |
 | `description` | string | 否 | 成分及其他（柱状图描述栏） |
-| `sample` | object | 否 | 取岩(土、水)样，见 §9.3.1 |
-| `test` | object | 否 | 原位测试，见 §9.3.2 |
+| `sample` | object | 否 | 取岩(土、水)样，见 §9.7.3.1 |
+| `test` | object | 否 | 原位测试，见 §9.7.3.2 |
 
-#### 9.3.1 `sample` 取样子对象
+##### 9.7.3.1 `sample` 取样子对象
 
 | 字段名 | 类型 | 备注 |
 | --- | --- | --- |
 | `no` | string | 编号，如 `"QT-001"`，无则 `""` |
 | `depth` | string | 取样深度，如 `"13-13.3"`，无则 `""` |
 
-#### 9.3.2 `test` 原位测试子对象
+##### 9.7.3.2 `test` 原位测试子对象
 
 | 字段名 | 类型 | 备注 |
 | --- | --- | --- |
@@ -732,7 +993,7 @@ borehole_data (object)
 | `rod_length` | string | 杆长 (m) |
 | `hits` | string | 锤击数 (击) |
 
-### 9.4 完整请求示例（与形态 A §4.6 一致）
+#### 9.7.4 完整请求示例（形态 A · `POST /api/draw`）
 
 ```bash
 curl -X POST http://localhost:7100/api/draw \
@@ -787,90 +1048,90 @@ curl -X POST http://localhost:7100/api/draw \
 
 ## 10. 完整 curl 调用示例
 
-### 10.1 形态 A · `POST /api/draw`（一次出多图，application/json）
+### 10.1 形态 A · `POST /api/draw`（一次出多图，application/json · 结构化 dict 遗留）
 
 ```bash
 curl -X POST http://localhost:7100/api/draw \
   -H "Content-Type: application/json; charset=utf-8" \
   -d '{
     "views": ["plan", "column"],
-    "borehole_data": { "ZK1": { /* 见 §9.4 */ } }
+    "borehole_data": { "ZK1": { /* 结构化 dict，见 §9.7 */ } }
   }'
 ```
 
-### 10.2 形态 B · `POST /api/draw/plan` 流程一无底图（application/json）
+### 10.2 形态 B · `POST /api/draw/plan` 流程一无底图（application/json · 二维数组 JSON）
 
 ```bash
 curl -X POST http://<gateway>/api/draw/plan \
   -H "Content-Type: application/json; charset=utf-8" \
   -d '{
     "borehole_data": {
-      "ZK1": {
-        "hole_no": "ZK1",
-        "elevation": 138.27,
-        "depth": 7.7,
-        "x": 2711077.24,
-        "y": 562014.73,
-        "layers": []
-      }
+      "ZK1": [
+        ["广西昇龙工程勘察设计检测有限公司", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        ["工  程  勘  察  钻  探  现  场  编  录  表", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, "第1页共37页", null],
+        ["工程名称", "宜州城区地下管网改造提升项目", null, null, null, null, null, null, null, null, "孔口高程（m）", 138.27, "钻孔类型", null, "技术孔", null, "终孔深度（m）", null, 7.7, null],
+        ["工程地点", "广西壮族自治区河池市宜州市", null, null, null, null, null, null, null, null, "开孔日期", "2025年12月10日", "初见水位（m）", null, "", null, "初见水位观测时间", null, null, null],
+        ["钻孔编号", "ZK1", null, "X坐标（m）", 2711077.24, null, null, null, "Y坐标（m）", 562014.73, "终孔日期", "2025年12月10日", "稳定水位（m）", null, "", null, "稳定水位观测时间", null, null, null],
+        ["地层编号", "进尺（m）", null, "岩性描述", null, null, null, null, null, null, null, null, "岩芯\n采取率（%）", "取岩（土、水）样", null, "原位测试", null, null, null, null],
+        [null, "自", "至", "地层名称", "颜色", "状态", "密实度", "湿度", "成分及其他", null, null, null, null, "编号", "取样深度", "类型", "起（m）", "止（m）", "杆长（m）", "锤击数（击）"],
+        ["1-0-0", 0, 7.7, "黏性土-粉质黏土", "黄褐色", "可塑", "", "", "第四纪残积，干强度中等", null, null, null, null, null, null, null, null, null, null, null]
+      ]
     },
     "auto_zoom": true
   }'
 ```
 
-### 10.3 形态 B · `POST /api/draw/plan` 流程二 multipart 上传底图
+> 完整二维数组 JSON 行义表与字段映射表见 §9.1.2 / §9.1.3；网关自动归一化为结构化 dict 后走既有 `_translate_borehole` 落盘。完整 ZK1 真实样例见 §9.1.5。
+
+### 10.3 形态 B · `POST /api/draw/plan` 流程二 multipart 上传底图（二维数组 JSON）
 
 ```bash
 curl -X POST http://<gateway>/api/draw/plan \
-  -F 'borehole_data={"ZK1":{"hole_no":"ZK1","elevation":138.27,"depth":7.7,"x":2711077.24,"y":562014.73,"layers":[]}};type=application/json' \
+  -F 'borehole_data={"ZK1":[["广西昇龙工程勘察设计检测有限公司",null,...],["工  程  勘  察  钻  探  现  场  编  录  表",null,...,"第1页共37页",null],["工程名称","宜州城区地下管网改造提升项目",null,...,"孔口高程（m）",138.27,"钻孔类型",null,"技术孔",null,"终孔深度（m）",null,7.7,null],["工程地点","广西壮族自治区河池市宜州市",null,...,"开孔日期","2025年12月10日",...],["钻孔编号","ZK1",null,"X坐标（m）",2711077.24,...,"Y坐标（m）",562014.73,...],["地层编号","进尺（m）",...],[null,"自","至","地层名称","颜色","状态","密实度","湿度","成分及其他",...],["1-0-0",0,7.7,"黏性土-粉质黏土","黄褐色","可塑","","","第四纪残积",...,null,null,null,null,null,null,null,null,null,null]]};type=application/json' \
   -F 'base_map=@"/path/to/05阳光幸福里总平面规划图104(1).dwg";type=application/octet-stream' \
   -F 'plan_base={"base_map":{"dim":true,"plot_scale":500,"registration":{"source_points":[[2747350.0,36524890.0],[2747650.0,36524890.0]],"target_points":[[2747450.0,36524990.0],[2747750.0,36524990.0]]}}};type=application/json'
 ```
 
-### 10.4 形态 B · `POST /api/draw/plan` 流程二 URL 底图（multipart/form-data）
+> 上例中 `borehole_data` 为省略版（实际提交时按 §9.1.5 完整二维数组填齐 8 行）。完整字段映射见 §9.1.3；行义见 §9.1.2。
+
+### 10.4 形态 B · `POST /api/draw/plan` 流程二 URL 底图（multipart/form-data · 二维数组 JSON）
 
 > ⚠️ `base_map_url` **只从 `request.form` 读取**（详设 V1.6 §9.2），**必须使用 `multipart/form-data`**；用 `application/json` 提交底图键将返回 **HTTP 400**（`base_map / base_map_url 仅支持 multipart/form-data 提交`，须改用 `multipart/form-data`；D1 决策，详见 §8.2 第 5 行）。
 
 ```bash
 curl -X POST http://<gateway>/api/draw/plan \
-  -F 'borehole_data={"ZK1":{"hole_no":"ZK1","elevation":138.27,"depth":7.7,"x":2711077.24,"y":562014.73,"layers":[]}};type=application/json' \
+  -F 'borehole_data={"ZK1":[["广西昇龙工程勘察设计检测有限公司",null,...],...,["1-0-0",0,7.7,"黏性土-粉质黏土","黄褐色","可塑","","","第四纪残积",...,null,null,null,null,null,null,null,null,null,null]]};type=application/json' \
   -F 'base_map_url=https://internal.example.com/sitedata/05阳光幸福里总平面规划图104(1).dwg' \
   -F 'plan_base={"base_map":{"dim":true,"plot_scale":500}};type=application/json'
 ```
 
-### 10.5 形态 B · `POST /api/draw/column`（application/json）
+### 10.5 形态 B · `POST /api/draw/column`（application/json · 二维数组 JSON）
 
 ```bash
 curl -X POST http://<gateway>/api/draw/column \
   -H "Content-Type: application/json; charset=utf-8" \
   -d '{
     "borehole_data": {
-      "ZK1": {
-        "hole_no": "ZK1",
-        "project_name": "宜州城区地下管网改造提升项目",
-        "company": "广西昇龙工程勘察设计检测有限公司",
-        "elevation": 138.27,
-        "depth": 7.7,
-        "layers": [
-          {
-            "layer_id": "1-0-0",
-            "from": 0, "to": 7.7,
-            "name": "黏性土-粉质黏土",
-            "sample": {"no": "", "depth": ""},
-            "test":   {"type": "", "from": "", "to": "", "rod_length": "", "hits": ""}
-          }
-        ]
-      }
+      "ZK1": [
+        ["广西昇龙工程勘察设计检测有限公司", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        ["工  程  勘  察  钻  探  现  场  编  录  表", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, "第1页共1页", null],
+        ["工程名称", "宜州城区地下管网改造提升项目", null, null, null, null, null, null, null, null, "孔口高程（m）", 138.27, "钻孔类型", null, "技术孔", null, "终孔深度（m）", null, 7.7, null],
+        ["工程地点", "广西壮族自治区河池市宜州市", null, null, null, null, null, null, null, null, "开孔日期", "2025年12月10日", "初见水位（m）", null, "", null, "初见水位观测时间", null, null, null],
+        ["钻孔编号", "ZK1", null, "X坐标（m）", 2711077.24, null, null, null, "Y坐标（m）", 562014.73, "终孔日期", "2025年12月10日", "稳定水位（m）", null, "", null, "稳定水位观测时间", null, null, null],
+        ["地层编号", "进尺（m）", null, "岩性描述", null, null, null, null, null, null, null, null, "岩芯\n采取率（%）", "取岩（土、水）样", null, "原位测试", null, null, null, null],
+        [null, "自", "至", "地层名称", "颜色", "状态", "密实度", "湿度", "成分及其他", null, null, null, null, "编号", "取样深度", "类型", "起（m）", "止（m）", "杆长（m）", "锤击数（击）"],
+        ["1-0-0", 0, 7.7, "黏性土-粉质黏土", "黄褐色", "可塑", "", "", "第四纪残积，干强度中等", null, null, null, null, "", "", "", "", "", "", ""]
+      ]
     },
     "auto_zoom": true
   }'
 ```
 
-### 10.6 形态 B · `POST /api/draw/section`（multipart）
+### 10.6 形态 B · `POST /api/draw/section`（multipart · 二维数组 JSON）
 
 ```bash
 curl -X POST http://<gateway>/api/draw/section \
-  -F 'borehole_data={"ZK1":{"hole_no":"ZK1","elevation":138.27,"depth":7.7,"x":2711077.24,"y":562014.73,"layers":[]}};type=application/json' \
+  -F 'borehole_data={"ZK1":[["广西昇龙工程勘察设计检测有限公司",null,...],...,["1-0-0",0,7.7,"黏性土-粉质黏土","黄褐色","可塑","","","第四纪残积",...,null,null,null,null,null,null,null,null,null,null]]};type=application/json' \
   -F 'section_params={"sections":[{"id":"A-A","holes":["ZK1","ZK2"],"azimuth":90.0}]};type=application/json' \
   -F 'auto_zoom=true'
 ```
@@ -885,7 +1146,7 @@ curl -X POST http://<gateway>/api/draw/section \
 | --- | --- | --- |
 | 连接拒绝 | CAD 没起 / ARX 没加载 / 没 `SLINIT` | 重启 CAD，`(arxload ...)`，`SLINIT` |
 | 400 Bad Request | JSON 格式错或缺 `borehole_data` | 检查请求 body 与字段名 |
-| HTTP 200 但 CAD 里没东西 | 缺 `x`/`y`/`elevation` 或字段名拼错 | 对照 §9.2 字段表 |
+| HTTP 200 但 CAD 里没东西 | 形态 A 缺 `x`/`y`/`elevation` 或字段名拼错；形态 B 二维数组行/列号未对齐（`cad_client` xlsx 模板换版） | 形态 A 对照 §9.7.2 字段表；形态 B 对照 §9.1.2 行义表 + §9.1.3 字段映射表 + §9.3 容错规则 |
 | 柱图无填充图案 | `layers[].name` 未在 `pat_define.json` 配置 | 补图案映射 |
 | CAD 长时间无响应 | 孔数极多（>500），画图中 | 等待；插件每 10 孔自动 yield |
 
@@ -923,7 +1184,7 @@ curl -X POST http://<gateway>/api/draw/section \
 | --- | --- | --- |
 | 2026-10-14 | **V1.0** | 初版。整合 `cad_server/API.md` v2.1（形态 A：单接口 `POST /api/draw` 已实现）与详设 V1.6 §9（形态 B：三接口 `POST /api/draw/{column,section,plan}` 待实现）。覆盖平面图流程一/流程二并列、底图两种提交方式、SSRF 策略、告警必达（绝不返 5xx + `warnings[]` + `degraded_to`）、出图比例 `plot_scale` 与对齐 `scale` 的区别、单项目/单 CAD 实例假设。基线：详设 V1.6 / 需规 V1.3 / 需求文档 V2.4。 |
 | 2026-10-14 | **V1.0**（初版核验修正） | 主理人核验发现两处与基线不符：① `base_map_url` 提交位置笔误——基线 `_save_base_map()` 仅从 `request.form` 读取，文档误写为"JSON body / form 字段"。修正：§7.2 表格行改为"仅 form 字段（multipart/form-data）"，新增"底图字段仅支持 multipart/form-data"表注（含"JSON body 提交会被静默忽略并按流程一继续出图"漏洞场景说明）；§3 接口清单总表第 4 行备注同步；§7.11.3 / §10.4 URL 底图示例由 `application/json` 改为 `multipart/form-data`；§11.2 排查表新增"静默忽略"行。② §1.2 ASCII 架构图"（仅网关端 · · 不阻塞 CAD）"重复点号。版本号维持 V1.0。 |
-| 2026-10-14 | **V1.1** | **P0 修复落地版**。含：① **D1 决策（§7.2 / §8.2 第 5 行 / §11.2）**——`base_map_url` JSON body 静默忽略漏洞修复：JSON 请求体含 `base_map` / `base_map_url` 键视为"调用方式错误"返 HTTP 400（`base_map / base_map_url 仅支持 multipart/form-data 提交`），消除"告警必达"漏洞场景，**明确为"调用方式错误"而非流程一降级**；② **§3 接口清单总表**第 2~4 行状态由"🔜 待实现"翻为"🛠 实施中"（A1~A7/G1~G5 任务派单已发，详见 `评审-P0 改造蓝图-2026-10-14.md`），新增 P0-1/P0-3 关联注脚；③ **§1.2 架构段**补 SSRF 启动参数 `--ssrf-whitelist-cidr` 落地说明；④ **§7.5.3 末段**"坐标对齐"加粗与对齐 `scale` 区分；⑤ **§7.4 `degraded_to` 语义段**"与"降级/兜底"无关"加粗；⑥ **§8.1 状态码总览**"绝不"加粗；⑦ **§11.2 排查表**删除"JSON 提交 `base_map_url` 无任何反应"行（已由 D1 方案 A 修复）。基线：详设 V1.7 / 需规 V1.3 / 需求文档 V2.4。 |
+| 2026-10-15 | **V1.2** | **borehole_data 入参改为二维数组 JSON（产品经理 Alice 同步 · 基于 `评审-转换层下沉网关-增量设计-V1.1` 落地 D-A / D-B 决策）**：① §9 整章重写——新增 §9.1 二维数组 JSON 输入格式（形态 B 网关主路径 · 推荐），含 §9.1.1 顶层结构 / §9.1.2 单孔二维数组行义表（V1.1 勘误后：Row 7+ = 地层数据行）/ §9.1.3 字段映射表（28 行，含 V1.1 勘误：`elevation = row[2][11]`、`date_start = row[3][11]`）/ §9.1.4 网关自动归一化流程 / §9.1.5 完整 ZK1 真实样例（基于 `cad_client/阳光幸福里-钻探编录表.json`）/ §9.1.6 curl 示例 / §9.2 地层组装规则 / §9.3 容错规则 / §9.4 网关注入实现 / §9.5 错误处理 / §9.6 与设计文档的引用 / §9.7 兼容：结构化 dict 输入（形态 A 遗留 · 不推荐新接入），将原 §9.1 ~ §9.4 内容下移为 §9.7.1 ~ §9.7.4；② §1.2 形态 B 架构段补"`_normalize_borehole()` 二维数组→英文键"+ "二维数组 JSON" 入参说明；③ §3 接口清单总表 borehole_data 字段标注 "二维数组 JSON（网关自动归一化）"；④ §10.2 ~ §10.6 形态 B curl 示例由结构化 dict 改为二维数组 JSON；⑤ §10.1 形态 A curl 示例注释改指 §9.7；⑥ §11.1 排查表 "对照 §9.2 字段表" 拆分为形态 A（§9.7.2）+ 形态 B（§9.1.2 / §9.1.3 / §9.3）双路径；⑦ 文档元信息版本号 V1.1 → V1.2、日期 2026-10-14 → 2026-10-15。基线：详设 V1.7 / 需规 V1.3 / 需求文档 V2.4 / `评审-转换层下沉网关-增量设计-V1.1`。**未改动**：形态 A 接口定义、§3 接口清单总表接口形态/状态、§4-§8 既有流程与底图策略、§11.2 形态 B 错误排查表。 |
 
 ---
 
