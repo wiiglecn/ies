@@ -7,6 +7,18 @@
 #include "../tools/ToolGlobal.h"
 #include <afx.h>
 #include <windows.h>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
+// VS2005 兼容
+#define snprintf _snprintf
+#define isnan _isnan
+
+#ifndef NAN
+static const double g_NaN = (double)(0.0 / 0.0);
+#define NAN g_NaN
+#endif
 
 struct ToolRouteInfo {
     const char* uriPath;
@@ -902,7 +914,11 @@ void HandleAiFeatureView(struct mg_connection* nc,
     // === 日志：收到请求 ===
     {
         std::string logLine = "=== RECEIVED " + uri + " ===\n";
-        logLine += "body length: " + std::to_string(body.size()) + "\n";
+        char lenBuf[32];
+        snprintf(lenBuf, sizeof(lenBuf), "%d", (int)body.size());
+        logLine += "body length: ";
+        logLine += lenBuf;
+        logLine += "\n";
         logLine += "body content:\n" + body + "\n";
         _LogToFile(L"7100.log", logLine);
     }
@@ -979,7 +995,7 @@ void HandleAiFeatureView(struct mg_connection* nc,
                 std::string resp = "{\"status\":\"error\",\"message\":\"failed to write borehole json\",\"path\":\"";
                 resp += pszPath;
                 resp += "\"}";
-                _LogToFile(L"7100.log", std::string("WRITE FAILED: ") + pszPath);
+                _LogToFile(L"7100.log", std::string("WRITE FAILED: ") + (const char*)pszPath);
                 AiApiServer::SendJsonResponse(nc, 500, resp);
                 if (jBoreholeEn != jBorehole) cJSON_Delete(jBoreholeEn);
                 cJSON_Delete(root);
