@@ -1,8 +1,8 @@
 // coding: gb18030
 //=============================================================================
-// CDwgImporter Êµï¿½ï¿½ - ï¿½ï¿½È¡ DWG ï¿½ï¿½ï¿½ï¿½Îªï¿½éµ¼ï¿½ëµ½Ö¸ï¿½ï¿½Î»ï¿½Ã£ï¿½AutoCAD 2007 / acdb17ï¿½ï¿½
+// CDwgImporter ÊµÏÖ - ¶ÁÈ¡ DWG ²¢×÷Îª¿éµ¼Èëµ½Ö¸¶¨Î»ÖÃ£¨AutoCAD 2007 / acdb17£©
 //=============================================================================
-#include "StdAfx.h"        // ï¿½ï¿½ï¿½ï¿½Ä¿Ô¼ï¿½ï¿½ï¿½ï¿½cpp ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È°ï¿½ï¿½ï¿½ï¿½ï¿½MFC _DEBUG ï¿½ï¿½Ü£ï¿½
+#include "StdAfx.h"        // ±¾ÏîÄ¿Ô¼¶¨£ºcpp ±ØÐë×îÏÈ°üº¬£¨MFC _DEBUG ¹æ±Ü£©
 #include "arxHeaders.h"
 #include <shlwapi.h>
 #include "cJSON.h"
@@ -10,43 +10,43 @@
 #include "CreateColumnView.h"
 #include "PatHatchLoader.h"
 
-// Öµï¿½ï¿½ï¿½Í£ï¿½Ò²ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ int 0/1ï¿½ï¿½Ã¶ï¿½Ù¿É¶ï¿½ï¿½Ô¸ï¿½ï¿½Ã£ï¿½
+// ÖµÀàÐÍ£¨Ò²¿ÉÒÔÖ±½ÓÓÃ int 0/1£¬Ã¶¾Ù¿É¶ÁÐÔ¸üºÃ£©
 enum JsonValType { JV_STRING, JV_NUMBER };
 
 struct FieldMap
 {
-    const TCHAR* fieldName;   // Õ¼Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ "[page_no]"ï¿½ï¿½Ò²ï¿½É²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å£ï¿½
+    const TCHAR* fieldName;   // Õ¼Î»·ûÃû£¬Èç "[page_no]"£¨Ò²¿É²»´øÀ¨ºÅ£©
     const TCHAR* firstName;
-    const TCHAR* secondName;       // ï¿½ï¿½ï¿½ï¿½ï¿½Â±ê£¨ï¿½ï¿½ JSON Êµï¿½ï¿½Î»ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â¡¢ï¿½É²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-    JsonValType  type;        // È¡Öµï¿½ï¿½Ê½
-    const TCHAR* defaultVal; // Ä¬ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Îª NULLï¿½ï¿½
+    const TCHAR* secondName;       // Êý×éÏÂ±ê£¨°´ JSON Êµ¼ÊÎ»ÖÃ£¬¿ÉÒÔÈÎÒâ¡¢¿É²»Á¬Ðø£©
+    JsonValType  type;        // È¡Öµ·½Ê½
+    const TCHAR* defaultVal; // Ä¬ÈÏÖµ£¨¿ÉÎª NULL£©
 };
-// ï¿½ï¿½ï¿½Í³ï¿½Æ½ï¿½ï¿½ï¿½î£¨ï¿½ï¿½ï¿½Ë³ï¿½ï¿½ï¿½ï¿½é£©
+// ±ê¹áÍ³¼Æ½á¹ûÏî£¨°´¸Ë³¤·Ö×é£©
 struct SPT_STAT
 {
-    double rodLength;    // ï¿½Ë³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-    double minVal;       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡Öµ
-    double maxVal;       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
-    int    totalCount;   // ï¿½ï¿½ï¿½ï¿½Í³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    double rodLength;    // ¸Ë³¤£¨·Ö×é¼ü£©
+    double minVal;       // ×éÄÚ×îÐ¡Öµ
+    double maxVal;       // ×éÄÚ×î´óÖµ
+    int    totalCount;   // ×éÄÚÍ³¼ÆÊý»ã×Ü
     SPT_STAT() : rodLength(0), minVal(0), maxVal(0), totalCount(0) {}
 };
 
-// Ó³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ staticï¿½ï¿½Ð´ï¿½ï¿½ CollectTexts/Execute Ö®Ç°
+// Ó³Éä±í£ºÉùÃ÷³ÉÎÄ¼þ¼¶ static£¬Ð´ÔÚ CollectTexts/Execute Ö®Ç°
 static const FieldMap s_fieldMap[] = {
-    { _T("[page_no]"),   _T("ï¿½ï¿½Ç°Ò³"), _T(""), JV_STRING, _T("1") },
-    { _T("[page_count]"),  _T("ï¿½ï¿½Ò³ï¿½ï¿½"),  _T(""), JV_STRING, _T("1") },
-    { _T("[project_name]"),  _T("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"),  _T(""), JV_STRING, _T("") },
+    { _T("[page_no]"),   _T("µ±Ç°Ò³"), _T(""), JV_STRING, _T("1") },
+    { _T("[page_count]"),  _T("×ÜÒ³Âë"),  _T(""), JV_STRING, _T("1") },
+    { _T("[project_name]"),  _T("¹¤³ÌÃû³Æ"),  _T(""), JV_STRING, _T("") },
     { _T("[project_no]"),  _T(""),  _T(""), JV_STRING , _T("") },
-    { _T("[hole_no]"),  _T("ï¿½ï¿½×±ï¿½ï¿½"), _T(""), JV_STRING, _T("") },
-    { _T("[elevation]"),  _T("ï¿½×¿Ú¸ß³ï¿½(m)"),  _T(""), JV_NUMBER, _T("") },
+    { _T("[hole_no]"),  _T("×ê¿×±àºÅ"), _T(""), JV_STRING, _T("") },
+    { _T("[elevation]"),  _T("¿×¿Ú¸ß³Ì(m)"),  _T(""), JV_NUMBER, _T("") },
     { _T("[diameter]"),  _T(""),  _T(""), JV_STRING, _T("") },
-    { _T("[coordinate_x]"),  _T("Xï¿½ï¿½ï¿½ï¿½(m)"),  _T(""), JV_NUMBER, _T("") },
-    { _T("[coordinate_y]"),  _T("Yï¿½ï¿½ï¿½ï¿½(m)"),   _T(""), JV_NUMBER, _T("") },
-    { _T("[start_date]"),  _T("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"),  _T(""), JV_STRING, _T("") },
-    { _T("[completion_date]"),  _T("ï¿½Õ¿ï¿½ï¿½ï¿½ï¿½ï¿½"),  _T(""), JV_STRING, _T("") },
+    { _T("[coordinate_x]"),  _T("X×ø±ê(m)"),  _T(""), JV_NUMBER, _T("") },
+    { _T("[coordinate_y]"),  _T("Y×ø±ê(m)"),   _T(""), JV_NUMBER, _T("") },
+    { _T("[start_date]"),  _T("¿ª¿×ÈÕÆÚ"),  _T(""), JV_STRING, _T("") },
+    { _T("[completion_date]"),  _T("ÖÕ¿×ÈÕÆÚ"),  _T(""), JV_STRING, _T("") },
 
-	{ _T("[water_depth]"),  _T("ï¿½È¶ï¿½Ë®Î»(m)"),  _T(""), JV_STRING, _T("") },
-    { _T("[survey_unit]"),  _T("ï¿½ï¿½Ë¾ï¿½ï¿½ï¿½ï¿½"),  _T(""), JV_STRING, _T("") },
+	{ _T("[water_depth]"),  _T("ÎÈ¶¨Ë®Î»(m)"),  _T(""), JV_STRING, _T("") },
+    { _T("[survey_unit]"),  _T("¹«Ë¾Ãû³Æ"),  _T(""), JV_STRING, _T("") },
     { _T("[mapping]"),  _T(""),  _T(""), JV_STRING, _T("") },
     { _T("[check]"),  _T(""),  _T(""), JV_STRING, _T("") },
 };
@@ -82,7 +82,7 @@ bool CCreateColumnView::GetUniqueBlockName(AcDbDatabase* pDb, ACHAR* pszName, in
         }
 
         AcDbObjectId existingId;
-        if (pBlkTbl->getAt(szTry, existingId) != Acad::eOk)   // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+        if (pBlkTbl->getAt(szTry, existingId) != Acad::eOk)   // ²»´æÔÚ ¡ú ¿ÉÓÃ
         {
             pBlkTbl->close();
             CUtils::SafeCopy(pszName, nNameCount, szTry, (int)_tcslen(szTry));
@@ -100,10 +100,10 @@ void CCreateColumnView::Execute()
 	CString strFilePath = CUtils::GetArxFolder();
 	strFilePath.Replace(_T("\\"), _T("/"));
 	CString cadBlockUrl;
-	cadBlockUrl.Format(_T("support/%s/ï¿½ï¿½ï¿½ï¿½ï¿½×´Í¼.dwg"), CADYEAR);
+	cadBlockUrl.Format(_T("support/%s/×ê¿×Öù×´Í¼.dwg"), CADYEAR);
 	cadBlockUrl = strFilePath + cadBlockUrl;
 	CString cadNoBlockUrl;
-	cadNoBlockUrl.Format(_T("support/%s/ï¿½ï¿½ï¿½.dwg"), CADYEAR);
+	cadNoBlockUrl.Format(_T("support/%s/ÐòºÅ.dwg"), CADYEAR);
 	cadNoBlockUrl = strFilePath + cadNoBlockUrl;
     CString cadPatUrl = CUtils::GetArxFolder() + _T("support\\pat");
     CString cadSoilConfigUrl= strFilePath + _T("support/pat_define.json");
@@ -111,15 +111,15 @@ void CCreateColumnView::Execute()
     if (!PathFileExists(cadBlockUrl)
 		|| !PathFileExists(cadNoBlockUrl))
     {
-        // ï¿½ï¿½ï¿½Ú£ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½ï¿½ PathIsDirectory ï¿½ï¿½ï¿½Ö£ï¿½
-        CUtils::acutPrintf(_T("[CAD ERROR] cadï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½! %s\n"), cadBlockUrl.GetString());
+        // ´æÔÚ£¨ÎÄ¼þ»òÄ¿Â¼¾ù¿É£¬ÅäºÏ PathIsDirectory Çø·Ö£©
+        CUtils::acutPrintf(_T("[CAD ERROR] cadÎÄ¼þ²»´æÔÚ! %s\n"), cadBlockUrl.GetString());
 		return;
     }
 
-    // ï¿½ï¿½ï¿½ï¿½ JSONï¿½ï¿½Ê§ï¿½ï¿½Ê±ï¿½Ú²ï¿½ï¿½Ñ´ï¿½Ó¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï±£ï¿½ï¿½Ô­ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½
-    s_patConfigData = CUtils::LoadJsonFile(cadSoilConfigUrl.GetString());   // ï¿½ï¿½Ä¬Ä£Ê½
+    // ½âÎö JSON£¨Ê§°ÜÊ±ÄÚ²¿ÒÑ´òÓ¡´íÎó£¬ÕâÀï±£ÁôÔ­ÓÐÒµÎñÌáÊ¾£©
+    s_patConfigData = CUtils::LoadJsonFile(cadSoilConfigUrl.GetString());   // ¾²Ä¬Ä£Ê½
     if (s_patConfigData == NULL) {
-        CUtils::acutPrintf(_T("[CAD ERROR] Ã»ï¿½ï¿½patï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½é£¡ %s\n"), cadSoilConfigUrl.GetString());
+        CUtils::acutPrintf(_T("[CAD ERROR] Ã»ÓÐpatÅäÖÃÎÄ¼þ£¬Çë¼ì²é£¡ %s\n"), cadSoilConfigUrl.GetString());
         return;
     }
 
@@ -155,7 +155,7 @@ void CCreateColumnView::Execute()
 
     double dWidthFactor = 0.6;
 
-	ACHAR* pszStyleName = _T("ï¿½É¹ï¿½Í¼ï¿½ï¿½ï¿½ï¿½");
+	ACHAR* pszStyleName = _T("³É¹ûÍ¼±íÌå");
     PatHatchLoader patLoader;
 	patLoader.setDocument(pDoc);
 	patLoader.setModelSpace(pModelSpace);
@@ -172,12 +172,11 @@ void CCreateColumnView::Execute()
         }
     }
 
-    int holeIdx = 0;
     cJSON_ArrayForEach(item, s_pJsonData) {
-        // ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        // ´¦ÀíÃ¿¸öÊôÐÔ
         if (item != NULL) {
-            const char* blockName = (item->string != NULL) ? item->string : "(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)";
-            CUtils::acutPrintf(_T("[ï¿½ï¿½ï¿½ï¿½] %hsï¿½ï¿½ï¿½ï¿½ %d ï¿½ï¿½Ôªï¿½ï¿½\n"),
+            const char* blockName = (item->string != NULL) ? item->string : "(ÄäÃûÊý×é)";
+            CUtils::acutPrintf(_T("[Êý×é] %hs£¬¹² %d ¸öÔªËØ\n"),
                             blockName, cJSON_GetArraySize(item));
 
 			ACHAR arrayName[256] = { 0 };
@@ -198,7 +197,7 @@ void CCreateColumnView::Execute()
             const int rowSize   = cJSON_GetArraySize(item);
             const int MAP_COUNT = (int)(sizeof(s_fieldMap) / sizeof(s_fieldMap[0]));
 
-            // ï¿½ï¿½ï¿½Í³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë³ï¿½ï¿½ï¿½ï¿½é£¨ï¿½ï¿½ï¿½×·ï¿½Î§ï¿½ï¿½
+            // ±ê¹áÍ³¼ÆÈÝÆ÷£º°´¸Ë³¤·Ö×é£¨µ¥¿×·¶Î§£©
             std::vector<SPT_STAT> sptStats;
 
             for (int i = 0; i < MAP_COUNT; ++i)
@@ -235,30 +234,30 @@ void CCreateColumnView::Execute()
                 if (fm.type == JV_STRING && cJSON_IsString(elem_col))
                 {
                     TCHAR buf[512];
-                    CUtils::utf8ToTChar(elem_col->valuestring, buf, 512);  // UTF-8 ï¿½ï¿½ TCHAR
+                    CUtils::utf8ToTChar(elem_col->valuestring, buf, 512);  // UTF-8 ¡ú TCHAR
                     v = buf;
                 }
 				else if (fm.type == JV_STRING && cJSON_IsNumber(elem_col))
                 {
                     TCHAR buf[512];
-                    CUtils::utf8ToTChar(elem_col->valueString, buf, 512);  // UTF-8 ï¿½ï¿½ TCHAR
+                    CUtils::utf8ToTChar(elem_col->valueString, buf, 512);  // UTF-8 ¡ú TCHAR
                     v = buf;
                 }
                 else if (fm.type == JV_NUMBER && cJSON_IsNumber(elem_col))
                 {
                     TCHAR buf[512];
-                    CUtils::utf8ToTChar(elem_col->valueString, buf, 512);  // UTF-8 ï¿½ï¿½ TCHAR
+                    CUtils::utf8ToTChar(elem_col->valueString, buf, 512);  // UTF-8 ¡ú TCHAR
                     v = buf;
                 }
                 else if (cJSON_IsNull(elem_col))
                 {
-                    v = fm.defaultVal;                         // ï¿½ï¿½Öµ ï¿½ï¿½ Ä¬ï¿½ï¿½Öµ
+                    v = fm.defaultVal;                         // ¿ÕÖµ ¡ú Ä¬ÈÏÖµ
                 }
                 else
                 {
-                    continue;                           // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                    continue;                           // ÀàÐÍÓëÉùÃ÷²»·û£¬Ìø¹ý
                 }
-				CUtils::acutPrintf(_T("[ï¿½ï¿½ï¿½ï¿½] key: %s : %s \n"),fm.fieldName, v);
+				CUtils::acutPrintf(_T("[Êý×é] key: %s : %s \n"),fm.fieldName, v);
 
                 mapVals.SetAt(fm.fieldName, v);
             }
@@ -279,26 +278,14 @@ void CCreateColumnView::Execute()
 			}
 			
 
-			//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			//Êý¾ÝÐÐ
 			int dataRow = 0;
-            //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ÐµÄ¸ß¶ï¿½
-            // ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ 7 ï¿½ï¿½ ~ ï¿½ï¿½ï¿½ï¿½ï¿½Ú¶ï¿½ï¿½ï¿½(rowSize-2)ï¿½ï¿½col1=ï¿½Ô£ï¿½col2=ï¿½ï¿½
+            //ÔÚÕâÀï¼ÆËãÃ¿ÐÐµÄ¸ß¶È
+            // Êý¾ÝÐÐ£ºµÚ 7 ÐÐ ~ µ¹ÊýµÚ¶þÐÐ(rowSize-2)£»col1=×Ô£¬col2=ÖÁ
             double totalDepth = 1.0;
-			// DEBUG: æ‰“å°å½“å‰é’»å­”å¯¹è±¡æ‰€æœ‰keyï¼Œå®šä½åœ°å±‚åˆ—è¡¨ä¸ºä½•æ‰¾ä¸åˆ°
-			{
-				acutPrintf(_T("[DEBUG] hole object keys:\n"));
-				cJSON* k = NULL;
-				cJSON_ArrayForEach(k, item) {
-					if (k->string) acutPrintf(_T("[DEBUG]   - %hs\n"), k->string);
-				}
-			}
-			cJSON* layerObj = CUtils::GetJsonObjectItemUtf8(item,_T("åœ°å±‚åˆ—è¡¨"));
-			if (layerObj == NULL) {
-				acutPrintf(_T("[DEBUG] WARNING: layerObj(åœ°å±‚åˆ—è¡¨) is NULL, skip layer drawing\n"));
-				continue;
-			}
-			acutPrintf(_T("[DEBUG] found åœ°å±‚åˆ—è¡¨, total layers: %d\n"), cJSON_GetArraySize(layerObj));
-			dataRow = cJSON_GetArraySize(layerObj);   // ï¿½ï¿½ï¿½ï¿½Ôªï¿½Ø¸ï¿½ï¿½ï¿½
+			cJSON* layerObj = CUtils::GetJsonObjectItemUtf8(item,_T("µØ²ãÁÐ±í"));
+			if (layerObj == NULL) continue;
+			dataRow = cJSON_GetArraySize(layerObj);   // Êý×éÔªËØ¸öÊý
 			if (dataRow == 0) continue;
 
 			int realHeight;
@@ -312,23 +299,23 @@ void CCreateColumnView::Execute()
             {
                 cJSON* rowTry = cJSON_GetArrayItem(layerObj, r);
                 if (rowTry == NULL)
-                    continue;                                   // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-                cJSON* cTo = CUtils::GetJsonObjectItemUtf8(rowTry,_T("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(m)"));    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½=ï¿½Õ¿ï¿½ï¿½ï¿½ï¿½
+                    continue;                                   // ¿ÕÐÐ ¡ú ¼ÌÐøÏòÉÏ
+                cJSON* cTo = CUtils::GetJsonObjectItemUtf8(rowTry,_T("½ø³ßÖÁ(m)"));    // ¡°ÖÁ¡±=ÖÕ¿×Éî¶È
                 if (cTo != NULL && cJSON_IsNumber(cTo) && cTo->valuedouble > 0.0)
                 {
-                    totalDepth = cTo->valuedouble;              // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ valuedouble
+                    totalDepth = cTo->valuedouble;              // ¡ïËãÊõ±ØÐëÓÃ valuedouble
                     break;
                 }
             }
-            if (totalDepth <= 0.0) totalDepth = 1.0;                      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            if (totalDepth <= 0.0) totalDepth = 1.0;                      // ·À³ýÁã
 
-            double scale = realHeight / totalDepth;                       // ï¿½ï¿½È¡ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½
-            double yTop  = ptInsert.y + offsetY + gridHeight;             // ï¿½ï¿½=ï¿½ï¿½ï¿½0ï¿½ï¿½ï¿½×¿Ú£ï¿½
-            double prevBottom = 0.0;                                      // ï¿½ï¿½Ò»ï¿½Ðµ×²ï¿½ï¿½ï¿½ï¿½
+            double scale = realHeight / totalDepth;                       // Éî¶È¡úÍ¼Ãæ±ÈÀý
+            double yTop  = ptInsert.y + offsetY + gridHeight;             // ¸ñ¶¥=Éî¶È0£¨¿×¿Ú£©
+            double prevBottom = 0.0;                                      // ÉÏÒ»ÐÐµ×²¿Éî¶È
 
 
             mapVals.Lookup(_T("[elevation]"), val);
-			double elevation = CUtils::CStringToDouble(val);	//ï¿½ß³ï¿½
+			double elevation = CUtils::CStringToDouble(val);	//¸ß³Ì
 			
 
 			double preTop;
@@ -336,46 +323,46 @@ void CCreateColumnView::Execute()
             {
                 double toDepth = prevBottom;
 				cJSON* rowTry = cJSON_GetArrayItem(layerObj, i);
-				cJSON* cTo = CUtils::GetJsonObjectItemUtf8(rowTry,_T("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(m)"));          // ï¿½ï¿½Ç°ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½
+				cJSON* cTo = CUtils::GetJsonObjectItemUtf8(rowTry,_T("½ø³ßÖÁ(m)"));          // µ±Ç°ÐÐ¡°ÖÁ¡±
                 if (cTo != NULL && cJSON_IsNumber(cTo))
                     toDepth = cTo->valuedouble;
 				else
 					continue;
-                double thick   = toDepth - prevBottom;                    // ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Ð±È½Ï¡ï¿½Êµï¿½Ê²ï¿½ï¿½
-                double hDraw   = thick * scale;                           // ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½Êµï¿½Ê¸ß¶ï¿½
-                double yBottom = yTop - toDepth * scale;                  // ï¿½ï¿½ï¿½Ðµ×²ï¿½Y
-                CUtils::acutPrintf(_T("[ï¿½ï¿½%d] ï¿½ï¿½=%.2f ï¿½ï¿½ï¿½=%.2f Í¼ï¿½ï¿½ï¿½=%.3f ï¿½×²ï¿½Y=%.3f\n"),
+                double thick   = toDepth - prevBottom;                    // ÓëÉÏÒ»ÐÐ±È½Ï¡úÊµ¼Ê²ãºñ
+                double hDraw   = thick * scale;                           // ¸ÃÐÐÍ¼ÃæÊµ¼Ê¸ß¶È
+                double yBottom = yTop - toDepth * scale;                  // ¸ÃÐÐµ×²¿Y
+                CUtils::acutPrintf(_T("[ÐÐ%d] ÖÁ=%.2f ²ãºñ=%.2f Í¼Ãæ¸ß=%.3f µ×²¿Y=%.3f\n"),
                                 i, toDepth, thick, hDraw, yBottom);
                 prevBottom = toDepth;
-                // TODO: ï¿½ï¿½ hDraw / yBottom ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¡ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½Ö¡ï¿½Ñ¹ï¿½ï¿½ hatchï¿½ï¿½ï¿½ï¿½
+                // TODO: ÓÃ hDraw / yBottom »­±í¸ñÏß¡¢¶¨Î»ÎÄ×Ö¡¢Ñ¹¸Ç hatch¡­¡­
 
-				//ï¿½×²ï¿½ï¿½ï¿½ï¿½ß£ï¿½ï¿½ï¿½ï¿½=ï¿½ï¿½ï¿½Ðµ×²ï¿½ï¿½ï¿½Ë½Çµã£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ gridWidth
+				//µ×²¿ºáÏß£ºÆðµã=¸ÃÐÐµ×²¿×ó¶Ë½Çµã£¬ÏòÓÒÑÓÉì gridWidth
                 AcGePoint3d ptDraw(ptInsert);
                 ptDraw.x += offsetX;
 				//ptDraw.y += offsetY;
-                ptDraw.y = yBottom;                 // ï¿½ï¿½ yBottom ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½Yï¿½ï¿½Ö±ï¿½Ó¸ï¿½Öµï¿½ï¿½ï¿½ï¿½Òª += offsetY ï¿½ï¿½ += yBottomï¿½ï¿½
+                ptDraw.y = yBottom;                 // ¡ï yBottom ÒÑÊÇ¾ø¶ÔY£¬Ö±½Ó¸³Öµ£¨²»Òª += offsetY ÔÙ += yBottom£©
 
-                CUtils::acutPrintf(_T("ï¿½ï¿½Ê¼ x=%.2f y=%.2f \n"),
+                CUtils::acutPrintf(_T("¿ªÊ¼ x=%.2f y=%.2f \n"),
                                 ptDraw.x, ptDraw.y);
 
                 AcGePoint3d ptEnd(ptDraw);
-                ptEnd.x  += gridWidth - lastWidth - space_desc;               // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                ptEnd.x  += gridWidth - lastWidth - space_desc;               // ÏòÓÒÑÓÉìÒ»¸ö±í¸ñ¿í¶È
 
                 
-                // pLine->setDatabaseDefaults();     // ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½æµ±Ç°Í¼ï¿½ï¿½/ï¿½ï¿½É«Ä¬ï¿½ï¿½Öµ
+                // pLine->setDatabaseDefaults();     // ¿ÉÑ¡£ºËæµ±Ç°Í¼²ã/ÑÕÉ«Ä¬ÈÏÖµ
                 
 				{
-					//ï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äºï¿½ï¿½ï¿½
+					//´ÓÍ·µ½ÍÁ²ãÃèÊöµÄºáÏß
 					AcDbLine* pLine = new AcDbLine(ptDraw, ptEnd);
 					AcDbObjectId lineId = AcDbObjectId::kNull;
 					Acad::ErrorStatus es = pModelSpace->appendAcDbEntity(lineId, pLine);
 					if (es == Acad::eOk)
-						pLine->close();                  // ï¿½ï¿½ï¿½É¹ï¿½ ï¿½ï¿½ closeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ deleteï¿½ï¿½
+						pLine->close();                  // Èë¿â³É¹¦ ¡ú close£¨²»ÄÜ delete£©
 					else
-						delete pLine;                    // ï¿½ï¿½ï¿½Ê§ï¿½ï¿½ ï¿½ï¿½ Î´ï¿½ï¿½â£¬Ö»ï¿½ï¿½ delete
+						delete pLine;                    // Èë¿âÊ§°Ü ¡ú Î´Èë¿â£¬Ö»ÄÜ delete
 				}
 
-				//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+				//Ìí¼ÓÐòºÅ
 				AcGePoint3d ptDrawXh(ptDraw);
 				ptDrawXh.x += space_no/2;
 				ptDrawXh.y += hDraw/2;
@@ -385,20 +372,20 @@ void CCreateColumnView::Execute()
 
 				AcDbObjectId blkDefId_xh = ImportDwgAsBlock(cadNoBlockUrl.GetString(),ptDrawXh, no_name.GetString());
 				if (blkDefId_xh != AcDbObjectId::kNull){
-					cJSON* cIndex = CUtils::GetJsonObjectItemUtf8(rowTry,_T("ï¿½Ø²ï¿½ï¿½ï¿½"));  // ï¿½ï¿½Ç°ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+					cJSON* cIndex = CUtils::GetJsonObjectItemUtf8(rowTry,_T("µØ²ã±àºÅ"));  // µ±Ç°ÁÐ¡°Ë÷Òý¡±
 					if (cIndex != NULL && cJSON_IsString(cIndex)){
                         std::vector<CString> arrSeg;
                         if (CUtils::SplitUtf8(cIndex->valuestring, '-', arrSeg) > 0)
                         {
-                            ChangeNo(blkDefId_xh, (ACHAR*)arrSeg[0].GetString());   // "1-0-0" ï¿½ï¿½ "1"
+                            ChangeNo(blkDefId_xh, (ACHAR*)arrSeg[0].GetString());   // "1-0-0" ¡ú "1"
                         }
 					}
 				}
 
                 CString soilPatName;
-				//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+				//Ìí¼ÓÍÁ²ãÎÄ×Ö
 				{
-					cJSON* cSoi = CUtils::GetJsonObjectItemUtf8(rowTry,_T("ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½"));  // ï¿½ï¿½Ç°ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¡ï¿½
+					cJSON* cSoi = CUtils::GetJsonObjectItemUtf8(rowTry,_T("µØ²ãÃû³Æ"));  // µ±Ç°ÁÐ¡°ÍÁ²ãÎÄ×Ö¡±
 					if (cSoi != NULL && cJSON_IsString(cSoi)){
                         std::vector<CString> arrSeg;
                         if (CUtils::SplitUtf8(cSoi->valuestring, '-', arrSeg) > 0)
@@ -416,9 +403,9 @@ void CCreateColumnView::Execute()
                     }
 				}
 
-				//ï¿½ï¿½ï¿½Ó¸ß³Ì£ï¿½ï¿½ï¿½È£ï¿½ï¿½ï¿½ï¿½
+				//Ìí¼Ó¸ß³Ì£¬Éî¶È£¬ºñ¶È
 				{
-					//ï¿½ß³ï¿½
+					//¸ß³Ì
 					AcGePoint3d ptDraw_elevation(ptDraw);
 					ptDraw_elevation.x += space_no + space_mc + space_sd + space_sd/2;
 					ptDraw_elevation.y += 3;
@@ -430,7 +417,7 @@ void CCreateColumnView::Execute()
                     2.1,pszStyleName,DBTA_CENTER,dWidthFactor);
 
 
-					//ï¿½ï¿½ï¿½
+					//Éî¶È
 					AcGePoint3d ptDraw_depth(ptDraw);
 					ptDraw_depth.x += space_no + space_mc + space_sd * 2 + space_sd/2;
 					ptDraw_depth.y += 3;
@@ -440,7 +427,7 @@ void CCreateColumnView::Execute()
                     pszStyleName,DBTA_CENTER,dWidthFactor);
 
 
-					//ï¿½ï¿½ï¿½
+					//ºñ¶È
 					AcGePoint3d ptDraw_thick(ptDraw);
 					ptDraw_thick.x += space_no + space_mc + space_sd * 3 + space_sd/2;
 					ptDraw_thick.y += 3;
@@ -451,9 +438,9 @@ void CCreateColumnView::Execute()
 				}
 
 				{
-					//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-					//ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ßµï¿½ï¿½ï¿½ï¿½ï¿½
-					cJSON* cDesc  = CUtils::GetJsonObjectItemUtf8(rowTry,_T("ï¿½É·Ö¼ï¿½ï¿½ï¿½ï¿½ï¿½"));  
+					//ÍÁ²ãÃèÊö
+					//ÐèÒª´¦Àí³¬¸ßµÄÎÊÌâ
+					cJSON* cDesc  = CUtils::GetJsonObjectItemUtf8(rowTry,_T("³É·Ö¼°ÆäËû"));  
 					ACHAR desc[256] = { 0 };
 					CUtils::utf8ToTChar(cDesc->valuestring, desc, ARRAYSIZE(desc));
 
@@ -480,7 +467,7 @@ void CCreateColumnView::Execute()
 								ptDraw_start_desc.x  += offsetX + gridWidth - lastWidth - space_desc;
 								ptDraw_start_desc.y = ptDraw.y;
 								if (calcH < ptDraw.y){
-									//ï¿½ï¿½ \_/ï¿½ï¿½ï¿½ï¿½
+									//»­ \_/ÏßÌõ
 									AcGePoint3d ptDraw_next_1(ptDraw_start_desc);
 									ptDraw_next_1.x +=1.0;
 									ptDraw_next_1.y = calcH;
@@ -518,7 +505,7 @@ void CCreateColumnView::Execute()
 									}
 
 								}else{
-									//Ö±ï¿½Ó»ï¿½Ö±ï¿½ï¿½
+									//Ö±½Ó»­Ö±Ïß
 									ptDraw_end_desc.x = ptDraw_start_desc.x+space_desc;
 									ptDraw_end_desc.y = ptDraw_start_desc.y;
 									AcDbLine* pLine = new AcDbLine(ptDraw_start_desc, ptDraw_end_desc);
@@ -546,7 +533,7 @@ void CCreateColumnView::Execute()
 				}
 
                 if (!soilPatName.IsEmpty()){
-                    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½
+                    //Ìî³äÍÁ²ãÍ¼°¸
                     double soilLeft = ptDraw.x + space_no + space_mc + space_sd * 4;
                     AcGePoint2dArray rect;                         
                     rect.append(AcGePoint2d(soilLeft,   ptDraw.y));
@@ -556,10 +543,10 @@ void CCreateColumnView::Execute()
                     rect.append(AcGePoint2d(soilLeft,   ptDraw.y));
 
                     AcGeDoubleArray bulges;
-                    for (int b = 0; b < rect.length(); ++b)     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ bï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ i
+                    for (int b = 0; b < rect.length(); ++b)     // ±äÁ¿¸ÄÃû b£¬±ÜÃâÕÚ±ÎÍâ²ãÐÐÑ­»·µÄ i
                         bulges.append(0.0);
 
-                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ "ï¿½ï¿½ï¿½ï¿½" ï¿½ï¿½ "gt"
+                    // ÑÒÐÔÃû ¡ú Í¼ÀýÃû£ºÈç "¸ûÍÁ" ¡ú "gt"
                     TCHAR patName[128] = { 0 };
                     if (CUtils::FindPatNameBySoilName(s_patConfigData, soilPatName.GetString(),
                                               patName, ARRAYSIZE(patName)))
@@ -568,23 +555,23 @@ void CCreateColumnView::Execute()
                         Acad::ErrorStatus es = patLoader.CreateHatchByName(
                             patName, rect, bulges, 0.5, 0.0, NULL, hatchId);
                         if (es != Acad::eOk)
-                            CUtils::acutPrintf(_T("[CAD WARN] ï¿½ï¿½ï¿½Ê§ï¿½ï¿½(%d)ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ \"%s\" Í¼ï¿½ï¿½ \"%s\"\n"),
+                            CUtils::acutPrintf(_T("[CAD WARN] Ìî³äÊ§°Ü(%d)£ºÑÒÐÔ \"%s\" Í¼Àý \"%s\"\n"),
                                 (int)es, soilPatName.GetString(), patName);
                     }
                     else
                     {
-                        CUtils::acutPrintf(_T("[CAD WARN] pat_define.json Î´ï¿½Òµï¿½ï¿½ï¿½ï¿½ï¿½ \"%s\" ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"),
+                        CUtils::acutPrintf(_T("[CAD WARN] pat_define.json Î´ÕÒµ½ÑÒÐÔ \"%s\" µÄÍ¼ÀýÃû³Æ£¬Ìø¹ýÌî³ä\n"),
                             soilPatName.GetString());
                     }
                 }
 
-				//È¡ï¿½ï¿½
+				//È¡Ñù
 				{
-					cJSON* cSampling_obj =  CUtils::GetJsonObjectItemUtf8(rowTry,_T("È¡ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½Ë®)ï¿½ï¿½"));
+					cJSON* cSampling_obj =  CUtils::GetJsonObjectItemUtf8(rowTry,_T("È¡ÑÒ(ÍÁ¡¢Ë®)Ñù"));
 					if (cSampling_obj != NULL)
 					{
-						cJSON* cSampling_no  = CUtils::GetJsonObjectItemUtf8(cSampling_obj,_T("ï¿½ï¿½ï¿½"));  
-						cJSON* cSampling_num  = CUtils::GetJsonObjectItemUtf8(cSampling_obj,_T("È¡ï¿½ï¿½ï¿½ï¿½ï¿½"));  
+						cJSON* cSampling_no  = CUtils::GetJsonObjectItemUtf8(cSampling_obj,_T("±àºÅ"));  
+						cJSON* cSampling_num  = CUtils::GetJsonObjectItemUtf8(cSampling_obj,_T("È¡ÑùÉî¶È"));  
 
 						if (cSampling_no != NULL && cJSON_IsString(cSampling_no)
 							&& cSampling_num != NULL && cJSON_IsString(cSampling_num)){
@@ -599,21 +586,21 @@ void CCreateColumnView::Execute()
 								ptDraw_sampling.y = yTop - depth_sampling * scale;
 
 								AcGePoint3d ptDraw_sampling_end(ptDraw_sampling);
-								ptDraw_sampling_end.x  +=space_chat;               // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+								ptDraw_sampling_end.x  +=space_chat;               // ÏòÓÒÑÓÉìÒ»¸ö±í¸ñ¿í¶È
 
 								AcDbLine* pLine = new AcDbLine(ptDraw_sampling, ptDraw_sampling_end);
 
 								AcDbObjectId lineId = AcDbObjectId::kNull;
 								Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
 								if (es == Acad::eOk)
-									pLine->close();                  // ï¿½ï¿½ï¿½É¹ï¿½ ï¿½ï¿½ closeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ deleteï¿½ï¿½
+									pLine->close();                  // Èë¿â³É¹¦ ¡ú close£¨²»ÄÜ delete£©
 								else
-									delete pLine;                    // ï¿½ï¿½ï¿½Ê§ï¿½ï¿½ ï¿½ï¿½ Î´ï¿½ï¿½â£¬Ö»ï¿½ï¿½ delete
+									delete pLine;                    // Èë¿âÊ§°Ü ¡ú Î´Èë¿â£¬Ö»ÄÜ delete
 
 								ACHAR sampling_txt[256] = { 0 };
 								CUtils::utf8ToTChar(cSampling_no->valuestring, sampling_txt, ARRAYSIZE(sampling_txt));
 
-								//È¡ï¿½ï¿½ï¿½ï¿½ï¿½
+								//È¡Ñù±àºÅ
 								AcGePoint3d ptDraw_sampling_txt_no(ptDraw_sampling);
 								ptDraw_sampling_txt_no.x += space_chat/2;
 								ptDraw_sampling_txt_no.y += 2.5;
@@ -622,7 +609,7 @@ void CCreateColumnView::Execute()
 									2.1,pszStyleName,DBTA_CENTER,dWidthFactor);
 
 
-								//È¡ï¿½ï¿½ï¿½ï¿½Öµ
+								//È¡ÑùÊýÖµ
 								CUtils::utf8ToTChar(cSampling_num->valuestring, sampling_txt, ARRAYSIZE(sampling_txt));
 
 								AcGePoint3d ptDraw_sampling_txt(ptDraw_sampling);
@@ -637,33 +624,33 @@ void CCreateColumnView::Execute()
 					}
 				}
 				
-				//Í³ï¿½Æ±ï¿½ï¿½
+				//Í³¼Æ±ê¹á
 				{
-					cJSON* ctesting_obj =  CUtils::GetJsonObjectItemUtf8(rowTry,_T("Ô­Î»ï¿½ï¿½ï¿½ï¿½"));
+					cJSON* ctesting_obj =  CUtils::GetJsonObjectItemUtf8(rowTry,_T("Ô­Î»²âÊÔ"));
 					if (ctesting_obj != NULL)
 					{
-						cJSON* cStandard_type  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("ï¿½ï¿½ï¿½ï¿½"));
+						cJSON* cStandard_type  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("ÀàÐÍ"));
 
 						if (cStandard_type != NULL && cJSON_IsString(cStandard_type))
 						{
-							// JSON Öµï¿½ï¿½ UTF-8ï¿½ï¿½×ª TCHAR ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È½ï¿½
+							// JSON ÖµÊÇ UTF-8£¬×ª TCHAR ºóÔÙÓë×ÖÃæÁ¿±È½Ï
 							TCHAR szType[64] = { 0 };
 							CUtils::utf8ToTChar(cStandard_type->valuestring, szType, ARRAYSIZE(szType));
 
-							if (_tcscmp(szType, _T("ï¿½ï¿½ï¿½")) == 0)
+							if (_tcscmp(szType, _T("±ê¹á")) == 0)
 							{
-								cJSON* cStandard_rod_length  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("ï¿½Ë³ï¿½(m)"));
+								cJSON* cStandard_rod_length  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("¸Ë³¤(m)"));
 
-								cJSON* cStandard_rod_min  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("ï¿½ï¿½(m)"));
+								cJSON* cStandard_rod_min  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("Æð(m)"));
 								cJSON* cStandard_rod_max  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("Ö¹(m)"));
-								cJSON* cStandard_rod_count  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½)"));
+								cJSON* cStandard_rod_count  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("´¸»÷Êý(»÷)"));
 
 								double rodLength = CUtils::JsonValToDouble(cStandard_rod_length);
 								double rodMin    = CUtils::JsonValToDouble(cStandard_rod_min);
 								double rodMax    = CUtils::JsonValToDouble(cStandard_rod_max);
 								int    rodCount  = (int)(CUtils::JsonValToDouble(cStandard_rod_count) + 0.5);
 
-								// ï¿½é²¢ï¿½ï¿½ï¿½Ë³ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½Ð·ï¿½ï¿½é£¨ï¿½ï¿½ï¿½ï¿½ï¿½Ý²ï¿½È½Ï£ï¿½
+								// ¹é²¢µ½¸Ë³¤ÏàÍ¬µÄÒÑÓÐ·Ö×é£¨¸¡µãÈÝ²î±È½Ï£©
 								bool bFound = false;
 								for (size_t k = 0; k < sptStats.size(); ++k)
 								{
@@ -678,7 +665,7 @@ void CCreateColumnView::Execute()
 										break;
 									}
 								}
-								if (!bFound)      // ï¿½Â¸Ë³ï¿½ ï¿½ï¿½ ï¿½Â½ï¿½ï¿½ï¿½ï¿½ï¿½
+								if (!bFound)      // ÐÂ¸Ë³¤ ¡ú ÐÂ½¨·Ö×é
 								{
 									SPT_STAT st;
 									st.rodLength  = rodLength;
@@ -692,24 +679,24 @@ void CCreateColumnView::Execute()
 					}
 				}
 
-                //Í³ï¿½Æ¶ï¿½Ì½
+                //Í³¼Æ¶¯Ì½
                 {
-					cJSON* ctesting_obj =  CUtils::GetJsonObjectItemUtf8(rowTry,_T("Ô­Î»ï¿½ï¿½ï¿½ï¿½"));
+					cJSON* ctesting_obj =  CUtils::GetJsonObjectItemUtf8(rowTry,_T("Ô­Î»²âÊÔ"));
 					if (ctesting_obj != NULL)
 					{
-						cJSON* cDT_type  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("ï¿½ï¿½ï¿½ï¿½"));
+						cJSON* cDT_type  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("ÀàÐÍ"));
 
 						if (cDT_type != NULL && cJSON_IsString(cDT_type))
 						{
-							// JSON Öµï¿½ï¿½ UTF-8ï¿½ï¿½×ª TCHAR ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È½ï¿½
+							// JSON ÖµÊÇ UTF-8£¬×ª TCHAR ºóÔÙÓë×ÖÃæÁ¿±È½Ï
 							TCHAR szType[64] = { 0 };
 							CUtils::utf8ToTChar(cDT_type->valuestring, szType, ARRAYSIZE(szType));
 
-							if (_tcscmp(szType, _T("ï¿½ï¿½ï¿½Í¶ï¿½Ì½")) == 0)
+							if (_tcscmp(szType, _T("ÖØÐÍ¶¯Ì½")) == 0)
 							{
-								cJSON* cDT_min  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("ï¿½ï¿½(m)"));
+								cJSON* cDT_min  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("Æð(m)"));
 								cJSON* cDT_max  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("Ö¹(m)"));
-								cJSON* cDT_desc  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½)"));
+								cJSON* cDT_desc  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("´¸»÷Êý(»÷)"));
 
 								double dtMin    = CUtils::JsonValToDouble(cDT_min);
 								double dtMax    = CUtils::JsonValToDouble(cDT_max);
@@ -719,7 +706,7 @@ void CCreateColumnView::Execute()
 								ptDraw_Dt.y = yTop - dtMax * scale;
 
 								AcGePoint3d ptDraw_Dt_end(ptDraw_Dt);
-								ptDraw_Dt_end.x  +=space_last;               // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+								ptDraw_Dt_end.x  +=space_last;               // ÏòÓÒÑÓÉìÒ»¸ö±í¸ñ¿í¶È
 
 								AcDbLine* pLine = new AcDbLine(ptDraw_Dt, ptDraw_Dt_end);
 
@@ -733,7 +720,7 @@ void CCreateColumnView::Execute()
 								ACHAR desc_txt[256] = { 0 };
 								CUtils::utf8ToTChar(cDT_desc->valuestring, desc_txt, ARRAYSIZE(desc_txt));
 
-								//ï¿½ï¿½Ì½ï¿½ï¿½ï¿½ï¿½
+								//¶¯Ì½»÷Êý
 								AcGePoint3d ptDraw_dt_head(ptDraw_Dt);
 								ptDraw_dt_head.x +=0.2;
 								AcDbObjectId objId = CUtils::AddDbMText(pModelSpace,desc_txt,ptDraw_dt_head,2.1,4,pszStyleName);
@@ -755,19 +742,19 @@ void CCreateColumnView::Execute()
 								AcDbMText* pText = AcDbMText::cast(entity_desc);
 								if (pText != NULL)
 								{
-									if (pText->upgradeOpen() == Acad::eOk)        // ï¿½ï¿½ ï¿½ï¿½ Ð´
+									if (pText->upgradeOpen() == Acad::eOk)        // ¶Á ¡ú Ð´
 									{
-										AcGePoint3d ptLoc = pText->location();     // È¡ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Åµï¿½
+										AcGePoint3d ptLoc = pText->location();     // È¡µ±Ç°¸½×Åµã
 										ptLoc.x = ptDraw_dt_head.x;                
 										ptLoc.y += height_desc;                
 										pText->setLocation(ptLoc);
 									}
-									pText->close();   // entity_desc ï¿½ï¿½ pText ï¿½ï¿½Í¬Ò»ï¿½ï¿½ï¿½ï¿½close Ò»ï¿½Î¼ï¿½ï¿½ï¿½
+									pText->close();   // entity_desc Óë pText ÊÇÍ¬Ò»¶ÔÏó£¬close Ò»´Î¼´¿É
 								}else{
 									entity_desc->close();
 								}
 
-								//ï¿½ï¿½Ð¡Öµ-ï¿½ï¿½ï¿½Öµ
+								//×îÐ¡Öµ-×î´óÖµ
 								CString dt_txt;
 								dt_txt.Format(_T("%.2f-%.2f"), dtMin, dtMax);
 
@@ -784,11 +771,11 @@ void CCreateColumnView::Execute()
 				}
             }
 
-			//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			//±ê¹á»÷Êý
             for (size_t k = 0; k < sptStats.size(); ++k)
             {
                 const SPT_STAT& st = sptStats[k];
-                CUtils::acutPrintf(_T("[ï¿½ï¿½ï¿½Í³ï¿½ï¿½] ï¿½Ë³ï¿½=%.2f  ï¿½ï¿½Ð¡Öµ=%.1f  ï¿½ï¿½ï¿½Öµ=%.1f  Í³ï¿½ï¿½ï¿½ï¿½=%d\n"),
+                CUtils::acutPrintf(_T("[±ê¹áÍ³¼Æ] ¸Ë³¤=%.2f  ×îÐ¡Öµ=%.1f  ×î´óÖµ=%.1f  Í³¼ÆÊý=%d\n"),
                     st.rodLength, st.minVal, st.maxVal, st.totalCount);
 
 				AcGePoint3d ptDraw_Standard(ptInsert);
@@ -796,21 +783,21 @@ void CCreateColumnView::Execute()
 				ptDraw_Standard.y = yTop - st.maxVal * scale;
 
 				AcGePoint3d ptDraw_Standard_end(ptDraw_Standard);
-				ptDraw_Standard_end.x  +=space_chat;               // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+				ptDraw_Standard_end.x  +=space_chat;               // ÏòÓÒÑÓÉìÒ»¸ö±í¸ñ¿í¶È
 
 				AcDbLine* pLine = new AcDbLine(ptDraw_Standard, ptDraw_Standard_end);
 
 				AcDbObjectId lineId = AcDbObjectId::kNull;
 				Acad::ErrorStatus es = this->pModelSpace->appendAcDbEntity(lineId, pLine);
 				if (es == Acad::eOk)
-					pLine->close();                  // ï¿½ï¿½ï¿½É¹ï¿½ ï¿½ï¿½ closeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ deleteï¿½ï¿½
+					pLine->close();                  // Èë¿â³É¹¦ ¡ú close£¨²»ÄÜ delete£©
 				else
-					delete pLine;                    // ï¿½ï¿½ï¿½Ê§ï¿½ï¿½ ï¿½ï¿½ Î´ï¿½ï¿½â£¬Ö»ï¿½ï¿½ delete
+					delete pLine;                    // Èë¿âÊ§°Ü ¡ú Î´Èë¿â£¬Ö»ÄÜ delete
 
 				CString standard_txt;
 				standard_txt.Format(_T("=%d"), st.totalCount);
 
-				//ï¿½Ë³ï¿½
+				//¸Ë³¤
 				AcGePoint3d ptDraw_standard_head(ptDraw_Standard);
 				ptDraw_standard_head.x += space_chat/2;
 				ptDraw_standard_head.y += 2.1;
@@ -819,7 +806,7 @@ void CCreateColumnView::Execute()
                     pszStyleName,DBTA_CENTER,dWidthFactor);
 
 
-				//ï¿½ï¿½Ð¡Öµ-ï¿½ï¿½ï¿½Öµ
+				//×îÐ¡Öµ-×î´óÖµ
 				standard_txt.Format(_T("%.2f-%.2f"), st.minVal, st.maxVal);
 
 				AcGePoint3d ptDraw_standard_len(ptDraw_Standard);
@@ -830,18 +817,9 @@ void CCreateColumnView::Execute()
                     pszStyleName,DBTA_CENTER,dWidthFactor);
             }
 
-			//ï¿½ï¿½Ì½ï¿½ï¿½ï¿½ï¿½
+			//¶¯Ì½»÷Êý
 
 			ptInsert.x += space;
-
-			++holeIdx;
-			if (holeIdx % 10 == 0) {
-				MSG msg;
-				while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-					TranslateMessage(&msg);
-					DispatchMessage(&msg);
-				}
-			}
 
 			/*if (_tcscmp(arrayName, _T("ZK3")) == 0){
 				break;
@@ -862,7 +840,7 @@ int CCreateColumnView::actionEnd()
 }
 void CCreateColumnView::CollectTexts(AcDbObjectId blkDefId, CMapStringToString& mapVals, int depth)
 {
-    if (blkDefId.isNull() || depth > 8)      // ï¿½ï¿½È±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½
+    if (blkDefId.isNull() || depth > 8)      // Éî¶È±£»¤£¬·À×ÔÒýÓÃËÀÑ­»·
         return;
 
     AcDbBlockTableRecord* pBTR = NULL;
@@ -878,49 +856,49 @@ void CCreateColumnView::CollectTexts(AcDbObjectId blkDefId, CMapStringToString& 
             if (pIter->getEntity(pEnt, AcDb::kForRead) != Acad::eOk)
                 continue;
 
-            //--- 1) ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ ---
+            //--- 1) µ¥ÐÐÎÄ±¾ ---
             AcDbText* pText = AcDbText::cast(pEnt);
             if (pText != NULL)
             {
-                CString s(pText->textString());          // Ö¸ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½È¿ï¿½ï¿½ï¿½
+                CString s(pText->textString());          // Ö¸Õë¹éÊµÌåËùÓÐ£¬ÏÈ¿½±´
                 AcGePoint3d pt = pText->position();
-                CUtils::acutPrintf(_T("%*s[ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½] \"%s\" @ (%.1f, %.1f)\n"),
+                CUtils::acutPrintf(_T("%*s[µ¥ÐÐÎÄ±¾] \"%s\" @ (%.1f, %.1f)\n"),
                                    depth * 2, _T(""), s.GetString(), pt.x, pt.y);
                 
 
-				// ï¿½Ð¶ï¿½ï¿½Ç·ï¿½ "[xxxx]" Õ¼Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ [ ï¿½ï¿½Í·ï¿½ï¿½] ï¿½ï¿½Î²ï¿½ï¿½ï¿½Ð¼ï¿½ï¿½ï¿½ ]
+				// ÅÐ¶ÏÊÇ·ñ "[xxxx]" Õ¼Î»·û£ºÒÔ [ ¿ªÍ·¡¢] ½áÎ²¡¢ÖÐ¼äÎÞ ]
                 int len = s.GetLength();
                 if (len >= 2 && s[0] == _T('[') && s[len - 1] == _T(']')
                     && s.Find(_T(']'), 1) == len - 1)
                 {
                     CString val;
-                    if (mapVals.Lookup(s, val))          // Ö±ï¿½ï¿½ï¿½ï¿½ "[page_no]" È«ï¿½ï¿½ï¿½ï¿½
+                    if (mapVals.Lookup(s, val))          // Ö±½ÓÓÃ "[page_no]" È«Ãû²é
                     {
-                        if (pEnt->upgradeOpen() == Acad::eOk)   // ï¿½ï¿½ ï¿½ï¿½ Ð´
+                        if (pEnt->upgradeOpen() == Acad::eOk)   // ¶Á ¡ú Ð´
                         {
                             pText->setTextString(val.GetString());
-                            CUtils::acutPrintf(_T("    ? ï¿½ï¿½ï¿½æ»» %s = \"%s\"\n"),
+                            CUtils::acutPrintf(_T("    ? ÒÑÌæ»» %s = \"%s\"\n"),
                                             s.GetString(), val.GetString());
                         }
                         else
                         {
-                            CUtils::acutPrintf(_T("    ? ï¿½ï¿½ï¿½æ£º%s ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½Ê§ï¿½Ü£ï¿½Î´ï¿½æ»»\n"),
+                            CUtils::acutPrintf(_T("    ? ¾¯¸æ£º%s Éý¼¶Ð´´ò¿ªÊ§°Ü£¬Î´Ìæ»»\n"),
                                             s.GetString());
                         }
                     }
                     else
                     {
-                        CUtils::acutPrintf(_T("    ? Õ¼Î»ï¿½ï¿½ %s ï¿½ï¿½ mapVals ï¿½ï¿½Î´ï¿½Òµï¿½\n"),
+                        CUtils::acutPrintf(_T("    ? Õ¼Î»·û %s ÔÚ mapVals ÖÐÎ´ÕÒµ½\n"),
                                         s.GetString());
                     }
-					//ï¿½ï¿½Í¼ï¿½ï¿½Ð£ï¿½ï¿½
+					//ÖÆÍ¼ºÍÐ£¶Ô
 					if (_tcscmp(s, _T("[mapping]")) == 0)
 					{
-						CollectMapping(pBTR,pt,_T("ï¿½ï¿½Í¼ï¿½ï¿½"));
+						CollectMapping(pBTR,pt,_T("ÖÆÍ¼ÈË"));
 					}
 					else if (_tcscmp(s, _T("[check]")) == 0)
 					{
-						CollectMapping(pBTR,pt,_T("Ð£ï¿½ï¿½ï¿½ï¿½"));
+						CollectMapping(pBTR,pt,_T("Ð£¶ÔÈË"));
 					}
                 }
 
@@ -929,31 +907,31 @@ void CCreateColumnView::CollectTexts(AcDbObjectId blkDefId, CMapStringToString& 
                 continue;
             }
 
-            //--- 2) ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ ---
+            //--- 2) ¶àÐÐÎÄ±¾ ---
             //AcDbMText* pMText = AcDbMText::cast(pEnt);
             //if (pMText != NULL)
             //{
-            //    CString s = MTextToPlain(pMText->contents());   // contents() ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½
+            //    CString s = MTextToPlain(pMText->contents());   // contents() º¬¸ñÊ½Âë
             //    AcGePoint3d pt = pMText->location();
-            //    CUtils::acutPrintf(_T("%*s[ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½] \"%s\" @ (%.1f, %.1f)\n"),
+            //    CUtils::acutPrintf(_T("%*s[¶àÐÐÎÄ±¾] \"%s\" @ (%.1f, %.1f)\n"),
             //                       depth * 2, _T(""), s.GetString(), pt.x, pt.y);
             //    pEnt->close();
             //    continue;
             //}
 
-            ////--- 3) ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½å£¨ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ tag ï¿½ï¿½Õ¼Î»ï¿½Ä±ï¿½ï¿½ï¿½---
+            ////--- 3) ÊôÐÔ¶¨Òå£¨¿éÄ£°åÀï´ø tag µÄÕ¼Î»ÎÄ±¾£©---
             //AcDbAttributeDefinition* pAttDef = AcDbAttributeDefinition::cast(pEnt);
             //if (pAttDef != NULL)
             //{
-            //    CString tag(pAttDef->tag());             // ï¿½ï¿½Ç©ï¿½ï¿½ï¿½ï¿½ "ZK_NAME"
-            //    CString val(pAttDef->textString());      // Ä¬ï¿½ï¿½Öµ
-            //    CUtils::acutPrintf(_T("%*s[ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½] tag=\"%s\" Ä¬ï¿½ï¿½Öµ=\"%s\"\n"),
+            //    CString tag(pAttDef->tag());             // ±êÇ©£¬Èç "ZK_NAME"
+            //    CString val(pAttDef->textString());      // Ä¬ÈÏÖµ
+            //    CUtils::acutPrintf(_T("%*s[ÊôÐÔ¶¨Òå] tag=\"%s\" Ä¬ÈÏÖµ=\"%s\"\n"),
             //                       depth * 2, _T(""), tag.GetString(), val.GetString());
             //    pEnt->close();
             //    continue;
             //}
 
-            //--- 4) Ç¶ï¿½×¿ï¿½ï¿½ï¿½Õ£ï¿½ï¿½Ý¹ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿é¶¨ï¿½ï¿½ ---
+            //--- 4) Ç¶Ì×¿é²ÎÕÕ£ºµÝ¹é½øËüµÄ¿é¶¨Òå ---
             /*AcDbBlockReference* pNested = AcDbBlockReference::cast(pEnt);
             if (pNested != NULL)
             {
@@ -962,9 +940,9 @@ void CCreateColumnView::CollectTexts(AcDbObjectId blkDefId, CMapStringToString& 
                 continue;
             }*/
 
-            pEnt->close();   // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ß¡ï¿½Ô²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            pEnt->close();   // ÆäËûÀàÐÍ£ºÏß¡¢Ô²¡­¡­Ìø¹ý
         }
-        delete pIter;        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ new ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ delete
+        delete pIter;        // µü´úÆ÷ÊÇ new ³öÀ´µÄ£¬Ðë delete
     }
     pBTR->close();
 }
@@ -982,7 +960,7 @@ CString CCreateColumnView::MTextToPlain(const ACHAR* s)
             else if (c == _T('~'))                   { out += _T(' ');  ++p; }
             else if (c == _T('{') || c == _T('}') || c == _T('\\'))
                                                     { out += c;        ++p; }
-            else   // \f..; \H..; \W..; \A..; \C..; ï¿½ï¿½ï¿½ï¿½ ';' ï¿½ï¿½Î²ï¿½Ä¸ï¿½Ê½ï¿½ë£ºï¿½ï¿½ï¿½Î¶ï¿½ï¿½ï¿½
+            else   // \f..; \H..; \W..; \A..; \C..; µÈÒÔ ';' ½áÎ²µÄ¸ñÊ½Âë£ºÕû¶Î¶ªÆú
             {
                 ++p;
                 while (*p != _T('\0') && *p != _T(';')) ++p;
@@ -990,13 +968,13 @@ CString CCreateColumnView::MTextToPlain(const ACHAR* s)
         }
         else if (*p == _T('{') || *p == _T('}'))
         {
-            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å£ï¿½ï¿½ï¿½ï¿½ï¿½
+            // ·Ö×éÀ¨ºÅ£¬¶ªÆú
         }
         else if (p[0] == _T('%') && p[1] == _T('%') && p[2] != _T('\0'))
         {
-            if      (p[2] == _T('d')) out += (ACHAR)0x00B0;  // %%d ï¿½ï¿½ ï¿½ï¿½
-            else if (p[2] == _T('c')) out += (ACHAR)0x00D8;  // %%c ï¿½ï¿½ ?
-            else if (p[2] == _T('p')) out += (ACHAR)0x00B1;  // %%p ï¿½ï¿½ ï¿½ï¿½
+            if      (p[2] == _T('d')) out += (ACHAR)0x00B0;  // %%d ¡ú ¡ã
+            else if (p[2] == _T('c')) out += (ACHAR)0x00D8;  // %%c ¡ú ?
+            else if (p[2] == _T('p')) out += (ACHAR)0x00B1;  // %%p ¡ú ¡À
             p += 2;
         }
         else
@@ -1022,11 +1000,11 @@ void CCreateColumnView::ChangeNo(AcDbObjectId blkDefId,ACHAR* no)
             if (pIter->getEntity(pEnt, AcDb::kForRead) != Acad::eOk)
                 continue;
 
-            //--- 1) ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ ---
+            //--- 1) µ¥ÐÐÎÄ±¾ ---
             AcDbText* pText = AcDbText::cast(pEnt);
-			CString s(pText->textString());          // Ö¸ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½È¿ï¿½ï¿½ï¿½
+			CString s(pText->textString());          // Ö¸Õë¹éÊµÌåËùÓÐ£¬ÏÈ¿½±´
 			if (s == _T("1")){
-				if (pEnt->upgradeOpen() == Acad::eOk)   // ï¿½ï¿½ ï¿½ï¿½ Ð´
+				if (pEnt->upgradeOpen() == Acad::eOk)   // ¶Á ¡ú Ð´
                 {
                     pText->setTextString(no);
 				}
@@ -1055,25 +1033,25 @@ void CCreateColumnView::CollectMapping(AcDbBlockTableRecord* pBTR,AcGePoint3d& p
 	//AcDbBlockTableRecord* pBTR_mapping = NULL;
 	//AcGePoint3d basePoint;
 	//if (acdbOpenObject(pBTR_mapping, block_mapping, AcDb::kForRead) == Acad::eOk) {
-	//	// getOrigin() ï¿½ï¿½ï¿½Øµï¿½ï¿½Ç¿é¶¨ï¿½ï¿½Ä»ï¿½ï¿½ã£¨ï¿½Ö²ï¿½ï¿½ï¿½ï¿½ê£©
+	//	// getOrigin() ·µ»ØµÄÊÇ¿é¶¨ÒåµÄ»ùµã£¨¾Ö²¿×ø±ê£©
 	//	basePoint = pBTR_mapping->origin(); 
 	//	pBTR_mapping->close();
 	//}
 
-	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ£ï¿½ï¿½ï¿½ï¿½ëµ½ï¿½ï¿½ï¿½Ú²ï¿½ pt Î»ï¿½ï¿½
+	// ´´½¨¿é²ÎÕÕ£¬²åÈëµ½¿éÄÚ²¿ pt Î»ÖÃ
     AcDbBlockReference* pBlkRef = new AcDbBlockReference;
-    pBlkRef->setBlockTableRecord(block_mapping);   // ï¿½ï¿½ï¿½ï¿½"ï¿½ï¿½Í¼ï¿½ï¿½"ï¿½é¶¨ï¿½ï¿½
+    pBlkRef->setBlockTableRecord(block_mapping);   // ÒýÓÃ"ÖÆÍ¼ÈË"¿é¶¨Òå
 	AcGePoint3d pos(pt);
 	pos.x +=2.5;
 	pos.y +=2.5;
-    pBlkRef->setPosition(pos);                      // pt Îªï¿½é¶¨ï¿½ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½Ïµ
+    pBlkRef->setPosition(pos);                      // pt Îª¿é¶¨ÒåÄÚ²¿×ø±êÏµ
 
     AcDbObjectId refId = AcDbObjectId::kNull;
     Acad::ErrorStatus es = pBTR->appendAcDbEntity(refId, pBlkRef);
     if (es != Acad::eOk)
     {
-        delete pBlkRef;                            // Î´ï¿½ï¿½ï¿½ ï¿½ï¿½ delete
-        CUtils::acutPrintf(_T("[DWGï¿½ï¿½ï¿½ï¿½] ï¿½ï¿½ï¿½ó£º²ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½Ë¿ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ %d)ï¿½ï¿½\n"), (int)es);
+        delete pBlkRef;                            // Î´Èë¿â ¡ú delete
+        CUtils::acutPrintf(_T("[DWGµ¼Èë] ´íÎó£º²åÈëÖÆÍ¼ÈË¿é²ÎÕÕÊ§°Ü(´íÎóÂë %d)¡£\n"), (int)es);
 		return;
     }
 
@@ -1086,19 +1064,19 @@ void CCreateColumnView::CollectMapping(AcDbBlockTableRecord* pBTR,AcGePoint3d& p
 
     double w = ext.maxPoint().x - ext.minPoint().x;
     double h = ext.maxPoint().y - ext.minPoint().y;
-    if (w < 0.0001 || h < 0.0001)          // ï¿½Õ¿ï¿½/ï¿½Ë»ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    if (w < 0.0001 || h < 0.0001)          // ¿Õ¿é/ÍË»¯ ¡ú ·À³ýÁã
 	{
 		pBlkRef->close();
         return;
 	}
 
-    // 2) Ä¿ï¿½ï¿½ß´ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½ÇµÈ±È£ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ìµ½ 23ï¿½ï¿½8ï¿½ï¿½
+    // 2) Ä¿±ê³ß´ç ¡ú Ëõ·ÅÏµÊý£¨·ÇµÈ±È£¬·Ö±ðÀ­Éìµ½ 23¡Á8£©
     double sx = widthBlock  / w;
     double sy = widthHeight / h;
-    // ï¿½ï¿½Òªï¿½È±ï¿½ï¿½ï¿½ï¿½Å£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ double s = min(sx, sy); sx = sy = s;
+    // ÈôÒªµÈ±ÈËõ·Å£¨²»±äÐÎ£©£¬¸ÄÓÃ£º double s = min(sx, sy); sx = sy = s;
 
-    // 3) ï¿½ï¿½ï¿½ï¿½ã²¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î§ï¿½Æ¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½
-    //    ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½Ä°ï¿½Î§ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼Î»ï¿½ï¿½Î»ï¿½ï¿½ pt
+    // 3) ²åÈëµã²¹³¥£ºËõ·ÅÎ§ÈÆ¿é»ùµã½øÐÐ£¬
+    //    ÈÃËõ·ÅºóµÄ°üÎ§ºÐ¡¾ÖÐÐÄ¡¿¶ÔÆëÕ¼Î»·ûÎ»ÖÃ pt
    /* AcGePoint3d pos;
     pos.x = pt.x + w * 0.5 * sx;
     pos.y = pt.y + h * 0.5 * sy;

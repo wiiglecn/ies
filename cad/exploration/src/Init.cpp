@@ -1,4 +1,4 @@
-#include "StdAfx.h"        // ï¿½ï¿½ï¿½ï¿½Ä¿Ô¼ï¿½ï¿½ï¿½ï¿½cpp ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È°ï¿½ï¿½ï¿½ï¿½ï¿½MFC _DEBUG ï¿½ï¿½Ü£ï¿½
+#include "StdAfx.h"        // ±¾ÏîÄ¿Ô¼¶¨£ºcpp ±ØÐë×îÏÈ°üº¬£¨MFC _DEBUG ¹æ±Ü£©
 #include "arxHeaders.h"
 #include "cJSON.h"
 #include "utils.h"
@@ -68,7 +68,7 @@ void CInit::Unload()
 
 void CInit::loadMenu()
 {
-	// 1. ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
+	// 1. ¶¨Òå²Ëµ¥×éÃûºÍÎÄ¼þÃû
 
 	CString strFilePath = CUtils::GetArxFolder();
 	strFilePath.Replace(_T("\\"), _T("/"));
@@ -78,9 +78,9 @@ void CInit::loadMenu()
 	szMenuPath = strFilePath + szMenuPath;
 
 
-    // 1. ï¿½ï¿½ï¿½ï¿½ LISP ï¿½ï¿½ï¿½ï¿½Ê½
-    // ×¢ï¿½â£ºÂ·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¿Õ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½Â·ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½Æ´ï¿½Ó¼ï¿½ï¿½ï¿½
-    //// menuload ï¿½ï¿½ï¿½ï¿½ T ï¿½ï¿½ï¿½ï¿½É¹ï¿½ï¿½ï¿½nil ï¿½ï¿½ï¿½Ê§ï¿½ï¿½
+    // 1. ¹¹½¨ LISP ±í´ïÊ½
+    // ×¢Òâ£ºÂ·¾¶ÖÐÈç¹ûÓÐ¿Õ¸ñ»òÌØÊâ×Ö·û£¬ÐèÒªÊÊµ±´¦Àí£¬µ«ÔÚ¼òµ¥Â·¾¶ÏÂÖ±½ÓÆ´½Ó¼´¿É
+    //// menuload ·µ»Ø T Èç¹û³É¹¦£¬nil Èç¹ûÊ§°Ü
     //CString strLisp;
     //strLisp.Format(_T("(if (not (menugroup \"%s\")) (menuload \"%s\"))"), 
     //               szGroupName, szMenuPath);
@@ -101,7 +101,7 @@ void CInit::loadMenu()
  //   if (pDoc == NULL)
  //       return;
 
- //   // ï¿½ï¿½ï¿½ï¿½ MENULOAD ï¿½ï¿½ï¿½ï¿½
+ //   // ¹¹Ôì MENULOAD ÃüÁî
  //   CString strCmd;
 
  //   strCmd.Format(
@@ -109,7 +109,7 @@ void CInit::loadMenu()
  //       szMenuPath
  //   );
 	////strCmd = _T("_.MENULOAD \"") + szMenuPath + _T("\"\n");
-	//CUtils::acutPrintf(_T("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø²Ëµï¿½: %s\n"), strCmd);
+	//CUtils::acutPrintf(_T("ÒÑÇëÇó¼ÓÔØ²Ëµ¥: %s\n"), strCmd);
 
  //   Acad::ErrorStatus es =
  //       acDocManager->sendStringToExecute(
@@ -120,16 +120,16 @@ void CInit::loadMenu()
  //           false
  //       );
 
-    // 2. Ö´ï¿½ï¿½ LISP ï¿½ï¿½ï¿½ï¿½Ê½
-    // ads_queueexpr ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ì²½Ö´ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç° ARX ï¿½ï¿½ï¿½ï¿½Õ»
-    // ï¿½ï¿½ï¿½ï¿½ AutoCAD 2005 Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ÃµÄ¼ï¿½ï¿½ï¿½
+    // 2. Ö´ÐÐ LISP ±í´ïÊ½
+    // ads_queueexpr ½«±í´ïÊ½·ÅÈë¶ÓÁÐÒì²½Ö´ÐÐ£¬²»»á×èÈûµ±Ç° ARX µ÷ÓÃÕ»
+    // ÕâÊÇ AutoCAD 2005 Ê±´ú³£ÓÃµÄ¼¼ÇÉ
     //ads_queueexpr(strLisp);
     
-    // 3. (ï¿½ï¿½Ñ¡) ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½Å¶ï¿½Ö´ï¿½ï¿½ menucmd
-    // ×¢ï¿½â£ºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ì²½Ö´ï¿½Ð£ï¿½menuload ï¿½ï¿½ï¿½Ü»ï¿½Ã»ï¿½ï¿½É£ï¿½menucmd ï¿½Í¿ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½
-    // ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð·Ö²ï¿½Ö´ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ã¶ï¿½Ê±ï¿½ï¿½/ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬
+    // 3. (¿ÉÑ¡) Èç¹ûÐèÒªÁ¢¼´ÏÔÊ¾²Ëµ¥£¬¿ÉÒÔ½Ó×ÅÅÅ¶ÓÖ´ÐÐ menucmd
+    // ×¢Òâ£ºÓÉÓÚÊÇÒì²½Ö´ÐÐ£¬menuload ¿ÉÄÜ»¹Ã»Íê³É£¬menucmd ¾Í¿ÉÄÜÖ´ÐÐÁË
+    // ¸ü°²È«µÄ×ö·¨ÊÇÔÚÓÃ»§½»»¥ÃüÁîÖÐ·Ö²½Ö´ÐÐ£¬»òÕßÊ¹ÓÃ¶¨Ê±Æ÷/·´Ó¦Æ÷¼ì²é¼ÓÔØ×´Ì¬
     
-	//CUtils::acutPrintf(_T("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø²Ëµï¿½: %s\n"), szGroupName);
+	//CUtils::acutPrintf(_T("ÒÑÇëÇó¼ÓÔØ²Ëµ¥: %s\n"), szGroupName);
 
 	//return;
 }
@@ -146,80 +146,6 @@ void CInit::unloadMenu()
             RTNONE
         );
     }*/
-}
-
-// ========== ARX Entry Point moved from Palette2005.cpp ==========
-#include "../tools/ToolGlobal.h"
-#include "./OwnerMenu.h"
-
-void *pPaletteSet = NULL;
-AC_IMPLEMENT_EXTENSION_MODULE(PaletteDLL);
-
-extern "C"
-BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID /*lpReserved*/)
-{
-	if (dwReason == DLL_PROCESS_ATTACH)
-	{
-		PaletteDLL.AttachInstance(hInstance);
-		InitAcUiDLL();
-	} else if (dwReason == DLL_PROCESS_DETACH) {
-		PaletteDLL.DetachInstance();
-	}
-	return TRUE;
-}
-
-void paletteShow() { return; }
-void paletteHide() { return; }
-
-static void AddCommand2(const TCHAR* cmdGroup, const TCHAR* cmdInt, const TCHAR* cmdLoc,
-				const int cmdFlags, const AcRxFunctionPtr cmdProc)
-{
-	char szCmdGroup[256], szCmdInt[256], szCmdLoc[256];
-	strcpy(szCmdGroup, cmdGroup);
-	strcpy(szCmdInt, cmdInt);
-	strcpy(szCmdLoc, cmdLoc);
-    acedRegCmds->addCommand(szCmdGroup, szCmdInt, szCmdLoc, cmdFlags, cmdProc);
-}
-
-static void InitApplication()
-{
-	AddCommand2(MENUGROUP, _T("SLCMD"), _T("SLCMD"), ACRX_CMD_MODAL, ToolGlobal::CMD);
-	AddCommand2(MENUGROUP, _T("SLCCV"), _T("SLCCV"), ACRX_CMD_MODAL, ToolGlobal::CreateColumnView);
-	AddCommand2(MENUGROUP, _T("SLINIT"), _T("SLINIT"), ACRX_CMD_MODAL, CInit::Prepare);
-	AddCommand2(MENUGROUP, _T("SLPLANVIEW"),  _T("SLPLANVIEW"), ACRX_CMD_MODAL, COwnerMenu::SLPlanView);
-	AddCommand2(MENUGROUP, _T("SLSECTIONVIEW"), _T("SLSECTIONVIEW"), ACRX_CMD_MODAL, COwnerMenu::SLSectionView);
-	AddCommand2(MENUGROUP, _T("SLCOLUMNVIEW"), _T("SLCOLUMNVIEW"), ACRX_CMD_MODAL, COwnerMenu::SLColumnView);
-	AddCommand2(MENUGROUP, _T("SLHOLEDIAMETER"), _T("SLHOLEDIAMETER"), ACRX_CMD_MODAL, COwnerMenu::SLHoleDiameter);
-	AddCommand2(MENUGROUP, _T("SLMAPPING"), _T("SLMAPPING"), ACRX_CMD_MODAL, COwnerMenu::SLMapping);
-	AddCommand2(MENUGROUP, _T("SLCHECK"), _T("SLCHECK"), ACRX_CMD_MODAL, COwnerMenu::SLCheck);
-	AddCommand2(MENUGROUP, _T("SLIMPORTDATA"), _T("SLIMPORTDATA"), ACRX_CMD_MODAL, COwnerMenu::SLImportData);
-	AddCommand2(MENUGROUP, _T("SLBLOCKLINESELECT"), _T("SLBLOCKLINESELECT"), ACRX_CMD_MODAL, COwnerMenu::SLBlockLineSelect);
-	AddCommand2(MENUGROUP, _T("SLPOLYLINEHOLE"), _T("SLPOLYLINEHOLE"), ACRX_CMD_MODAL, COwnerMenu::SLPolylineHole);
-	AddCommand2(MENUGROUP, _T("SLARCPICK"), _T("SLARCPICK"), ACRX_CMD_MODAL, COwnerMenu::SLArcPick);
-	AddCommand2(MENUGROUP, _T("SLSINGLESCALE"), _T("SLSINGLESCALE"), ACRX_CMD_MODAL, COwnerMenu::SLSingleScale);
-	AddCommand2(MENUGROUP, _T("SLALLSCALE"), _T("SLALLSCALE"), ACRX_CMD_MODAL, COwnerMenu::SLAllScale);
-}
-
-static void UnloadApplication()
-{
-	acedRegCmds->removeGroup(_T("ASDK"));
-	CInit::Unload();
-}
-
-extern "C" AcRx::AppRetCode 
-acrxEntryPoint(AcRx::AppMsgCode msg, void* pkt)
-{
-	switch (msg) {
-	case AcRx::kInitAppMsg:
-		acrxDynamicLinker->unlockApplication(pkt);
-		acrxDynamicLinker->registerAppMDIAware(pkt);
-		InitApplication();
-		break;
-	case AcRx::kUnloadAppMsg:
-		UnloadApplication();
-		break;
-	}
-	return AcRx::kRetOK;
 }
 void CInit::CmdUnloadSLTools()
 {
