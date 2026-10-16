@@ -354,11 +354,10 @@ Content-Type: multipart/form-data        # 推荐：文件上传场景
 
 | 字段 | 类型 | 必填 | 提交位置 | 默认 | 说明 |
 | --- | --- | --- | --- | --- | --- |
-| `borehole_data` | object | **是** | JSON body / form 字段 | — | 钻孔数据，第 9 章 |
-| `base_map` | file (`.dwg`) | **二选一** | **`multipart/form-data` 文件字段** | — | 上传的底图 DWG 文件（流程二） |
-| `base_map_url` | string | **二选一** | **仅 form 字段（`multipart/form-data`）** | — | 底图可访问链接，http/https（流程二） |
-| `plan_base` | object | 否 | JSON body / form 字段 | — | 平面图配置；含底图对齐参数、出图比例等；详见 §7.5 |
-| `auto_zoom` | bool | 否 | JSON body / form 字段 | `true` | 出图后是否自动全图缩放 |
+| `borehole_data` | object | **是** | JSON body | — | 钻孔数据，全中文键名结构 |
+| `has_base_map` | bool | 否 | JSON body | `false` | 是否加载底图：true=有底图模式，必须提供`base_map_path`；false=无底图模式 |
+| `base_map_path` | string | 有条件必填 | JSON body | 空 | 当`has_base_map=true`时必填，本地DWG底图文件绝对路径 |
+| `auto_zoom` | bool | 否 | JSON body | `true` | 出图后是否自动全图缩放 |
 
 > **`base_map` 与 `base_map_url` 二选一**：同时提交 → `HTTP 400 + {"status":"error","message":"base_map 与 base_map_url 互斥，二选一"}`。
 > **底图字段仅支持 `multipart/form-data`**：`base_map`（文件）与 `base_map_url`（string）**只从 `request.form` / `request.files` 读取**（详设 V1.7 §9.2 `_save_base_map()`）；`application/json` 提交时 `request.form` 为空——**若 JSON body 中仍包含 `base_map` / `base_map_url` 键，视为"调用方式错误"，网关返 `HTTP 400 + {"status":"error","message":"base_map / base_map_url 仅支持 multipart/form-data 提交"}`**（与"同传 / 扩展名错误"同类处理，详见 §8.2 第 5 行；本项即 **D1 决策**——`base_map_url requires multipart/form-data`，属"调用方式错误"语义，**不是流程一降级**）。**调用方若需提供底图，必须使用 `multipart/form-data`**。

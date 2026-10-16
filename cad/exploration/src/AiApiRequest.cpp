@@ -293,15 +293,41 @@ void HandleAiTool(struct mg_connection* nc,
 	if (nCommandID == WM_USER_FEATURE_COLUMNVIEW || nCommandID == WM_USER_FEATURE_PLANVIEW || nCommandID == WM_USER_FEATURE_SECTIONVIEW) {
 		cJSON* boreholeData = cJSON_GetObjectItem(root, "borehole_data");
 		if (boreholeData) {
+			// 提取平面图底图相关参数，合并到参数文件顶层
+			cJSON* hasBaseMap = cJSON_GetObjectItem(root, "has_base_map");
+			cJSON* baseMapPath = cJSON_GetObjectItem(root, "base_map_path");
+			if (hasBaseMap) cJSON_AddItemReferenceToObject(boreholeData, "has_base_map", hasBaseMap);
+			if (baseMapPath) cJSON_AddItemReferenceToObject(boreholeData, "base_map_path", baseMapPath);
+
 			char* pPrinted = cJSON_Print(boreholeData);
 			if (pPrinted) {
 				FILE* fp = fopen("D:/project/ies/cad/exploration/project/钻探编录表.json", "w");
 				if (fp) {
 					fwrite(pPrinted, 1, strlen(pPrinted), fp);
 					fclose(fp);
-					CUtils::acutPrintf(_T("[7100] 参数文件已落盘: project/钻探编录表.json\n"));
+					CUtils::acutPrintf(_T("[7100] Parameter file saved\n"));
 				}
 				free(pPrinted);
+			}
+
+			// Plan view: load basemap FIRST, before drawing holes
+			if (nCommandID == WM_USER_FEATURE_PLANVIEW) {
+				cJSON* pHasBaseMap = cJSON_GetObjectItem(root, "has_base_map");
+				cJSON* pBaseMapPath = cJSON_GetObjectItem(root, "base_map_path");
+				bool bLoadBaseMap = (pHasBaseMap && cJSON_IsBool(pHasBaseMap)) ? cJSON_IsTrue(pHasBaseMap) : false;
+				if (bLoadBaseMap && pBaseMapPath && cJSON_IsString(pBaseMapPath) && pBaseMapPath->valuestring) {
+					TCHAR szBaseMapPath[MAX_PATH] = {0};
+					CUtils::utf8ToTChar(pBaseMapPath->valuestring, szBaseMapPath, ARRAYSIZE(szBaseMapPath));
+					CUtils::acutPrintf(_T("[7100] Loading basemap first: %s\n"), szBaseMapPath);
+					// First turn off file dialog, then send insert command, avoid popup
+					CUtils::sendStringToExecute(acDocManager->curDocument(), _T("FILEDIA 0 "));
+					Sleep(200);
+					CString sInsertCmd;
+					sInsertCmd.Format(_T("INSERT \"%s\" 0,0,0 1 1 0 FILEDIA 1 "), szBaseMapPath);
+					CUtils::sendStringToExecute(acDocManager->curDocument(), sInsertCmd.GetString());
+					CUtils::acutPrintf(_T("[7100] Basemap inserted, wait 1s then draw holes\n"));
+					Sleep(1000);
+				}
 			}
 		}
 	}
