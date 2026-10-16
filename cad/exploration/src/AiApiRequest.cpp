@@ -302,50 +302,14 @@ void HandleAiTool(struct mg_connection* nc,
 			char* pPrinted = cJSON_Print(boreholeData);
 			if (pPrinted) {
 				FILE* fp1 = fopen("D:/project/ies/cad/exploration/project/drill_data.json", "w");
-				if (fp1) { fwrite(pPrinted, 1, strlen(pPrinted), fp1); fclose(fp1); CUtils::acutPrintf(_T("[7100] Saved file: exploration/project/drill_data.json\n")); }
+				if (fp1) { fwrite(pPrinted, 1, strlen(pPrinted), fp1); fclose(fp1); }
 				FILE* fp2 = fopen("D:/project/ies/cad/exploration/Debug/project/drill_data.json", "w");
-				if (fp2) { fwrite(pPrinted, 1, strlen(pPrinted), fp2); fclose(fp2); CUtils::acutPrintf(_T("[7100] Saved file: exploration/Debug/project/drill_data.json\n")); }
+				if (fp2) { fwrite(pPrinted, 1, strlen(pPrinted), fp2); fclose(fp2); }
 				FILE* fp3 = fopen("D:/project/ies/cad/exploration/Release/project/drill_data.json", "w");
-				if (fp3) { fwrite(pPrinted, 1, strlen(pPrinted), fp3); fclose(fp3); CUtils::acutPrintf(_T("[7100] Saved file: exploration/Release/project/drill_data.json\n")); }
+				if (fp3) { fwrite(pPrinted, 1, strlen(pPrinted), fp3); fclose(fp3); }
 				free(pPrinted);
 			}
-
-			if (nCommandID == WM_USER_FEATURE_PLANVIEW) {
-				CUtils::acutPrintf(_T("[7100] Processing plan view, inserting hole blocks...\n"));
-				CUtils::sendStringToExecute(acDocManager->curDocument(), _T("FILEDIA 0 "));
-				Sleep(200);
-
-				cJSON* pHole = NULL;
-				cJSON_ArrayForEach(pHole, boreholeData) {
-					if (!pHole || !cJSON_IsObject(pHole)) {
-						CUtils::acutPrintf(_T("[7100] Skip non-object entry\n"));
-						continue;
-					}
-					cJSON* pHoleNo = cJSON_GetObjectItem(pHole, "钻孔编号");
-					cJSON* pX = cJSON_GetObjectItem(pHole, "X坐标(m)");
-					cJSON* pY = cJSON_GetObjectItem(pHole, "Y坐标(m)");
-					if (!pHoleNo || !cJSON_IsString(pHoleNo)) {
-						CUtils::acutPrintf(_T("[7100] Skip entry: missing hole number field\n"));
-						continue;
-					}
-					if (!pX || !pY) {
-						CUtils::acutPrintf(_T("[7100] Skip hole: missing coordinate fields\n"));
-						continue;
-					}
-					double xData = pX->valuedouble; // North coordinate -> CAD Y axis
-					double yData = pY->valuedouble; // East coordinate -> CAD X axis
-					double cadX = yData;
-					double cadY = xData;
-					TCHAR szHoleName[128] = {0};
-					CUtils::utf8ToTChar(pHoleNo->valuestring, szHoleName, ARRAYSIZE(szHoleName));
-					CUtils::acutPrintf(_T("[7100] Insert hole %s at CAD(%.3f, %.3f)\n"), szHoleName, cadX, cadY);
-					CString sHoleCmd;
-					sHoleCmd.Format(_T("INSERT \"%s\" %.3f,%.3f 0.006 0.006 0 "), szHoleName, cadX, cadY);
-					CUtils::sendStringToExecute(acDocManager->curDocument(), sHoleCmd.GetString());
-				}
-				CUtils::sendStringToExecute(acDocManager->curDocument(), _T("FILEDIA 1 "));
-				CUtils::acutPrintf(_T("[7100] All hole insert commands finished\n"));
-			}
+			// Remove custom hole insert logic, let original business code draw holes from saved file
 		}
 	}
 
