@@ -1,0 +1,37 @@
+﻿diff --git a/cad/exploration/features/CreateColumnView.cpp b/cad/exploration/features/CreateColumnView.cpp
+index 5c8582f..cd64908 100644
+--- a/cad/exploration/features/CreateColumnView.cpp
++++ b/cad/exploration/features/CreateColumnView.cpp
+@@ -578,13 +578,13 @@ void CCreateColumnView::Execute()
+                     }
+                 }
+ 
+-				//ȡ��
++				//取样
+ 				{
+-					cJSON* cSampling_obj =  CUtils::GetJsonObjectItemUtf8(rowTry,_T("ȡ��(����ˮ)��"));
++					cJSON* cSampling_obj =  CUtils::GetJsonObjectItemUtf8(rowTry,_T("\321\261\267\273(\226\267\272\315\260\273)"));
+ 					if (cSampling_obj != NULL)
+ 					{
+-						cJSON* cSampling_no  = CUtils::GetJsonObjectItemUtf8(cSampling_obj,_T("���"));  
+-						cJSON* cSampling_num  = CUtils::GetJsonObjectItemUtf8(cSampling_obj,_T("ȡ�����"));  
++						cJSON* cSampling_no  = CUtils::GetJsonObjectItemUtf8(cSampling_obj,_T("\261\340\272\305"));  
++						cJSON* cSampling_num  = CUtils::GetJsonObjectItemUtf8(cSampling_obj,_T("\321\261\272\336\267\353\266\310"));  
+ 
+ 						if (cSampling_no != NULL && cJSON_IsString(cSampling_no)
+ 							&& cSampling_num != NULL && cJSON_IsString(cSampling_num)){
+@@ -650,11 +650,11 @@ void CCreateColumnView::Execute()
+ 							TCHAR szType[64] = { 0 };
+ 							CUtils::utf8ToTChar(cStandard_type->valuestring, szType, ARRAYSIZE(szType));
+ 
+-							if (_tcscmp(szType, _T("���")) == 0)
++							if (_tcscmp(szType, _T("\261\352\271\340")) == 0)
+ 							{
+-								cJSON* cStandard_rod_length  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("�˳�(m)"));
++								cJSON* cStandard_rod_length  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("\267\365\263\271(m)"));
+ 
+-								cJSON* cStandard_rod_min  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("��(m)"));
++								cJSON* cStandard_rod_min  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("\260\356\260\372(\260\356)"));
+ 								cJSON* cStandard_rod_max  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("ֹ(m)"));
+ 								cJSON* cStandard_rod_count  = CUtils::GetJsonObjectItemUtf8(ctesting_obj,_T("������(��)"));
+ 
