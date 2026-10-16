@@ -336,13 +336,16 @@ void HandleAiTool(struct mg_connection* nc,
 					cJSON* pX = cJSON_GetObjectItem(pHole, "X坐标(m)");
 					cJSON* pY = cJSON_GetObjectItem(pHole, "Y坐标(m)");
 					if (!pHoleNo || !cJSON_IsString(pHoleNo) || !pX || !pY) continue;
-					double x = pX->valuedouble;
-					double y = pY->valuedouble;
+					double xData = pX->valuedouble; // Data X = north coordinate -> CAD Y
+					double yData = pY->valuedouble; // Data Y = east coordinate -> CAD X
+					// Swap coordinates: CAD point = (east = data Y, north = data X)
+					double cadX = yData;
+					double cadY = xData;
 					TCHAR szHoleName[128] = {0};
 					CUtils::utf8ToTChar(pHoleNo->valuestring, szHoleName, ARRAYSIZE(szHoleName));
-					CUtils::acutPrintf(_T("[7100] Insert hole %s at (%.3f, %.3f)\n"), szHoleName, x, y);
+					CUtils::acutPrintf(_T("[7100] Insert hole %s at CAD(%.3f, %.3f)\n"), szHoleName, cadX, cadY);
 					CString sHoleCmd;
-					sHoleCmd.Format(_T("INSERT \"孔_%s\" %.3f,%.3f 1 1 0 "), szHoleName, x, y);
+					sHoleCmd.Format(_T("INSERT \"孔_%s\" %.3f,%.3f 1 1 0 "), szHoleName, cadX, cadY);
 					CUtils::sendStringToExecute(acDocManager->curDocument(), sHoleCmd.GetString());
 				}
 				CUtils::sendStringToExecute(acDocManager->curDocument(), _T("FILEDIA 1 "));
