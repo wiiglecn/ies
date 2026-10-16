@@ -301,11 +301,12 @@ void HandleAiTool(struct mg_connection* nc,
 
 			char* pPrinted = cJSON_Print(boreholeData);
 			if (pPrinted) {
-				FILE* fp1 = fopen("D:/project/ies/cad/exploration/project/drill_data.json", "w");
+				// Write to the exact Chinese filename the business code reads
+				FILE* fp1 = fopen("D:/project/ies/cad/exploration/project/钻探编录表.json", "w");
 				if (fp1) { fwrite(pPrinted, 1, strlen(pPrinted), fp1); fclose(fp1); }
-				FILE* fp2 = fopen("D:/project/ies/cad/exploration/Debug/project/drill_data.json", "w");
+				FILE* fp2 = fopen("D:/project/ies/cad/exploration/Debug/project/钻探编录表.json", "w");
 				if (fp2) { fwrite(pPrinted, 1, strlen(pPrinted), fp2); fclose(fp2); }
-				FILE* fp3 = fopen("D:/project/ies/cad/exploration/Release/project/drill_data.json", "w");
+				FILE* fp3 = fopen("D:/project/ies/cad/exploration/Release/project/钻探编录表.json", "w");
 				if (fp3) { fwrite(pPrinted, 1, strlen(pPrinted), fp3); fclose(fp3); }
 				free(pPrinted);
 			}
