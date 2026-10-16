@@ -301,16 +301,16 @@ void HandleAiTool(struct mg_connection* nc,
 
 			char* pPrinted = cJSON_Print(boreholeData);
 			if (pPrinted) {
-				FILE* fp = fopen("D:/project/ies/cad/exploration/project/钻探编录表.json", "w");
-				if (fp) {
-					fwrite(pPrinted, 1, strlen(pPrinted), fp);
-					fclose(fp);
-					CUtils::acutPrintf(_T("[7100] Parameter file saved\n"));
-				}
+				// Write to both possible read paths to avoid path mismatch
+				FILE* fp1 = fopen("D:/project/ies/cad/exploration/project/钻探编录表.json", "w");
+				if (fp1) { fwrite(pPrinted, 1, strlen(pPrinted), fp1); fclose(fp1); }
+				FILE* fp2 = fopen("D:/project/ies/cad/exploration/Debug/project/钻探编录表.json", "w");
+				if (fp2) { fwrite(pPrinted, 1, strlen(pPrinted), fp2); fclose(fp2); }
+				CUtils::acutPrintf(_T("[7100] Parameter file saved to both paths\n"));
 				free(pPrinted);
 			}
 
-			// Plan view: load basemap FIRST, before drawing holes
+			// Plan view: directly insert hole blocks at request coordinates, no file read needed
 			if (nCommandID == WM_USER_FEATURE_PLANVIEW) {
 				cJSON* pHasBaseMap = cJSON_GetObjectItem(root, "has_base_map");
 				cJSON* pBaseMapPath = cJSON_GetObjectItem(root, "base_map_path");
@@ -318,16 +318,34 @@ void HandleAiTool(struct mg_connection* nc,
 				if (bLoadBaseMap && pBaseMapPath && cJSON_IsString(pBaseMapPath) && pBaseMapPath->valuestring) {
 					TCHAR szBaseMapPath[MAX_PATH] = {0};
 					CUtils::utf8ToTChar(pBaseMapPath->valuestring, szBaseMapPath, ARRAYSIZE(szBaseMapPath));
-					CUtils::acutPrintf(_T("[7100] Loading basemap first: %s\n"), szBaseMapPath);
-					// First turn off file dialog, then send insert command, avoid popup
+					CUtils::acutPrintf(_T("[7100] Loading basemap FIRST: %s\n"), szBaseMapPath);
 					CUtils::sendStringToExecute(acDocManager->curDocument(), _T("FILEDIA 0 "));
-					Sleep(200);
+					Sleep(300);
 					CString sInsertCmd;
-					sInsertCmd.Format(_T("INSERT \"%s\" 0,0,0 1 1 0 FILEDIA 1 "), szBaseMapPath);
+					sInsertCmd.Format(_T("INSERT \"%s\" 0,0,0 1 1 0 "), szBaseMapPath);
 					CUtils::sendStringToExecute(acDocManager->curDocument(), sInsertCmd.GetString());
-					CUtils::acutPrintf(_T("[7100] Basemap inserted, wait 1s then draw holes\n"));
-					Sleep(1000);
+					CUtils::acutPrintf(_T("[7100] Basemap commands queued, waiting 2s...\n"));
+					Sleep(2000);
 				}
+
+				// Insert each hole block at its exact X/Y coordinate from request
+				cJSON* pHole = NULL;
+				cJSON_ArrayForEach(pHole, boreholeData) {
+					if (!pHole || !cJSON_IsObject(pHole)) continue;
+					cJSON* pHoleNo = cJSON_GetObjectItem(pHole, "钻孔编号");
+					cJSON* pX = cJSON_GetObjectItem(pHole, "X坐标(m)");
+					cJSON* pY = cJSON_GetObjectItem(pHole, "Y坐标(m)");
+					if (!pHoleNo || !cJSON_IsString(pHoleNo) || !pX || !pY) continue;
+					double x = pX->valuedouble;
+					double y = pY->valuedouble;
+					TCHAR szHoleName[128] = {0};
+					CUtils::utf8ToTChar(pHoleNo->valuestring, szHoleName, ARRAYSIZE(szHoleName));
+					CUtils::acutPrintf(_T("[7100] Insert hole %s at (%.3f, %.3f)\n"), szHoleName, x, y);
+					CString sHoleCmd;
+					sHoleCmd.Format(_T("INSERT \"孔_%s\" %.3f,%.3f 1 1 0 "), szHoleName, x, y);
+					CUtils::sendStringToExecute(acDocManager->curDocument(), sHoleCmd.GetString());
+				}
+				CUtils::sendStringToExecute(acDocManager->curDocument(), _T("FILEDIA 1 "));
 			}
 		}
 	}
