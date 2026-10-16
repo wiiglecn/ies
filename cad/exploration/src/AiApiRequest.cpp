@@ -312,21 +312,8 @@ void HandleAiTool(struct mg_connection* nc,
 
 			// Plan view: directly insert hole blocks at request coordinates, no file read needed
 			if (nCommandID == WM_USER_FEATURE_PLANVIEW) {
-				cJSON* pHasBaseMap = cJSON_GetObjectItem(root, "has_base_map");
-				cJSON* pBaseMapPath = cJSON_GetObjectItem(root, "base_map_path");
-				bool bLoadBaseMap = (pHasBaseMap && cJSON_IsBool(pHasBaseMap)) ? cJSON_IsTrue(pHasBaseMap) : false;
-				if (bLoadBaseMap && pBaseMapPath && cJSON_IsString(pBaseMapPath) && pBaseMapPath->valuestring) {
-					TCHAR szBaseMapPath[MAX_PATH] = {0};
-					CUtils::utf8ToTChar(pBaseMapPath->valuestring, szBaseMapPath, ARRAYSIZE(szBaseMapPath));
-					CUtils::acutPrintf(_T("[7100] Loading basemap FIRST: %s\n"), szBaseMapPath);
-					CUtils::sendStringToExecute(acDocManager->curDocument(), _T("FILEDIA 0 "));
-					Sleep(300);
-					CString sInsertCmd;
-					sInsertCmd.Format(_T("INSERT \"%s\" 0,0,0 1 1 0 "), szBaseMapPath);
-					CUtils::sendStringToExecute(acDocManager->curDocument(), sInsertCmd.GetString());
-					CUtils::acutPrintf(_T("[7100] Basemap commands queued, waiting 2s...\n"));
-					Sleep(2000);
-				}
+				// Basemap is already opened manually by user, no auto insert needed
+				CUtils::acutPrintf(_T("[7100] Drawing holes on already-opened basemap\n"));
 
 				// Insert each hole block at its exact X/Y coordinate from request
 				cJSON* pHole = NULL;
