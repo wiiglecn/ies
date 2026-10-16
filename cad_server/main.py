@@ -2,7 +2,7 @@ import requests
 from flask import Flask, request, Response
 
 WORK_URL = "https://ws-93xgld532jdyrkjf.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions"
-API_KEY = "sk-820adfc78edd47608679411d492c0c20"  # 建议从环境变量或配置文件中读取
+API_KEY = ""  # 建议从环境变量或配置文件中读取
 CHECK_KEY = "sl-123456"
 
 app = Flask(__name__)
