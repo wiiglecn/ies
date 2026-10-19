@@ -33,6 +33,8 @@ protected:
 	void drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const SectionRulerInfo& rule);
 	//画钻孔号（ZK1/ZK2/ZK3）：每根柱体上方居中标注
 	void drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule);
+	//画土层序号+名称：每根柱体右侧、各整层层高中部标注（如 "② 黏土"）
+	void drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule);
 	//高度尺
 	double getRuleHeight(const SectionRulerInfo& rule,double depth);
 };

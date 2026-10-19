@@ -288,6 +288,7 @@ void CCreateSectionView::Execute()
 
 			drawColumn(basePt,gpsObj,ruler);
 			drawHoleNo(basePt,gpsObj,ruler);
+			drawLayerName(basePt,gpsObj,ruler);
 			drawLineFix(basePt,item,ruler);
 			drawLineDrill(basePt,item,ruler);
 
@@ -923,6 +924,100 @@ void CCreateSectionView::drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
         pt.y = lineY + 3.0;
         CUtils::AddDbText(pModelSpace, sElev, pt, 2.5, pszStyleName, DBTA_CENTER, 0.8);
 
+        index++;
+    }
+}
+//画土层序号+名称：每根柱体右侧、每个整层层高中部标注（如 "② 黏土"）
+//序号 = 地层编号首位（"2-0-0"→2→②）；名称 = 地层名称 '-' 后部分（"黏性土-黏土"→黏土）
+//同一地层的连续分段合并后只标一次，位置取整层层高中点
+void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule)
+{
+    int gpRows = cJSON_GetArraySize(gpsObj);
+    if (gpRows == 0) return;
+
+    double left         = 23.0;
+    double width_valid  = PAGE_WIDTH - left*2 - 30;
+    double width_per    = (width_valid - 23*2) / gpRows;
+    double left_pre     = basePt.x + left*2 + 30.0;
+    const double COL_W  = 15.0;               // 柱宽，与 drawColumn / drawHoleNo 一致
+
+    ACHAR* layerName = _T("地质-文字");
+    CUtils::EnsureLayer(layerName, true);
+
+    ACHAR* pszStyleName = _T("SLNormal");
+
+    static const ACHAR* circled[] = {
+        _T("①"),_T("②"),_T("③"),_T("④"),_T("⑤"),
+        _T("⑥"),_T("⑦"),_T("⑧"),_T("⑨"),_T("⑩")
+    };
+
+    cJSON* gpObj = NULL;
+    int index = 0;
+    cJSON_ArrayForEach(gpObj, gpsObj)
+    {
+        if (gpObj == NULL || !cJSON_IsString(gpObj)) { index++; continue; }
+
+        cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+        if (zkObj == NULL) { index++; continue; }
+        cJSON* layerObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("地层列表"));
+        if (layerObj == NULL) { index++; continue; }
+
+        int segCount = cJSON_GetArraySize(layerObj);
+        double x = left_pre + index*width_per + 1.5;   // 柱右缘右侧
+
+        for (int ii = 0; ii < segCount; ++ii)
+        {
+            cJSON* item = cJSON_GetArrayItem(layerObj, ii);
+            if (item == NULL) continue;
+            // 同一地层连续分段：只标组内首段
+            if (ii > 0 && KsSameCode(item, cJSON_GetArrayItem(layerObj, ii - 1))) continue;
+
+            cJSON* cFrom = CUtils::GetJsonObjectItemUtf8(item, _T("进尺自(m)"));
+            cJSON* cTo   = CUtils::GetJsonObjectItemUtf8(item, _T("进尺至(m)"));
+            if (cFrom == NULL || !cJSON_IsNumber(cFrom)
+                || cTo == NULL || !cJSON_IsNumber(cTo)) continue;
+
+            // 向后吃掉同编号段，得到整层顶/底深度
+            double depthTop = cFrom->valuedouble;
+            double depthBottom = cTo->valuedouble;
+            for (int nx = ii + 1; nx < segCount && KsSameCode(item, cJSON_GetArrayItem(layerObj, nx)); ++nx)
+            {
+                cJSON* nTo = CUtils::GetJsonObjectItemUtf8(cJSON_GetArrayItem(layerObj, nx), _T("进尺至(m)"));
+                if (nTo != NULL && cJSON_IsNumber(nTo)) depthBottom = nTo->valuedouble;
+            }
+            double depthMid = (depthTop + depthBottom) / 2.0;
+
+            // 序号 = 地层编号首位
+            cJSON* cNo = CUtils::GetJsonObjectItemUtf8(item, _T("地层编号"));
+            if (cNo == NULL || !cJSON_IsString(cNo)) continue;
+            CString sSeq(cNo->valuestring);
+            int dash = sSeq.Find(_T('-'));
+            if (dash > 0) sSeq = sSeq.Left(dash);
+            long seq = _ttol(sSeq);
+            if (seq <= 0) continue;
+
+            // 土层名称 = 地层名称 '-' 后部分（JSON 是 UTF-8，需先转 TCHAR 再切 '-'）
+            TCHAR szName[128] = { 0 };
+            cJSON* cSoi = CUtils::GetJsonObjectItemUtf8(item, _T("地层名称"));
+            if (cSoi != NULL && cJSON_IsString(cSoi) && cSoi->valuestring[0] != '\0')
+            {
+                TCHAR szSoi[256] = { 0 };
+                CUtils::utf8ToTChar(cSoi->valuestring, szSoi, ARRAYSIZE(szSoi));
+                CString sName(szSoi);
+                int d2 = sName.Find(_T('-'));
+                if (d2 >= 0 && d2 + 1 < sName.GetLength()) sName = sName.Mid(d2 + 1);
+                _tcsncpy(szName, sName, ARRAYSIZE(szName) - 1);
+            }
+
+            CString txt;
+            if (seq >= 1 && seq <= 10)
+                txt.Format(_T("%s %s"), circled[seq - 1], szName);
+            else
+                txt.Format(_T("(%d) %s"), (int)seq, szName);
+
+            AcGePoint3d pt(x, getRuleHeight(rule, depthMid), 0.0);
+            CUtils::AddDbText(pModelSpace, txt, pt, 2.2, pszStyleName, DBTA_LEFT, 0.8);
+        }
         index++;
     }
 }
