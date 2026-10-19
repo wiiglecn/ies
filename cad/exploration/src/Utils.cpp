@@ -800,7 +800,7 @@ bool CUtils::FindPatNameBySoilName(cJSON* pPatConfig, const TCHAR* pszSoilName,
         cJSON* jName = cJSON_GetObjectItem(patRow, utf8KeyName);
         if (jName == NULL || !cJSON_IsString(jName))
             continue;
-        if (strcmp(jName->valuestring, utf8Name) != 0)      // UTF-8 字节精确比较
+        if (strstr(utf8Name, jName->valuestring) == NULL)
             continue;
 
         cJSON* jPat = cJSON_GetObjectItem(patRow, utf8KeyPat);

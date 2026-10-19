@@ -68,47 +68,32 @@ AcDbObjectId CUtils::EnsureLayer(const ACHAR* pszLayerName, bool bSetCurrent)
         return AcDbObjectId::kNull;
 
     AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
-    if (pDb == NULL)
-        return AcDbObjectId::kNull;
+    if (pDb == NULL) return AcDbObjectId::kNull;
 
-    // 1. 已存在：需要时切换为当前层后直接返回
+    // 直接以写模式打开图层表（避免先读后写导致 320 锁冲突）
     AcDbLayerTable* pLyrTbl = NULL;
-    if (pDb->getLayerTable(pLyrTbl, AcDb::kForRead) != Acad::eOk)
-        return AcDbObjectId::kNull;
+    Acad::ErrorStatus st = pDb->getLayerTable(pLyrTbl, AcDb::kForWrite);
+    if (st != Acad::eOk) { CUtils::acutPrintf(_T("[LAYER DEBUG] kForWrite fail: %d, %s\n"), (int)st, pszLayerName); return AcDbObjectId::kNull; }
 
     AcDbObjectId layerId = AcDbObjectId::kNull;
-    pLyrTbl->getAt(pszLayerName, layerId);
-    pLyrTbl->close();
-
-    if (!layerId.isNull())
+    if (pLyrTbl->getAt(pszLayerName, layerId) == Acad::eOk && !layerId.isNull())
     {
-        if (bSetCurrent && pDb->clayer() != layerId)
-            pDb->setClayer(layerId);
+        pLyrTbl->close();
+        if (bSetCurrent && pDb->clayer() != layerId) pDb->setClayer(layerId);
         return layerId;
     }
 
-    // 2. 不存在：写方式打开图层表，新建记录（默认颜色/线型，继承 0 层以外的默认值）
-    if (pDb->getLayerTable(pLyrTbl, AcDb::kForWrite) != Acad::eOk)
-        return AcDbObjectId::kNull;
-
     AcDbLayerTableRecord* pLyrRec = new AcDbLayerTableRecord;
     pLyrRec->setName(pszLayerName);
-
     AcDbObjectId newId = AcDbObjectId::kNull;
-    if (pLyrTbl->add(pLyrRec) == Acad::eOk)
-    {
-        newId = pLyrRec->objectId();
-        pLyrRec->close();           // 项目约定：入库成功 close，失败 delete
-    }
-    else
-        delete pLyrRec;
+    if (pLyrTbl->add(pLyrRec) == Acad::eOk) { newId = pLyrRec->objectId(); pLyrRec->close(); }
+    else delete pLyrRec;
     pLyrTbl->close();
 
-    // 3. 切换为当前层（之后新建的实体默认落在该层）
-    if (!newId.isNull() && bSetCurrent)
-        pDb->setClayer(newId);
+    if (!newId.isNull() && bSetCurrent) pDb->setClayer(newId);
     return newId;
 }
+
 // 在调用方已打开的容器里删除指定图层实体（容器不关，实体用迭代器逐个开/关）
 int CUtils::EraseLayerEntities(AcDbBlockTableRecord* pOpenedBtr, const ACHAR* pszLayerName)
 {

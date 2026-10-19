@@ -403,8 +403,10 @@ def _remove_if_exists(path):
             pass
 
 
-def _call_cad(path, timeout=120):
-    r = requests.post(CAD_HTTP + path, json={}, timeout=timeout)
+def _call_cad(path, timeout=120, body=None):
+    """调 ARX HTTP 接口。body 非空时完整传给 ARX，日志可记录每次请求参数。"""
+    payload = body if body is not None else {}
+    r = requests.post(CAD_HTTP + path, json=payload, timeout=timeout)
     r.raise_for_status()
     return r.json()
 
@@ -737,7 +739,8 @@ def draw_column():
     with _lock:
         try:
             _write_json(BOREHOLE_FILE, _translate_borehole(bh))
-            result = _call_cad(VIEW_ROUTES["column"], timeout=COLUMN_TIMEOUT)
+            body_for_cad = {"borehole_data": json.load(open(BOREHOLE_FILE, encoding="utf-8"))}
+            result = _call_cad(VIEW_ROUTES["column"], timeout=COLUMN_TIMEOUT, body=body_for_cad)
         except requests.exceptions.Timeout:
             return jsonify({"status": "error",
                             "message": f"column view timed out ({COLUMN_TIMEOUT}s)"}), 504
@@ -782,7 +785,13 @@ def draw_section():
             _write_json(BOREHOLE_FILE, _translate_borehole(bh))
             if sp is not None:
                 _write_json(SECTION_FILE, _translate_section(sp))
-            result = _call_cad(VIEW_ROUTES["section"], timeout=SECTION_TIMEOUT)
+            # 读落盘后的中文 JSON 作为 body，ARX 从 body 读参数而非旧文件
+            body_for_cad = {
+                "borehole_data": json.load(open(BOREHOLE_FILE, encoding="utf-8")),
+            }
+            if sp is not None:
+                body_for_cad["section_params"] = json.load(open(SECTION_FILE, encoding="utf-8"))
+            result = _call_cad(VIEW_ROUTES["section"], timeout=SECTION_TIMEOUT, body=body_for_cad)
         except requests.exceptions.Timeout:
             return jsonify({"status": "error",
                             "message": f"section view timed out ({SECTION_TIMEOUT}s)"}), 504
@@ -894,7 +903,13 @@ def draw_plan():
             else:
                 _remove_if_exists(PLAN_BASE_FILE)
 
-            result = _call_cad(VIEW_ROUTES["plan"], timeout=PLAN_TIMEOUT)
+            # 读落盘后的中文 JSON 作为 body
+            body_for_cad = {
+                "borehole_data": json.load(open(BOREHOLE_FILE, encoding="utf-8")),
+            }
+            if os.path.exists(PLAN_BASE_FILE):
+                body_for_cad["plan_base"] = json.load(open(PLAN_BASE_FILE, encoding="utf-8"))
+            result = _call_cad(VIEW_ROUTES["plan"], timeout=PLAN_TIMEOUT, body=body_for_cad)
         except requests.exceptions.Timeout:
             return jsonify({
                 "status": "error",
@@ -965,11 +980,16 @@ def draw():
         except Exception as e:
             return jsonify({"status": "error", "message": f"failed to write files: {e}"}), 500
 
-        # 2. 依次调插件出图
+        # 2. 依次调插件出图（body 带完整参数，ARX 从 body 读而非旧文件）
         results, errors = {}, {}
         for v in views:
             try:
-                results[v] = _call_cad(VIEW_ROUTES[v])
+                body_for_cad = {
+                    "borehole_data": json.load(open(BOREHOLE_FILE, encoding="utf-8")),
+                }
+                if section_params is not None:
+                    body_for_cad["section_params"] = json.load(open(SECTION_FILE, encoding="utf-8"))
+                results[v] = _call_cad(VIEW_ROUTES[v], body=body_for_cad)
             except Exception as e:
                 errors[v] = f"{type(e).__name__}: {e}"
 

@@ -313,6 +313,18 @@ void HandleAiTool(struct mg_connection* nc,
 			}
 			// Remove custom hole insert logic, let original business code draw holes from saved file
 		}
+		// Also write section_params from body to profile config files
+		cJSON* sectionParams = cJSON_GetObjectItem(root, "section_params");
+		if (sectionParams) {
+			char* pSecPrinted = cJSON_Print(sectionParams);
+			if (pSecPrinted) {
+				FILE* fpS1 = fopen("D:/project/ies/cad/exploration/Debug/剖面图参数.json", "w");
+				if (fpS1) { fwrite(pSecPrinted, 1, strlen(pSecPrinted), fpS1); fclose(fpS1); }
+				FILE* fpS2 = fopen("D:/project/ies/cad/exploration/project/剖面图参数.json", "w");
+				if (fpS2) { fwrite(pSecPrinted, 1, strlen(pSecPrinted), fpS2); fclose(fpS2); }
+				free(pSecPrinted);
+			}
+		}
 	}
 
     // 5. Post Message to AutoCAD Main Thread

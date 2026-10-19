@@ -12,6 +12,10 @@
 4.  加载成功后命令行无报错，提示已加载模块即可；可将该arx添加到「启动组」，实现AutoCAD启动时自动加载。
     (arxload "D:/project/ies/cad/exploration/Debug2005/KsExploration.arx")
     (arxload "D:/project/ies/cad/exploration/Debug/KsExploration.arx")
+    SLINIT
+(arxload "D:/project/ies/cad/exploration/Debug/KsExploration.arx")
+SLINIT
+
 ## 三、启动7100端口HTTP服务
 ARX加载完成后，在AutoCAD命令行输入：
 ```
