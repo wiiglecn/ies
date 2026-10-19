@@ -162,25 +162,32 @@ void CCreateSectionView::Execute()
     };
     const int nLayerCount = sizeof(arrLayers) / sizeof(arrLayers[0]);
 
+	// showAllLayer();
+	 CUtils::ClearSelection();
+	 if (this->startTrans()) return;
+
+	 // ★ 关键：图层创建必须在 actionBefore() 之后。
+	 //   actionBefore()（ToolDrawBase）内部才会执行 acDocManager->lockDocument(pDoc) 拿到文档**写锁**；
+	 //   在此之前任何 getLayerTable(kForWrite) 都会因文档未取得写锁而失败，
+	 //   CAD 返回 320 = eWasOpenForRead → 14 个图层全部创建失败。
+	 //   本项目 ToolLayer::create_layer 就是「先 actionBefore() 再 getLayerTable(kForWrite)」，可正常建层，
+	 //   所以这里把建层循环整体挪到 actionBefore() 之后，与之一致。
+     int ret = this->actionBefore();
+	 if (ret != 0 ) {
+	 	aboutTrans();
+	 	return;
+	 }
+
     for (int i = 0; i < nLayerCount; ++i)
     {
         // bSetCurrent=false：批量建层不逐个切换当前层，避免 CLAYER 被反复改写
         if (CUtils::EnsureLayer(arrLayers[i], false).isNull())
         {
             CUtils::acutPrintf(_T("[CAD ERROR] 创建图层失败，请检查！ %s\n"), arrLayers[i]);
-            return;   // 若希望失败后继续建剩余图层，把 return 改成 continue
+            continue;
         }
     }
-	// showAllLayer();
-	 CUtils::ClearSelection();
-	 if (this->startTrans()) return;
 
-     int ret = this->actionBefore();
-	 if (ret != 0 ) {
-	 	aboutTrans();
-	 	return;
-	 }
-	 
 	 Acad::ErrorStatus es;
 	 AcGePoint3d basePt;
 
@@ -279,6 +286,7 @@ void CCreateSectionView::Execute()
 			ruler.index = index;
 
 			drawColumn(basePt,gpsObj,ruler);
+			drawHoleNo(basePt,gpsObj,ruler);
 			drawLineFix(basePt,item,ruler);
 			drawLineDrill(basePt,item,ruler);
 
@@ -712,6 +720,52 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 		}
 	}
 
+}
+//画钻孔号标注（ZK1 / ZK2 / ZK3）
+//位置与 drawColumn 的柱体严格对齐：柱右缘 x = left_pre + index*width_per，柱左缘 = x - 15
+void CCreateSectionView::drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule)
+{
+    int gpRows = cJSON_GetArraySize(gpsObj);
+    if (gpRows == 0) return;
+
+    double left         = 23.0;
+    double width_valid  = PAGE_WIDTH - left*2 - 30;
+    double width_per    = (width_valid - 23*2) / gpRows;
+    double left_pre     = basePt.x + left*2 + 30.0;
+    const double COL_W  = 15.0;               // 柱宽，与 drawColumn / drawLineDrill 一致
+
+    ACHAR* layerName = _T("地质-钻孔");
+    CUtils::EnsureLayer(layerName, true);
+
+    ACHAR* pszStyleName = _T("SLNormal");
+
+    cJSON* gpObj = NULL;
+    int index = 0;
+    cJSON_ArrayForEach(gpObj, gpsObj)
+    {
+        if (gpObj == NULL || !cJSON_IsString(gpObj)) { index++; continue; }
+
+        // 孔口高程决定标注的竖直位置
+        double top = 0.0;
+        cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+        if (zkObj != NULL)
+        {
+            cJSON* elevationObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("孔口高程(m)"));
+            if (elevationObj != NULL) top = CUtils::JsonValToDouble(elevationObj);
+        }
+
+        // 钻孔号：JSON 里是 UTF-8，需转 TCHAR（MBCS/Unicode 双编译通吃）
+        TCHAR szNo[64] = { 0 };
+        CUtils::utf8ToTChar(gpObj->valuestring, szNo, ARRAYSIZE(szNo));
+
+        AcGePoint3d pt;
+        pt.x = left_pre + index*width_per - COL_W*0.5;   // 柱中心
+        pt.y = getRuleHeight(rule, top) + 3.0;           // 孔口高程上方 3 个单位
+
+        CUtils::AddDbText(pModelSpace, szNo, pt, 3.0, pszStyleName, DBTA_CENTER, 0.8);
+
+        index++;
+    }
 }
 void CCreateSectionView::drawLineFix(AcGePoint3d& basePt,cJSON* itemObj,const SectionRulerInfo& rule)
 {

@@ -31,6 +31,8 @@ protected:
 	void drawLineFix(AcGePoint3d& basePt,cJSON* itemObj,const SectionRulerInfo& rule);
 	//画钻孔线条
 	void drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const SectionRulerInfo& rule);
+	//画钻孔号（ZK1/ZK2/ZK3）：每根柱体上方居中标注
+	void drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule);
 	//高度尺
 	double getRuleHeight(const SectionRulerInfo& rule,double depth);
 };
