@@ -640,6 +640,17 @@ SectionRulerInfo CCreateSectionView::drawRuler(AcGePoint3d& basePt,double min_zk
 	return info;
 }
 
+// 相邻两个地层记录是否同一地层编号（编录把一层切成多段时编号相同）
+static bool KsSameCode(cJSON* a, cJSON* b)
+{
+    if (a == NULL || b == NULL) return false;
+    cJSON* ca = CUtils::GetJsonObjectItemUtf8(a, _T("地层编号"));
+    cJSON* cb = CUtils::GetJsonObjectItemUtf8(b, _T("地层编号"));
+    if (ca == NULL || cb == NULL) return false;
+    if (!cJSON_IsString(ca) || !cJSON_IsString(cb)) return false;
+    return strcmp(ca->valuestring, cb->valuestring) == 0;
+}
+
 void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule)
 {
 	double zk_divide = rule.mPerGrid;
@@ -732,8 +743,14 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 			double top =  CUtils::JsonValToDouble(elevationObj);
 
 			cJSON* layerObj = CUtils::GetJsonObjectItemUtf8(zkObj,_T("地层列表"));
-			cJSON* item;
-			cJSON_ArrayForEach(item, layerObj){
+			int segCount = cJSON_GetArraySize(layerObj);
+			for (int ii = 0; ii < segCount; ++ii)
+			{
+				cJSON* item = cJSON_GetArrayItem(layerObj, ii);
+				if (item == NULL) continue;
+				// ★同一地层的连续分段只标整层底面（如 ZK5 的 3-2-0 只标 16.12）
+				if (ii + 1 < segCount && KsSameCode(item, cJSON_GetArrayItem(layerObj, ii + 1))) continue;
+
 				cJSON* bottomObj = CUtils::GetJsonObjectItemUtf8(item,_T("进尺至(m)"));
 				if (bottomObj == NULL || !cJSON_IsNumber(bottomObj)) continue;
 				double depth = bottomObj->valuedouble;
@@ -763,8 +780,15 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 			double top =  CUtils::JsonValToDouble(elevationObj);
 
 			cJSON* layerObj = CUtils::GetJsonObjectItemUtf8(zkObj,_T("地层列表"));
+			int segCount2 = cJSON_GetArraySize(layerObj);
 			cJSON* item;
-			cJSON_ArrayForEach(item, layerObj){
+			for (int ii = 0; ii < segCount2; ++ii)
+			{
+				item = cJSON_GetArrayItem(layerObj, ii);
+				if (item == NULL) continue;
+				// ★同一地层的连续分段合并：只有组内最后一段参与填充
+				if (ii + 1 < segCount2 && KsSameCode(item, cJSON_GetArrayItem(layerObj, ii + 1))) continue;
+
 				cJSON* topObj = CUtils::GetJsonObjectItemUtf8(item,_T("进尺自(m)"));
 				cJSON* bottomObj = CUtils::GetJsonObjectItemUtf8(item,_T("进尺至(m)"));
 				if (bottomObj == NULL || !cJSON_IsNumber(bottomObj)
@@ -776,8 +800,19 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 				depth = bottomObj->valuedouble;
 				double secondbottom = top - depth;
 
+				// ★向前回溯同名段，把填充矩形顶界抬到整层顶面（整层一个花纹，不分块）
+				for (int back = ii - 1; back >= 0; --back)
+				{
+					cJSON* prev = cJSON_GetArrayItem(layerObj, back);
+					if (!KsSameCode(prev, item)) break;
+					cJSON* pFrom = CUtils::GetJsonObjectItemUtf8(prev,_T("进尺自(m)"));
+					if (pFrom != NULL && cJSON_IsNumber(pFrom))
+						firstBottom = top - pFrom->valuedouble;
+				}
+
 				cJSON* cSoi = CUtils::GetJsonObjectItemUtf8(item,_T("地层名称"));  // 当前列“土层文字”
-				if (cSoi == NULL || !cJSON_IsString(cSoi)) return;
+				// ★原为 return：任一层缺地层名称会让整个 drawColumn 提前退出、后续孔全部不画
+				if (cSoi == NULL || !cJSON_IsString(cSoi)) continue;
 				CString soilPatName;
 				{
                     std::vector<CString> arrSeg;
@@ -923,7 +958,8 @@ void CCreateSectionView::drawLineFix(AcGePoint3d& basePt,cJSON* itemObj,const Se
 		arrPts.push_back(pt1);
 		arrPts.push_back(pt2);
 
-		CUtils::AddDbPolyline(pModelSpace,arrPts,0.2, false, _T("swx_long"), 5);
+		// 标高线统一用单点长划线（颜色 5 蓝）
+		CUtils::AddDbPolyline(pModelSpace,arrPts,0.2, false, _T("KS_LONGGDASH_DOT"), 5);
 
 		arrPts.clear();
 
@@ -982,7 +1018,8 @@ void CCreateSectionView::drawLineFix(AcGePoint3d& basePt,cJSON* itemObj,const Se
 		arrPts.push_back(pt1);
 		arrPts.push_back(pt2);
 
-		CUtils::AddDbPolyline(pModelSpace,arrPts,0.2, false, _T("swx"), 6);
+		// 标高线统一用单点长划线（颜色 6 洋红）
+		CUtils::AddDbPolyline(pModelSpace,arrPts,0.2, false, _T("KS_LONGGDASH_DOT"), 6);
 
 
 		AcGePoint3d ptDraw;
@@ -1066,6 +1103,23 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const 
                     if (li.depthTo > hole.totalDepth) hole.totalDepth = li.depthTo;
                     hole.layers.push_back(li);
                 }
+
+                // ★同一地层在编录里被切成多个连续同名段时必须合并为一层
+                //   （如 ZK5 的 3-2-0 连着出现 4 段：3.1-4.0-7.0-9.0-16.12）。
+                //   不合并的后果：①柱内画出同一层内部的假分界线；
+                //   ②与邻孔配对时同编号被反复匹配，在柱间连出多条穿层的假连线。
+                if (hole.layers.size() > 1)
+                {
+                    std::vector<KsDrillLayer> merged;
+                    for (size_t k = 0; k < hole.layers.size(); ++k)
+                    {
+                        if (!merged.empty() && merged.back().code.Compare(hole.layers[k].code) == 0)
+                            merged.back().depthTo = hole.layers[k].depthTo;   // 同层 → 延伸底界
+                        else
+                            merged.push_back(hole.layers[k]);
+                    }
+                    hole.layers.swap(merged);
+                }
             }
             holes.push_back(hole);
             idx++;
@@ -1104,7 +1158,8 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const 
             arrPts.push_back(AcGePoint3d(holes[i].xL, getRuleHeight(rule, holes[i].top), 0.0));
             arrPts.push_back(AcGePoint3d(holes[i].x,  getRuleHeight(rule, holes[i].top), 0.0));
         }
-        CUtils::AddDbPolyline(pModelSpace, arrPts, 0.3, false, NULL, 3);
+        // 地面线：与标高线同线型（单点长划线），颜色 3 绿区分
+        CUtils::AddDbPolyline(pModelSpace, arrPts, 0.3, false, _T("KS_LONGGDASH_DOT"), 3);
     }
 
     // ---- 5. 地层线 ----
