@@ -1,0 +1,38 @@
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/feature/create_column_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/feature/create_section_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/feature/create_plan_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/feature/create_plan_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/feature/create_section_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/feature/create_column_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/feature/create_plan_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/feature/create_section_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/feature/create_column_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/feature/create_plan_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/feature/create_plan_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:23] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:24] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:24] "POST /ai/feature/create_plan_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:24] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+[PASS] G1 /api/draw/column 200+必要字段 | expect=200 & status=success & results.column | actual=200 status=success keys=['results', 'status']
+[PASS] G2 /api/draw/section 200 | expect=200 & status=success & results.section | actual=200 status=success keys=['results', 'status']
+[PASS] G3 /api/draw/plan 无底图 degraded_to | expect=200 & degraded_to=process1_no_basemap & 四字段 | actual=200 degraded_to=process1_no_basemap fields=['degraded_to', 'results', 'status', 'warnings']
+[PASS] G4 旧 /api/draw 保留可用 | expect=200 & status=success & results 三视图 | actual=200 status=success results=['column', 'plan', 'section']
+[PASS] G5a /api/draw/plan JSON 含 base_map_url → 400 | expect=400 | actual=400 msg=base_map / base_map_url 仅支持 multipart/fo
+[PASS] G5b /api/draw/plan JSON 含 base_map → 400 | expect=400 | actual=400
+[PASS] G5c [信息] 旧 /api/draw JSON 含 base_map_url | expect=200(旧接口不改, D3) 或 400 | actual=200
+[PASS] G6 SSRF 回环 base_map_url 被拒 | expect=200 & warnings 非空 & degraded_to=process1_no_basemap | actual=200 warnings=['底图未被采用：base_map_url 校验未通过（详见网关日志）'] degraded_to=process1_no_basemap
+[PASS] G7 base_map_url 非 .dwg → 400 | expect=400 | actual=400
+[PASS] G8 base_map 与 base_map_url 同传 → 400 | expect=400 | actual=400
+[PASS] G9 multipart 上传 .dwg → degraded_to=process2_with_basemap | expect=200 & process2_with_basemap | actual=200 degraded_to=process2_with_basemap warnings=[]
+[PASS] G10 borehole_data 非法 JSON → 400 | expect=400 | actual=400
+[PASS] G11 /health（mock CAD 在线） | expect=200 & gateway=ok | actual=200 {'cad': True, 'cad_http': 'http://127.0.0.1:7100', 'gateway': 'ok'}
+[PASS] G12 流程一不残留 plan_base.json | expect=不存在 | actual=不存在
+
+================ 网关端汇总 ================
+用例 14/14 通过；失败 0

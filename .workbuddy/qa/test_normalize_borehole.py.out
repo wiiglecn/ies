@@ -1,0 +1,27 @@
+[PASS] N1a _is_2d_array_format: dict of dict → False | expect=False | actual=False
+[PASS] N1b _is_2d_array_format: dict of list → True | expect=True | actual=True
+[PASS] N1c _is_2d_array_format: empty dict → False | expect=False | actual=False
+[PASS] N2a X/Y 交换: output x = 测量Y=东 | expect=36524930.708 | actual=36524930.708
+[PASS] N2b X/Y 交换: output y = 测量X=北 | expect=2747346.764 | actual=2747346.764
+[PASS] N3a test.type str | expect=<str> | actual=str
+[PASS] N3b test.from str('9.15') | expect='9.15' | actual=9.15
+[PASS] N3c test.to str('9.25') | expect='9.25' | actual=9.25
+[PASS] N3d test.rod_length str('10') | expect='10' | actual=10
+[PASS] N3e test.hits str('2') | expect='2' | actual=2
+[PASS] N4a 孔号双校验: row[4][0]!='钻孔编号' → ValueError 含孔号 | expect=含 'ZK1' | actual=孔 ZK1: 标识校验失败（row[4][0]='孔号' ≠ '钻孔编号' 或 row[4][1]='ZK1' ≠ 顶层
+[PASS] N4b 孔号双校验: row[4][1]≠顶层 key → ValueError 含孔号 | expect=含 'ZK1' | actual=孔 ZK1: 标识校验失败（row[4][0]='钻孔编号' ≠ '钻孔编号' 或 row[4][1]='ZK_WRON
+[PASS] N5 跳过终止行: 仅 2 层（不含 '终孔' 行） | expect=2 | actual=2
+[PASS] N6 跳过负责人行: 仅 2 层（不含 '项目负责人' 行） | expect=2 | actual=2
+[PASS] N7 sample 皆空 → 不输出 sample | expect=False (key not in layer) | actual=absent
+[PASS] N8 test.type 空 → 不输出 test | expect=False (key not in layer) | actual=absent
+[PASS] N9 形态A 走 _translate_borehole（原样保留） | expect=成功 | actual=translate OK
+[PASS] N10a 实仓 ZK1: x=36524930.708 | expect=36524930.708 | actual=36524930.708
+[PASS] N10b 实仓 ZK1: y=2747346.764 | expect=2747346.764 | actual=2747346.764
+[PASS] N10c 实仓 ZK1: elevation=206.05 | expect=206.05 | actual=206.05
+[PASS] N10d 实仓 ZK1: depth=19.2 | expect=19.2 | actual=19.2
+[PASS] N10e 实仓 ZK1: 3 layers | expect=3 | actual=3
+[PASS] N10f 实仓 ZK1 layer1 test 全 string | expect={type:str,from:str,to:str,rod_length:str,hits:str} | actual={'type': 'str', 'from': 'str', 'to': 'str', 'rod_length': 'str', 'hits': 'str'}
+[PASS] N10g 实仓 ZK1 layer1 test 内容 | expect={type='标贯',from='9.15',to='9.25',rod_length='10',hits='2'} | actual={'type': '标贯', 'from': '9.15', 'to': '9.25', 'rod_length': '10', 'hits': '2'}
+[PASS] N11 归一化 → _translate_borehole 全链路 | expect=成功 + 关键字段一致 | actual=translate OK
+
+============ 归一化层单元汇总：25/25 通过 ============
