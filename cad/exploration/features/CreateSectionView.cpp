@@ -962,6 +962,10 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
         cJSON* layerObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("地层列表"));
         if (layerObj == NULL) { index++; continue; }
 
+        cJSON* elevationObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("孔口高程(m)"));
+        if (elevationObj == NULL) { index++; continue; }
+        double top = CUtils::JsonValToDouble(elevationObj);
+
         int segCount = cJSON_GetArraySize(layerObj);
         double x = left_pre + index*width_per + 1.5;   // 柱右缘右侧
 
@@ -1015,7 +1019,9 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
             else
                 txt.Format(_T("(%d) %s"), (int)seq, szName);
 
-            AcGePoint3d pt(x, getRuleHeight(rule, depthMid), 0.0);
+            // ★getRuleHeight 接收标高（不是进尺）：换算 elevation = 孔口高程 - 进尺
+            double elevMid = top - depthMid;
+            AcGePoint3d pt(x, getRuleHeight(rule, elevMid), 0.0);
             CUtils::AddDbText(pModelSpace, txt, pt, 2.2, pszStyleName, DBTA_LEFT, 0.8);
         }
         index++;
