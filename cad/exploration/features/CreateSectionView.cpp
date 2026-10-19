@@ -33,7 +33,8 @@ struct KsDrillLayer
     CString code;       // 地层编号
     double depthFrom;   // 进尺自(m)
     double depthTo;     // 进尺至(m)
-    KsDrillLayer() : depthFrom(0.0), depthTo(0.0) {}
+    bool isRock;        // ★岩石类地层（地层名称首段为"岩石"，如"岩石-灰岩"）
+    KsDrillLayer() : depthFrom(0.0), depthTo(0.0), isRock(false) {}
 };
 struct KsDrillHole
 {
@@ -721,7 +722,7 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 	}
 
 }
-//画钻孔号标注（ZK1 / ZK2 / ZK3）
+//画钻孔标准表示：孔号（上）— 横线（中）— 孔口高程（下），整体悬在地面线上方
 //位置与 drawColumn 的柱体严格对齐：柱右缘 x = left_pre + index*width_per，柱左缘 = x - 15
 void CCreateSectionView::drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule)
 {
@@ -745,24 +746,35 @@ void CCreateSectionView::drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
     {
         if (gpObj == NULL || !cJSON_IsString(gpObj)) { index++; continue; }
 
-        // 孔口高程决定标注的竖直位置
-        double top = 0.0;
         cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
-        if (zkObj != NULL)
-        {
-            cJSON* elevationObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("孔口高程(m)"));
-            if (elevationObj != NULL) top = CUtils::JsonValToDouble(elevationObj);
-        }
+        if (zkObj == NULL) { index++; continue; }
+        cJSON* elevationObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("孔口高程(m)"));
+        if (elevationObj == NULL) { index++; continue; }
+        double top = CUtils::JsonValToDouble(elevationObj);
 
-        // 钻孔号：JSON 里是 UTF-8，需转 TCHAR（MBCS/Unicode 双编译通吃）
+        // 孔号：JSON 里是 UTF-8，需转 TCHAR（MBCS/Unicode 双编译通吃）
         TCHAR szNo[64] = { 0 };
         CUtils::utf8ToTChar(gpObj->valuestring, szNo, ARRAYSIZE(szNo));
 
-        AcGePoint3d pt;
-        pt.x = left_pre + index*width_per - COL_W*0.5;   // 柱中心
-        pt.y = getRuleHeight(rule, top) + 3.0;           // 孔口高程上方 3 个单位
+        double xR  = left_pre + index*width_per;          // 柱右缘
+        double xL  = xR - COL_W;                          // 柱左缘
+        double lineY = getRuleHeight(rule, top);          // 地面线 y
 
+        // ① 孔号（最上层）
+        AcGePoint3d pt(xR - COL_W*0.5, lineY + 8.5, 0.0);
         CUtils::AddDbText(pModelSpace, szNo, pt, 3.0, pszStyleName, DBTA_CENTER, 0.8);
+
+        // ② 横线（中间）：比柱宽两端各伸出 3 个单位
+        std::vector<AcGePoint3d> arrPts;
+        arrPts.push_back(AcGePoint3d(xL - 3.0, lineY + 7.0, 0.0));
+        arrPts.push_back(AcGePoint3d(xR + 3.0, lineY + 7.0, 0.0));
+        CUtils::AddDbPolyline(pModelSpace, arrPts, 0.0);
+
+        // ③ 孔口高程（横线下方）
+        CString sElev;
+        sElev.Format(_T("%.2f"), top);
+        pt.y = lineY + 3.0;
+        CUtils::AddDbText(pModelSpace, sElev, pt, 2.5, pszStyleName, DBTA_CENTER, 0.8);
 
         index++;
     }
@@ -799,7 +811,7 @@ void CCreateSectionView::drawLineFix(AcGePoint3d& basePt,cJSON* itemObj,const Se
 		arrPts.push_back(pt1);
 		arrPts.push_back(pt2);
 
-		CUtils::AddDbPolyline(pModelSpace,arrPts,0.2, false, _T("swx"), 5);
+		CUtils::AddDbPolyline(pModelSpace,arrPts,0.2, false, _T("swx_long"), 5);
 
 		arrPts.clear();
 
@@ -930,6 +942,15 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const 
                     cJSON* cTo = CUtils::GetJsonObjectItemUtf8(layerObj,_T("进尺至(m)"));
                     if (cTo != NULL && cJSON_IsNumber(cTo)) li.depthTo = cTo->valuedouble;
 
+                    // ★岩石类判定：地层名称形如"岩石-灰岩"，取 '-' 前的分类段
+                    cJSON* cName = CUtils::GetJsonObjectItemUtf8(layerObj,_T("地层名称"));
+                    if (cName != NULL && cJSON_IsString(cName))
+                    {
+                        std::vector<CString> arrSeg;
+                        if (CUtils::SplitUtf8(cName->valuestring, '-', arrSeg) > 0)
+                            li.isRock = (arrSeg[0].Compare(_T("岩石")) == 0);
+                    }
+
                     if (li.depthTo > hole.totalDepth) hole.totalDepth = li.depthTo;
                     hole.layers.push_back(li);
                 }
@@ -985,6 +1006,9 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const 
             const KsDrillHole& H = holes[i];
             for (size_t j = 0; j < H.layers.size(); ++j)
             {
+                // ★最下面一层的底面 = 孔底，按需求不画（柱底开放不封口）
+                if (j + 1 >= H.layers.size()) continue;
+
                 double e = H.top - H.layers[j].depthTo;   // ★实际深度 = 孔口高程 - 进尺至
 
                 std::vector<AcGePoint3d> arrPts;
@@ -994,6 +1018,9 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const 
                 Adesk::UInt16 colorIdx;
 				double lw;
                 const ACHAR* pszLt = KsStyleFor(codes, styles, ltNames, H.layers[j].code, colorIdx, lw);
+                // ★土层/岩石分界线：紧邻下方是岩石类地层时，固定用带点的虚线 swx
+                if (H.layers[j+1].isRock)
+                    pszLt = _T("swx");
 				CUtils::AddDbPolyline(pModelSpace, arrPts, lw, false, pszLt, colorIdx);
             }
         }
@@ -1010,6 +1037,10 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const 
             for (size_t a = 0; a < A.layers.size(); ++a)
             {
                 const KsDrillLayer& la = A.layers[a];
+
+                // ★A 最后一层的底面 = 孔底，跨孔连线同样不画
+                if (a + 1 >= A.layers.size()) continue;
+
                 int b = KsFindLayer(B, la.code, usedB);
 
                 double elevA = A.top - la.depthTo;
@@ -1034,6 +1065,11 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const 
                 Adesk::UInt16 colorIdx;
 				double lw;                                                   // ★新增
 				const ACHAR* pszLt = KsStyleFor(codes, styles, ltNames, la.code, colorIdx, lw);
+                // ★任一侧紧邻下方是岩石类地层 → 带点虚线
+                bool rockTop = A.layers[a+1].isRock
+                            || (b >= 0 && (size_t)(b+1) < B.layers.size() && B.layers[b+1].isRock);
+                if (rockTop)
+                    pszLt = _T("swx");
 				CUtils::AddDbPolyline(pModelSpace, arrPts, lw, false, pszLt, colorIdx);
             }
 
@@ -1042,6 +1078,9 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const 
             {
                 if (usedB[b2] != 0) continue;
                 const KsDrillLayer& lb = B.layers[b2];
+
+                // ★B 最后一层的底面 = 孔底，跨孔连线同样不画
+                if (b2 + 1 >= B.layers.size()) continue;
 
                 double elevB2 = B.top - lb.depthTo;
                 int yIdx = -1;
@@ -1056,6 +1095,11 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const 
                 Adesk::UInt16 colorIdx;
 				double lw;                                                   // ★新增
 				const ACHAR* pszLt = KsStyleFor(codes, styles, ltNames, lb.code, colorIdx, lw);
+                // ★任一侧紧邻下方是岩石类地层 → 带点虚线
+                bool rockTop = B.layers[b2+1].isRock
+                            || (yIdx >= 0 && (size_t)(yIdx+1) < A.layers.size() && A.layers[yIdx+1].isRock);
+                if (rockTop)
+                    pszLt = _T("swx");
 				CUtils::AddDbPolyline(pModelSpace, arrPts, lw, false, pszLt, colorIdx);
             }
         }
