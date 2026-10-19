@@ -282,7 +282,7 @@ void CCreateSectionView::Execute()
 			int min_zk_int = (int)min_zk;
 			double zk_divide = (double)(divide*10)/(double)(max_zk_int-min_zk_int);
 
-			drawTable(basePt);
+			drawTable(basePt, gpsObj);
 			SectionRulerInfo ruler = drawRuler(basePt,min_zk,divide,elevation_zero);
 			ruler.index = index;
 
@@ -364,7 +364,7 @@ void CCreateSectionView::showAllLayer()
 
 }
 
-void CCreateSectionView::drawTable(AcGePoint3d& basePt)
+void CCreateSectionView::drawTable(AcGePoint3d& basePt, cJSON* gpsObj)
 {
 	double left=23.0;
 	double bottom = 60.0;
@@ -437,6 +437,118 @@ void CCreateSectionView::drawTable(AcGePoint3d& basePt)
 	{
 		pt2.y += 8.0;
 		CUtils::AddDbText(pModelSpace,_T("孔   深 (m)"),pt2,2.4,pszStyleName,DBTA_CENTER,1.0);
+	}
+
+	// === 表格数据填充：每个钻孔列对应表中一格，列中心与 drawColumn 柱体中心严格对齐 ===
+	struct KsHoleTab { bool valid; double depth; double maxBlow; double x; double y; KsHoleTab():valid(false),depth(0),maxBlow(-1),x(0),y(0){} };
+	std::vector<KsHoleTab> holes;
+	int n = 0;
+	if (gpsObj != NULL) n = cJSON_GetArraySize(gpsObj);
+	holes.assign(n, KsHoleTab());
+	for (int idx = 0; idx < n; ++idx)
+	{
+		cJSON* gpObj = cJSON_GetArrayItem(gpsObj, idx);
+		if (gpObj == NULL || !cJSON_IsString(gpObj)) continue;
+		cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+		if (zkObj == NULL) continue;
+		holes[idx].valid = true;
+		cJSON* xObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("X坐标(m)"));
+		cJSON* yObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("Y坐标(m)"));
+		if (xObj != NULL) holes[idx].x = CUtils::JsonValToDouble(xObj);
+		if (yObj != NULL) holes[idx].y = CUtils::JsonValToDouble(yObj);
+		cJSON* layersObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("地层列表"));
+		if (layersObj != NULL)
+		{
+			int last = cJSON_GetArraySize(layersObj) - 1;
+			if (last >= 0)
+			{
+				cJSON* row = cJSON_GetArrayItem(layersObj, last);
+				cJSON* cTo = CUtils::GetJsonObjectItemUtf8(row, _T("进尺至(m)"));
+				if (cTo != NULL && cJSON_IsNumber(cTo)) holes[idx].depth = cTo->valuedouble;
+			}
+			// 击数：取该孔所有原位测试的最大锤击数
+			cJSON* ly = NULL;
+			cJSON_ArrayForEach(ly, layersObj)
+			{
+				cJSON* yw = CUtils::GetJsonObjectItemUtf8(ly, _T("原位测试"));
+				if (yw == NULL || !cJSON_IsObject(yw)) continue;
+				cJSON* bObj = CUtils::GetJsonObjectItemUtf8(yw, _T("锤击数(击)"));
+				if (bObj == NULL) continue;
+				double b = 0;
+				if (cJSON_IsString(bObj))
+				{
+					// 空串（如 "锤击数(击)": ""）不做计数，避免 atof("")=0 显示成0
+					if (bObj->valuestring == NULL || bObj->valuestring[0] == '\0') continue;
+					b = atof(bObj->valuestring);
+				}
+				else if (cJSON_IsNumber(bObj)) b = bObj->valuedouble;
+				else continue;
+				if (holes[idx].maxBlow < 0 || b > holes[idx].maxBlow) holes[idx].maxBlow = b;
+			}
+		}
+	}
+	if (n > 0)
+	{
+		// 横向布点（与 drawColumn 完全一致）
+		double width_valid = PAGE_WIDTH - left*2 - 30;
+		double width_per   = (width_valid - 23*2) / n;
+		double left_pre    = basePt.x + left*2 + 30.0;
+		const double COL_W = 15.0;
+
+		// 钻孔列中心（与 drawColumn 柱中心严格一致）
+		std::vector<double> c(n);
+		for (int i = 0; i < n; ++i) c[i] = left_pre + i*width_per - COL_W*0.5;
+
+		// 数据区 x 范围
+		double dataLeft  = pt1.x + 30.0;
+		double dataRight = pt1.x + width_table;
+
+		// 竖向分界线：相邻钻孔柱中心的中点
+		pt2.y = pt1.y;
+		pt3.y = pt1.y + height*rows;
+		for (int i = 1; i < n; ++i)
+		{
+			double bx = (c[i-1] + c[i]) * 0.5;
+			if (bx <= dataLeft || bx >= dataRight) continue;
+			pt2.x = bx; pt3.x = bx;
+			CUtils::AddLine(pModelSpace, pt2, pt3);
+		}
+
+		// 行 y 中心（自下而上：动探击数 / 钻孔间距 / 孔深）
+		double yDT  = pt1.y + 4.0;
+		double yGap = pt1.y + 12.0;
+		double yDep = pt1.y + 20.0;
+
+		for (int i = 0; i < n; ++i)
+		{
+			if (!holes[i].valid) continue;
+			AcGePoint3d ptv;
+			ptv.x = c[i];
+
+			// 孔深（顶行）
+			CString sDep; sDep.Format(_T("%.2f"), holes[i].depth);
+			ptv.y = yDep;
+			CUtils::AddDbText(pModelSpace, sDep, ptv, 2.4, pszStyleName, DBTA_CENTER, 1.0);
+
+			// 钻孔间距（中间行；首个孔留空）
+			if (i > 0)
+			{
+				double dx = holes[i].x - holes[i-1].x;
+				double dy = holes[i].y - holes[i-1].y;
+				double sp = sqrt(dx*dx + dy*dy);
+				CString sSp; sSp.Format(_T("%.1f"), sp);
+				ptv.y = yGap;
+				CUtils::AddDbText(pModelSpace, sSp, ptv, 2.4, pszStyleName, DBTA_CENTER, 1.0);
+			}
+
+			// 动探击数（底行；maxBlow>=0 表示有数据）
+			if (holes[i].maxBlow >= 0)
+			{
+				CString sB; sB.Format(_T("%.0f"), holes[i].maxBlow);
+				ptv.y = yDT;
+				CUtils::AddDbText(pModelSpace, sB, ptv, 2.4, pszStyleName, DBTA_CENTER, 1.0);
+			}
+		}
 	}
 
 	

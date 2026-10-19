@@ -21,8 +21,8 @@ protected:
 	PatHatchLoader* patLoader;
 
 
-	//画标注表格
-	void drawTable(AcGePoint3d& basePt);
+	//画标注表格（含每个钻孔列的孔深/钻孔间距/动探击数）
+	void drawTable(AcGePoint3d& basePt, cJSON* gpsObj);
 	//画标尺
 	SectionRulerInfo drawRuler(AcGePoint3d& basePt,double min_zk,int divide,double elevation_zero);
 	//画柱状条
