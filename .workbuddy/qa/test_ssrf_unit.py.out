@@ -1,0 +1,11 @@
+[PASS] S1 _is_loopback('127.0.0.1') | expect=True | actual=True
+[PASS] S2 _is_loopback('localhost') | expect=True | actual=True
+[PASS] S3 _ssrf_check('127.0.0.1') 禁回环 | expect=False | actual=False
+[PASS] S4 _ssrf_check('8.8.8.8') 公网放行 | expect=True | actual=True
+[PASS] S5 _ssrf_check('') 空 host | expect=False | actual=False
+[PASS] S6 非 http(s) 协议拒绝 | expect=ValueError 'only http(s) allowed' | actual=only http(s) allowed
+[PASS] S7 白名单生效时公网 8.8.8.8 被拒 | expect=False | actual=False
+[PASS] S8 白名单命中 10.1.2.3 放行 | expect=True | actual=True
+[PASS] S9 白名单生效时回环 127.0.0.1 被拒 | expect=False | actual=False
+
+============ SSRF 单元汇总：9/9 通过 ============

@@ -1,0 +1,48 @@
+﻿
+Microsoft (R) Visual Studio 8.0.50727.42 �档
+��Ȩ���� (C) Microsoft Corp 1984-2005����������Ȩ����
+1>------ ���������: ��Ŀ: exploration, ����: Debug Win32 ------
+1>���ڴ������Ϳ�...
+1>Processing .\CustPalette.idl
+1>CustPalette.idl
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\oaidl.idl
+1>oaidl.idl
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\objidl.idl
+1>objidl.idl
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\unknwn.idl
+1>unknwn.idl
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\wtypes.idl
+1>wtypes.idl
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\basetsd.h
+1>basetsd.h
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\guiddef.h
+1>guiddef.h
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\ocidl.idl
+1>ocidl.idl
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\oleidl.idl
+1>oleidl.idl
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\servprov.idl
+1>servprov.idl
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\urlmon.idl
+1>urlmon.idl
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\msxml.idl
+1>msxml.idl
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\oaidl.acf
+1>oaidl.acf
+1>Processing d:\Program Files (x86)\Microsoft Visual Studio 8\VC\PlatformSDK\include\ocidl.acf
+1>ocidl.acf
+1>��������...
+1>   ���ڴ����� Debug/CustPalette.lib �Ͷ��� Debug/CustPalette.exp
+1>rxapi.lib(libinit.obj) : warning LNK4099: δ�ҵ� PDB��rxapi.pdb��(ʹ�á�..\lib\2007\rxapi.lib�����ڡ�d:\project\ies\cad\exploration\Debug\rxapi.pdb����Ѱ��)���������Ӷ�����ͬû�е�����Ϣһ��
+1>rxapi.lib(nullobid.obj) : warning LNK4099: δ�ҵ� PDB��rxapi.pdb��(ʹ�á�..\lib\2007\rxapi.lib�����ڡ�d:\project\ies\cad\exploration\Debug\rxapi.pdb����Ѱ��)���������Ӷ�����ͬû�е�����Ϣһ��
+1>acedapi.lib(acedstub.obj) : warning LNK4099: δ�ҵ� PDB��corehdr.pdb��(ʹ�á�..\lib\2007\acedapi.lib�����ڡ�d:\project\ies\cad\exploration\Debug\corehdr.pdb����Ѱ��)���������Ӷ�����ͬû�е�����Ϣһ��
+1>����Ƕ���嵥...
+1>����ִ�����ɺ��¼�...
+1>������ 0 ���ļ�
+1>������ 0 ���ļ�
+1>������ 0 ���ļ�
+1>������ 0 ���ļ�
+1>������ 0 ���ļ�
+1>������־�����ڡ�file://d:\project\ies\cad\exploration\Debug\BuildLog.htm��
+1>exploration - 0 ������3 ������
+========== ����: 1 �ѳɹ�, 0 ��ʧ��, 0 ����, 0 ������ ==========

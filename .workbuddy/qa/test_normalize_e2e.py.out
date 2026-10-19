@@ -1,0 +1,28 @@
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/feature/create_column_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/feature/create_section_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/feature/create_plan_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/feature/create_plan_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/feature/create_section_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/feature/create_column_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/feature/create_column_view HTTP/1.1" 200 -
+127.0.0.1 - - [15/Oct/2026 10:15:21] "POST /ai/tool/zoom_extents HTTP/1.1" 200 -
+[PASS] E1 /api/draw/column 形态B → 200 | expect=200 | actual=200
+[PASS] E2 /api/draw/section 形态B → 200 | expect=200 | actual=200
+[PASS] E3 /api/draw/plan 形态B → 200 | expect=200 | actual=200
+[PASS] E4 /api/draw 形态B → 200 | expect=200 | actual=200
+[PASS] E5 落盘 ZK1.X坐标(m)=36524930.708 | expect=36524930.708 | actual=36524930.708
+[PASS] E6 落盘 ZK1.Y坐标(m)=2747346.764 | expect=2747346.764 | actual=2747346.764
+[PASS] E7 落盘 ZK1.孔口高程(m)=206.05 | expect=206.05 | actual=206.05
+[PASS] E8 落盘 ZK1.终孔深度(m)=19.2 | expect=19.2 | actual=19.2
+[PASS] E9 落盘 ZK1.地层列表 3 层 | expect=3 | actual=3
+[PASS] E10 落盘 ZK1 layer1.原位测试.起(m)='9.15' | expect='9.15' | actual=9.15
+[PASS] E11 落盘 ZK1 layer1.原位测试.杆长(m)='10' | expect='10' | actual=10
+[PASS] E12 落盘 ZK1 layer1.原位测试.锤击数(击)='2' | expect='2' | actual=2
+[PASS] E13 /api/draw/column 形态A 仍可用 → 200 | expect=200 | actual=200
+[PASS] E14 孔号双校验失败 → 400 含孔号 | expect=400 + 含 WRONG | actual=status=400 msg=孔 WRONG: 标识校验失败（row[4][0]='孔号' ≠ '钻孔编号' 或 row[4][1]='WRONG' 
+
+============ E2E 汇总：14/14 通过 ============
