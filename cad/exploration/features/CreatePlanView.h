@@ -23,6 +23,8 @@ protected:
     void CreateLegend(std::vector<CString>& arrUsedHoles,
 					const CString& fistCadBlockUrl,
                     const CString& blockStyleName);
-	//生成后把视图缩放到本次钻孔范围（否则钻孔落在大坐标处，当前视图看不见）
-	void ZoomToHoles(const std::vector<AcGePoint3d>& arrHole);
+	//生成后把视图缩放到「底图范围∪钻孔范围」（否则钻孔落在大坐标处，当前视图看不见）
+	//baseMin/baseMax = 插入钻孔前的底图包围盒，同时用于诊断钻孔与底图是否同一坐标系
+	void ZoomToHoles(const std::vector<AcGePoint3d>& arrHole,
+		const AcGePoint3d& baseMin, const AcGePoint3d& baseMax, bool bHasBase);
 };

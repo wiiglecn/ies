@@ -52,6 +52,29 @@ void CCreatePlanView::Execute()
 	std::vector<CString> arrUsedHoles;   // 收集用到的块名（去重）
 	std::vector<AcGePoint3d> arrInsert;  // 收集钻孔插入点，供生成后自动缩放视图用
 	CString fistCadBlockUrl,firstBlockStyleName; 
+
+	// ★记录底图范围（插入钻孔之前取 EXTMIN/EXTMAX），用于诊断钻孔与底图是否同一坐标系
+	AcGePoint3d baseMin, baseMax;
+	bool bHasBase = false;
+	{
+		AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
+		if (pDb != NULL)
+		{
+			baseMin = pDb->extmin();
+			baseMax = pDb->extmax();
+			if (baseMin.x < baseMax.x && baseMin.y < baseMax.y)
+			{
+				bHasBase = true;
+				CUtils::acutPrintf(_T("[平面图] 底图范围：X[%.2f~%.2f] Y[%.2f~%.2f]\n"),
+					baseMin.x, baseMax.x, baseMin.y, baseMax.y);
+			}
+			else
+			{
+				CUtils::acutPrintf(_T("[平面图] 底图范围：读取失败（当前图形为空）\n"));
+			}
+		}
+	}
+
 	bool bFirstSaved = false;
 	cJSON* item = NULL;
 	cJSON_ArrayForEach(item, s_pJsonData) {
@@ -177,27 +200,69 @@ void CCreatePlanView::Execute()
 	this->actionEnd();
 	this->regen();
 
-	// ★生成完成后把视图缩放到本次钻孔范围，否则钻孔在几十万坐标处，当前视图里根本看不到
-	ZoomToHoles(arrInsert);
+	// ★生成完成后把视图缩放到（底图 ∪ 钻孔）范围，否则钻孔在大坐标处当前视图看不到
+	ZoomToHoles(arrInsert, baseMin, baseMax, bHasBase);
 }
 
-//缩放到本次生成的全部钻孔范围（含块半径与右侧孔号/高程标注的余量）
-void CCreatePlanView::ZoomToHoles(const std::vector<AcGePoint3d>& arrHole)
+//缩放到「底图范围 ∪ 钻孔范围」（含块半径与右侧孔号/高程标注的余量）
+//baseMin/baseMax 为插入钻孔前的底图包围盒，同时用于诊断两者是否同一坐标系
+void CCreatePlanView::ZoomToHoles(const std::vector<AcGePoint3d>& arrHole,
+	const AcGePoint3d& baseMin, const AcGePoint3d& baseMax, bool bHasBase)
 {
-	if (arrHole.empty()) return;
+	bool bHas = false;
+	double minX = 0.0, maxX = 0.0, minY = 0.0, maxY = 0.0;
 
-	double minX = arrHole[0].x, maxX = arrHole[0].x;
-	double minY = arrHole[0].y, maxY = arrHole[0].y;
-	for (size_t i = 1; i < arrHole.size(); ++i)
+	if (bHasBase)
 	{
-		if (arrHole[i].x < minX) minX = arrHole[i].x;
-		if (arrHole[i].x > maxX) maxX = arrHole[i].x;
-		if (arrHole[i].y < minY) minY = arrHole[i].y;
-		if (arrHole[i].y > maxY) maxY = arrHole[i].y;
+		minX = baseMin.x; maxX = baseMax.x;
+		minY = baseMin.y; maxY = baseMax.y;
+		bHas = true;
 	}
 
+	if (!arrHole.empty())
+	{
+		double hMinX = arrHole[0].x, hMaxX = arrHole[0].x;
+		double hMinY = arrHole[0].y, hMaxY = arrHole[0].y;
+		for (size_t i = 1; i < arrHole.size(); ++i)
+		{
+			if (arrHole[i].x < hMinX) hMinX = arrHole[i].x;
+			if (arrHole[i].x > hMaxX) hMaxX = arrHole[i].x;
+			if (arrHole[i].y < hMinY) hMinY = arrHole[i].y;
+			if (arrHole[i].y > hMaxY) hMaxY = arrHole[i].y;
+		}
+
+		CUtils::acutPrintf(_T("[平面图] 钻孔范围：X[%.2f~%.2f] Y[%.2f~%.2f]\n"),
+			hMinX, hMaxX, hMinY, hMaxY);
+
+		// 诊断：钻孔是否落在底图范围内
+		if (bHasBase)
+		{
+			bool bInside = (hMinX >= baseMin.x && hMaxX <= baseMax.x
+						 && hMinY >= baseMin.y && hMaxY <= baseMax.y);
+			CUtils::acutPrintf(_T("[平面图] 钻孔%s底图范围内；中心偏移 dX=%.2f dY=%.2f\n"),
+				bInside ? _T("在") : _T("不在"),
+				(hMinX + hMaxX) / 2.0 - (baseMin.x + baseMax.x) / 2.0,
+				(hMinY + hMaxY) / 2.0 - (baseMin.y + baseMax.y) / 2.0);
+		}
+
+		if (!bHas)
+		{
+			minX = hMinX; maxX = hMaxX; minY = hMinY; maxY = hMaxY;
+			bHas = true;
+		}
+		else
+		{
+			if (hMinX < minX) minX = hMinX;
+			if (hMaxX > maxX) maxX = hMaxX;
+			if (hMinY < minY) minY = hMinY;
+			if (hMaxY > maxY) maxY = hMaxY;
+		}
+	}
+
+	if (!bHas) return;
+
 	const double MARGIN = 30.0;              // 块半径 2.15 + 右侧标注宽度，留足余量
-	// 只有一个孔（或孔距过小）时给最小窗口，避免零面积窗口被 CAD 拒绝
+	// 窗口过小时给最小窗口，避免零面积窗口被 CAD 拒绝
 	if (maxX - minX < 1.0) { minX -= 50.0; maxX += 50.0; }
 	if (maxY - minY < 1.0) { minY -= 50.0; maxY += 50.0; }
 
@@ -205,7 +270,7 @@ void CCreatePlanView::ZoomToHoles(const std::vector<AcGePoint3d>& arrHole)
 	cmd.Format(_T("_.ZOOM _W %f,%f %f,%f "),
 		minX - MARGIN, minY - MARGIN, maxX + MARGIN, maxY + MARGIN);
 	acDocManager->sendStringToExecute(acDocManager->curDocument(), cmd);
-	CUtils::acutPrintf(_T("[平面图] 视图已缩放到钻孔范围：%.3f,%.3f ~ %.3f,%.3f\n"),
+	CUtils::acutPrintf(_T("[平面图] 视图已缩放到 %.3f,%.3f ~ %.3f,%.3f\n"),
 		minX - MARGIN, minY - MARGIN, maxX + MARGIN, maxY + MARGIN);
 }
 void CCreatePlanView::ClearExtDbCache()
