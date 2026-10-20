@@ -1023,9 +1023,10 @@ static bool KsDescField(const CString& sDesc, const CString& sKey, CString& vOut
 
 //由 地层年代/堆积年代/地层成因 推时代成因代号，识别成功返回 true（如 "Q\Sal^4;"）
 //MText 堆叠格式 \S上^下;：成因代号在上标、年代数字在下标
-static bool KsEraIdentity(const CString& sEra, const CString& sAccu, const CString& sCause, CString& sCode)
+static bool KsEraIdentity(const CString& sEra, const CString& sAccu, const CString& sCause,
+                          CString& sMain, CString& sSub, CString& sSup)
 {
-    sCode.Empty();
+    sMain.Empty(); sSub.Empty(); sSup.Empty();
     if (sEra.IsEmpty()) return false;
     TCHAR szBase[4] = { 0 };
     if (sEra.Find(_T("第四")) >= 0)      szBase[0] = _T('Q');
@@ -1039,7 +1040,6 @@ static bool KsEraIdentity(const CString& sEra, const CString& sAccu, const CStri
     else if (sEra.Find(_T("泥盆")) >= 0) szBase[0] = _T('D');
     else return false;
 
-    CString sSub;   // 下标：年代数字
     if (sEra.Find(_T("全新")) >= 0 || sAccu.Find(_T("全新")) >= 0
         || sAccu.Find(_T("近十年")) >= 0) sSub = _T("4");
     else if (sEra.Find(_T("上更新")) >= 0) sSub = _T("3");
@@ -1050,7 +1050,6 @@ static bool KsEraIdentity(const CString& sEra, const CString& sAccu, const CStri
     else if (sEra.Find(_T("中统")) >= 0)   sSub = _T("2");
     else if (sEra.Find(_T("上统")) >= 0)   sSub = _T("3");
 
-    CString sSup;   // 上标：成因代号
     if (sCause.Find(_T("冲洪积")) >= 0)      sSup = _T("al+pl");
     else if (sCause.Find(_T("残坡积")) >= 0) sSup = _T("el+dl");
     else if (sCause.Find(_T("填土")) >= 0)   sSup = _T("ml");
@@ -1064,16 +1063,35 @@ static bool KsEraIdentity(const CString& sEra, const CString& sAccu, const CStri
     else if (sCause.Find(_T("冰积")) >= 0)   sSup = _T("gl");
     else if (sCause.Find(_T("沼泽")) >= 0)   sSup = _T("h");
 
-    sCode = szBase;
-    if (!sSub.IsEmpty() || !sSup.IsEmpty())
-    {
-        sCode += _T("\\S");
-        sCode += sSup;
-        sCode += _T("^");
-        sCode += sSub;
-        sCode += _T(";");
-    }
+    sMain = szBase;
     return true;
+}
+
+//直接画出时代成因代号：主字母 + 下标年代 + 上标成因，排成 Q4ml 的样式（4 在下、ml 在上）
+//不用 MText 堆叠、不用 Unicode 上下标字形，三段都是 ASCII，任何字体（含 SHX）都能正常出图
+static void KsDrawEraCode(AcDbBlockTableRecord* pMS, const CString& sMain, const CString& sSub,
+                          const CString& sSup, const AcGePoint3d& ptAnchor,
+                          bool bToLeft, const ACHAR* pszStyle)
+{
+    if (pMS == NULL || sMain.IsEmpty()) return;
+    const double H  = 2.0;    // 主字母字高
+    const double HS = 1.2;    // 上下标字高
+    const double WF = 0.8;    // 宽高比
+    const double CW = 0.62;   // ASCII 单字宽（相对字高）
+    double wMain = sMain.GetLength() * H  * CW * WF;
+    double wSub  = sSub.GetLength()  * HS * CW * WF;
+    double wSup  = sSup.GetLength()  * HS * CW * WF;
+    double total = wMain + wSub + wSup;
+    // bToLeft：代号整体右对齐到 ptAnchor（末孔层名靠右，代号放其左侧）
+    double x0 = bToLeft ? (ptAnchor.x - total) : ptAnchor.x;
+    CUtils::AddDbText(pMS, sMain, AcGePoint3d(x0, ptAnchor.y, 0.0), H, pszStyle, DBTA_LEFT, WF);
+    double x1 = x0 + wMain;
+    if (!sSub.IsEmpty())
+        CUtils::AddDbText(pMS, sSub, AcGePoint3d(x1, ptAnchor.y - 0.4, 0.0),
+                          HS, pszStyle, DBTA_LEFT, WF);
+    if (!sSup.IsEmpty())
+        CUtils::AddDbText(pMS, sSup, AcGePoint3d(x1 + wSub, ptAnchor.y + 1.05, 0.0),
+                          HS, pszStyle, DBTA_LEFT, WF);
 }
 
 
@@ -1191,23 +1209,21 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
                 CUtils::utf8ToTChar(cDes->valuestring, szDes, ARRAYSIZE(szDes));
                 sDesc = szDes;
             }
-            CString sEra, sAccu, sCause, sCode;
+            CString sEra, sAccu, sCause, sMain, sSub, sSup;
             KsDescField(sDesc, _T("地层年代"), sEra);
             KsDescField(sDesc, _T("堆积年代"), sAccu);
             KsDescField(sDesc, _T("地层成因"), sCause);
-            if (txtId != AcDbObjectId::kNull && KsEraIdentity(sEra, sAccu, sCause, sCode))
+            if (txtId != AcDbObjectId::kNull
+                && KsEraIdentity(sEra, sAccu, sCause, sMain, sSub, sSup))
             {
                 double nameW = 0.0, nameH = 0.0;
                 CUtils::GetEntExtentById(txtId, nameW, nameH);
                 if (nameW <= 0.01) nameW = txt.GetLength() * 1.6;   // 量不到宽度时按字数估
                 const double GAP = 1.0;
-                const double TXT_H = 2.0;      // 代号字高，堆叠部分由 CAD 自动缩小
                 // 末孔层名靠左（右对齐），代号接层名左侧；其余孔接层名右侧
                 AcGePoint3d ptCode(bLastCol ? (pt.x - nameW - GAP) : (pt.x + nameW + GAP),
-                                   pt.y + 1.1, 0.0);
-                AcDbMText::AttachmentPoint attach =
-                    bLastCol ? AcDbMText::kMiddleRight : AcDbMText::kMiddleLeft;
-                CUtils::AddDbMText(pModelSpace, sCode, ptCode, TXT_H, 0.0, pszStyleName, attach);
+                                   pt.y, 0.0);
+                KsDrawEraCode(pModelSpace, sMain, sSub, sSup, ptCode, bLastCol, pszStyleName);
             }
         }
         index++;
