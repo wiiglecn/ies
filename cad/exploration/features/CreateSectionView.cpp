@@ -1003,6 +1003,80 @@ void CCreateSectionView::drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
         index++;
     }
 }
+// ---- 时代成因标识（层名后带框代号，如 Q4 上标 al）：由"成分及其他"里的地层年代/堆积年代/地层成因推算 ----
+//取描述里 "关键字:值" 的值（到 , ， ; ； 为止）
+static bool KsDescField(const CString& sDesc, const CString& sKey, CString& vOut)
+{
+    vOut.Empty();
+    int pos = sDesc.Find(sKey);
+    if (pos < 0) return false;
+    int k = pos + sKey.GetLength();
+    while (k < sDesc.GetLength()
+        && (sDesc[k] == _T(':') || sDesc[k] == _T('：') || sDesc[k] == _T(' '))) k++;
+    while (k < sDesc.GetLength()
+        && sDesc[k] != _T(',') && sDesc[k] != _T('，')
+        && sDesc[k] != _T(';') && sDesc[k] != _T('；'))
+    { vOut += sDesc[k]; k++; }
+    vOut.Trim();
+    return !vOut.IsEmpty();
+}
+
+//由 地层年代/堆积年代/地层成因 推时代成因代号，识别成功返回 true（如 "Q\Sal^4;"）
+//MText 堆叠格式 \S上^下;：成因代号在上标、年代数字在下标
+static bool KsEraIdentity(const CString& sEra, const CString& sAccu, const CString& sCause, CString& sCode)
+{
+    sCode.Empty();
+    if (sEra.IsEmpty()) return false;
+    TCHAR szBase[4] = { 0 };
+    if (sEra.Find(_T("第四")) >= 0)      szBase[0] = _T('Q');
+    else if (sEra.Find(_T("石炭")) >= 0) szBase[0] = _T('C');
+    else if (sEra.Find(_T("二叠")) >= 0) szBase[0] = _T('P');
+    else if (sEra.Find(_T("三叠")) >= 0) szBase[0] = _T('T');
+    else if (sEra.Find(_T("侏罗")) >= 0) szBase[0] = _T('J');
+    else if (sEra.Find(_T("白垩")) >= 0) szBase[0] = _T('K');
+    else if (sEra.Find(_T("奥陶")) >= 0) szBase[0] = _T('O');
+    else if (sEra.Find(_T("志留")) >= 0) szBase[0] = _T('S');
+    else if (sEra.Find(_T("泥盆")) >= 0) szBase[0] = _T('D');
+    else return false;
+
+    CString sSub;   // 下标：年代数字
+    if (sEra.Find(_T("全新")) >= 0 || sAccu.Find(_T("全新")) >= 0
+        || sAccu.Find(_T("近十年")) >= 0) sSub = _T("4");
+    else if (sEra.Find(_T("上更新")) >= 0) sSub = _T("3");
+    else if (sEra.Find(_T("中更新")) >= 0) sSub = _T("2");
+    else if (sEra.Find(_T("下更新")) >= 0) sSub = _T("1");
+    else if (sEra.Find(_T("更新")) >= 0)   sSub = _T("3");
+    else if (sEra.Find(_T("下统")) >= 0)   sSub = _T("1");
+    else if (sEra.Find(_T("中统")) >= 0)   sSub = _T("2");
+    else if (sEra.Find(_T("上统")) >= 0)   sSub = _T("3");
+
+    CString sSup;   // 上标：成因代号
+    if (sCause.Find(_T("冲洪积")) >= 0)      sSup = _T("al+pl");
+    else if (sCause.Find(_T("残坡积")) >= 0) sSup = _T("el+dl");
+    else if (sCause.Find(_T("填土")) >= 0)   sSup = _T("ml");
+    else if (sCause.Find(_T("冲积")) >= 0)   sSup = _T("al");
+    else if (sCause.Find(_T("洪积")) >= 0)   sSup = _T("pl");
+    else if (sCause.Find(_T("坡积")) >= 0)   sSup = _T("dl");
+    else if (sCause.Find(_T("残积")) >= 0)   sSup = _T("el");
+    else if (sCause.Find(_T("湖积")) >= 0)   sSup = _T("l");
+    else if (sCause.Find(_T("海积")) >= 0)   sSup = _T("m");
+    else if (sCause.Find(_T("风积")) >= 0)   sSup = _T("eol");
+    else if (sCause.Find(_T("冰积")) >= 0)   sSup = _T("gl");
+    else if (sCause.Find(_T("沼泽")) >= 0)   sSup = _T("h");
+
+    sCode = szBase;
+    if (!sSub.IsEmpty() || !sSup.IsEmpty())
+    {
+        sCode += _T("\\S");
+        sCode += sSup;
+        sCode += _T("^");
+        sCode += sSub;
+        sCode += _T(";");
+    }
+    return true;
+}
+
+
 //画土层序号+名称：每根柱体右侧、每个整层层高中部标注（如 "② 黏土"）
 //序号 = 地层编号首位（"2-0-0"→2→②）；名称 = 地层名称 '-' 后部分（"黏性土-黏土"→黏土）
 //同一地层的连续分段合并后只标一次，位置取整层层高中点
@@ -1106,7 +1180,35 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
             // ★getRuleHeight 接收标高（不是进尺）：换算 elevation = 孔口高程 - 进尺
             double elevMid = top - depthMid;
             AcGePoint3d pt(x, getRuleHeight(rule, elevMid), 0.0);
-            CUtils::AddDbText(pModelSpace, txt, pt, 2.2, pszStyleName, hAlign, 0.8);
+            AcDbObjectId txtId = CUtils::AddDbText(pModelSpace, txt, pt, 2.2, pszStyleName, hAlign, 0.8);
+
+            // 时代成因标识：描述里带 地层年代/地层成因 时，层名后画带框堆叠代号（如 Q4 上标 al）
+            CString sDesc;
+            cJSON* cDes = CUtils::GetJsonObjectItemUtf8(item, _T("成分及其他"));
+            if (cDes != NULL && cJSON_IsString(cDes) && cDes->valuestring[0] != '\0')
+            {
+                TCHAR szDes[512] = { 0 };
+                CUtils::utf8ToTChar(cDes->valuestring, szDes, ARRAYSIZE(szDes));
+                sDesc = szDes;
+            }
+            CString sEra, sAccu, sCause, sCode;
+            KsDescField(sDesc, _T("地层年代"), sEra);
+            KsDescField(sDesc, _T("堆积年代"), sAccu);
+            KsDescField(sDesc, _T("地层成因"), sCause);
+            if (txtId != AcDbObjectId::kNull && KsEraIdentity(sEra, sAccu, sCause, sCode))
+            {
+                double nameW = 0.0, nameH = 0.0;
+                CUtils::GetEntExtentById(txtId, nameW, nameH);
+                if (nameW <= 0.01) nameW = txt.GetLength() * 1.6;   // 量不到宽度时按字数估
+                const double BOX_W = 8.0, BOX_H = 4.6, GAP = 1.2, TXT_H = 1.8;
+                // 末孔层名靠左（右对齐），框放层名左侧；其余孔框放层名右侧
+                double cxBox = bLastCol ? (pt.x - nameW - GAP - BOX_W / 2.0)
+                                        : (pt.x + nameW + GAP + BOX_W / 2.0);
+                double cyBox = pt.y + TXT_H;
+                CUtils::AddDbRect(pModelSpace, AcGePoint3d(cxBox, cyBox, 0.0), BOX_W, BOX_H, 0.0);
+                CUtils::AddDbMText(pModelSpace, sCode, AcGePoint3d(cxBox, cyBox, 0.0),
+                                   TXT_H, 0.0, pszStyleName, AcDbMText::kMiddleCenter);
+            }
         }
         index++;
     }
