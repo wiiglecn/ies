@@ -221,60 +221,46 @@ void CCreateSectionView::Execute()
 	patLoader->RegisterPatFile(cadPatUrl);
 
 	int index = 1;
+	const int HOLES_PER_PAGE = 5;          // 每页钻孔数
 	cJSON_ArrayForEach(item, items) {
-        // 处理每个属性
+        // 处理每个剖面
         if (item != NULL) 
 		{
-			{
-				// 插入块参照
-				AcDbBlockReference* pBlkRef = new AcDbBlockReference;
-				pBlkRef->setBlockTableRecord(blkDefId);
-				pBlkRef->setPosition(basePt);
-
-				AcDbObjectId refId = AcDbObjectId::kNull;
-				es = pModelSpace->appendAcDbEntity(refId, pBlkRef);
-				if (es != Acad::eOk)
-				{
-					CUtils::acutPrintf(_T("\n[DWG导入] 错误：添加块参照失败(错误码 %d)。"), (int)es);
-					delete pBlkRef;          // 未入库，delete（不能 close）
-					return;
-				}
-				pBlkRef->close();
-			}
-	
 			cJSON* gpsObj = CUtils::GetJsonObjectItemUtf8(item,_T("勘察组"));
+			if (gpsObj == NULL) continue;
 
-			if (gpsObj == NULL)
-				continue;
-			
-			cJSON* gpObj = NULL;
+			int holeCount = cJSON_GetArraySize(gpsObj);
+			if (holeCount == 0) continue;
+			int pageCount = (holeCount + HOLES_PER_PAGE - 1) / HOLES_PER_PAGE;
+
+			// 整条剖面统一算高程范围,保证分页后各页竖向比例一致
 			double max_zk = 0;
 			double min_zk = std::numeric_limits<double>::max();
-			cJSON_ArrayForEach(gpObj, gpsObj){
-				if (gpObj == NULL || !cJSON_IsString(gpObj)) continue;
-				cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
-
-				{
-					cJSON* gpsObj = CUtils::GetJsonObjectItemUtf8(zkObj,_T("孔口高程(m)"));
-					double top =  CUtils::JsonValToDouble(gpsObj);
+			{
+				cJSON* gpObj = NULL;
+				cJSON_ArrayForEach(gpObj, gpsObj){
+					if (gpObj == NULL || !cJSON_IsString(gpObj)) continue;
+					cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+					if (zkObj == NULL) continue;
+					cJSON* topObj = CUtils::GetJsonObjectItemUtf8(zkObj,_T("孔口高程(m)"));
+					double top = CUtils::JsonValToDouble(topObj);
 					cJSON* layerObj = CUtils::GetJsonObjectItemUtf8(zkObj,_T("地层列表"));
 					if (layerObj == NULL) continue;
-					
 					int dataRow = cJSON_GetArraySize(layerObj);
 					if (dataRow == 0) continue;
 					double totalDepth = 0.0;
 					cJSON* rowTry = cJSON_GetArrayItem(layerObj, dataRow - 1);
-					cJSON* cTo = CUtils::GetJsonObjectItemUtf8(rowTry,_T("进尺至(m)"));    // “至”=终孔深度
+					cJSON* cTo = CUtils::GetJsonObjectItemUtf8(rowTry,_T("进尺至(m)"));    // 终孔深度
 					if (cTo != NULL && cJSON_IsNumber(cTo) && cTo->valuedouble > 0.0)
 					{
-						totalDepth = cTo->valuedouble;              // ★算术必须用 valuedouble
+						totalDepth = cTo->valuedouble;
 					}
 					double bottom = top - totalDepth;
 					if (top>max_zk) max_zk = top;
 					if (bottom<min_zk) min_zk=bottom;
 				}
 			}
-			
+
 			int divide = 12;
 			double elevation_zero = 208.55;
 			if (elevation_zero>max_zk) max_zk = elevation_zero;
@@ -282,19 +268,58 @@ void CCreateSectionView::Execute()
 			int min_zk_int = (int)min_zk;
 			double zk_divide = (double)(divide*10)/(double)(max_zk_int-min_zk_int);
 
-			drawTable(basePt, gpsObj);
-			SectionRulerInfo ruler = drawRuler(basePt,min_zk,divide,elevation_zero);
-			ruler.index = index;
+			// 分页绘制:每页最多 HOLES_PER_PAGE 个钻孔
+			for (int pg = 0; pg < pageCount; ++pg)
+			{
+				int startIdx = pg * HOLES_PER_PAGE;
+				int endIdx   = startIdx + HOLES_PER_PAGE;
+				if (endIdx > holeCount) endIdx = holeCount;
 
-			drawColumn(basePt,gpsObj,ruler);
-			drawHoleNo(basePt,gpsObj,ruler);
-			drawLayerName(basePt,gpsObj,ruler);
-			drawLineFix(basePt,item,ruler);
-			drawLineDrill(basePt,item,ruler);
+				// 本页孔名子数组
+				cJSON* pageGps = cJSON_CreateArray();
+				for (int k = startIdx; k < endIdx; ++k)
+				{
+					cJSON* one = cJSON_GetArrayItem(gpsObj, k);
+					if (one != NULL) cJSON_AddItemToArray(pageGps, cJSON_Duplicate(one, 1));
+				}
 
-			basePt.x +=430.0;
-			index ++;
+				m_pageCols = HOLES_PER_PAGE;   // 固定列数,末页不足时右侧留白
 
+				// 图框图签
+				{
+					AcDbBlockReference* pBlkRef = new AcDbBlockReference;
+					pBlkRef->setBlockTableRecord(blkDefId);
+					pBlkRef->setPosition(basePt);
+
+					AcDbObjectId refId = AcDbObjectId::kNull;
+					es = pModelSpace->appendAcDbEntity(refId, pBlkRef);
+					if (es != Acad::eOk)
+					{
+						CUtils::acutPrintf(_T("\n[DWG导入] 图签块添加块参照失败(错误码 %d)。"), (int)es);
+						delete pBlkRef;          // 未入库,delete(不能 close)
+						return;
+					}
+					pBlkRef->close();
+				}
+
+				drawTable(basePt, pageGps);
+				SectionRulerInfo ruler = drawRuler(basePt,min_zk,divide,elevation_zero);
+				ruler.index = index;
+
+				drawColumn(basePt,pageGps,ruler);
+				drawHoleNo(basePt,pageGps,ruler);
+				drawLayerName(basePt,pageGps,ruler);
+				drawLineFix(basePt,item,ruler);
+				drawLineDrill(basePt,pageGps,ruler);
+
+				CUtils::acutPrintf(_T("[剖面图] 第 %d 页:第 %d~%d 个孔(本剖面共 %d 孔,分 %d 页)\n"),
+					index, startIdx+1, endIdx, holeCount, pageCount);
+
+				basePt.x +=430.0;
+				index ++;
+
+				cJSON_Delete(pageGps);
+			}
 		}
 	}
 
@@ -668,11 +693,12 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 
 	int gpRows = cJSON_GetArraySize(gpsObj);
 	if (gpRows == 0) return;
+	int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 分页列数
 	
 	ACHAR* layerName = _T("地质-钻孔");
 	CUtils::EnsureLayer(layerName,true);
 
-	double width_per = (width_valid-23*2) / gpRows;
+	double width_per = (width_valid-23*2) / nCols;
 	double width_b = 3.0;
 
 	AcGePoint3d pt1,pt2;
@@ -876,10 +902,11 @@ void CCreateSectionView::drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 {
     int gpRows = cJSON_GetArraySize(gpsObj);
     if (gpRows == 0) return;
+    int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 分页列数
 
     double left         = 23.0;
     double width_valid  = PAGE_WIDTH - left*2 - 30;
-    double width_per    = (width_valid - 23*2) / gpRows;
+    double width_per    = (width_valid - 23*2) / nCols;
     double left_pre     = basePt.x + left*2 + 30.0;
     const double COL_W  = 15.0;               // 柱宽，与 drawColumn / drawLineDrill 一致
 
@@ -934,10 +961,11 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
 {
     int gpRows = cJSON_GetArraySize(gpsObj);
     if (gpRows == 0) return;
+    int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 分页列数
 
     double left         = 23.0;
     double width_valid  = PAGE_WIDTH - left*2 - 30;
-    double width_per    = (width_valid - 23*2) / gpRows;
+    double width_per    = (width_valid - 23*2) / nCols;
     double left_pre     = basePt.x + left*2 + 30.0;
     const double COL_W  = 15.0;               // 柱宽，与 drawColumn / drawHoleNo 一致
 
@@ -1140,9 +1168,8 @@ void CCreateSectionView::drawLineFix(AcGePoint3d& basePt,cJSON* itemObj,const Se
 }
 //画钻孔线条
 //画钻孔线条（地面线 + 地层连线；每孔两点：柱左缘 x-15 / 柱右缘 x）
-void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const SectionRulerInfo& rule)
+void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule)
 {
-    cJSON* gpsObj = CUtils::GetJsonObjectItemUtf8(itemObj,_T("勘察组"));
     if (gpsObj == NULL) return;
 
     int gpRows = cJSON_GetArraySize(gpsObj);
@@ -1151,7 +1178,8 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const 
     // ---- 横向布点：与 drawColumn 完全一致 ----
     double left = 23.0;
     double width_valid = PAGE_WIDTH - left*2 - 30;
-    double width_per  = (width_valid - 23*2) / gpRows;
+    int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 分页列数
+    double width_per  = (width_valid - 23*2) / nCols;
     double left_pre   = basePt.x + left*2 + 30.0;
     const double COL_W = 15.0;               // 柱宽，与 drawColumn 填充矩形一致
 

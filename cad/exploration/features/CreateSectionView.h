@@ -19,6 +19,7 @@ public:
 protected:
 	cJSON* s_ConfigData;
 	PatHatchLoader* patLoader;
+	int m_pageCols;   // 本页固定列数(分页用):>0 时各绘制函数按此列数布点,末页不足则右侧留白;0=按数组实际长度
 
 
 	//画标注表格（含每个钻孔列的孔深/钻孔间距/动探击数）
@@ -30,7 +31,7 @@ protected:
 	//画固定线条
 	void drawLineFix(AcGePoint3d& basePt,cJSON* itemObj,const SectionRulerInfo& rule);
 	//画钻孔线条
-	void drawLineDrill(AcGePoint3d& basePt,cJSON* itemObj,const SectionRulerInfo& rule);
+	void drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule);
 	//画钻孔号（ZK1/ZK2/ZK3）：每根柱体上方居中标注
 	void drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule);
 	//画土层序号+名称：每根柱体右侧、各整层层高中部标注（如 "② 黏土"）
