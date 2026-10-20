@@ -775,17 +775,40 @@ SectionRulerInfo CCreateSectionView::drawRuler(AcGePoint3d& basePt,double min_zk
 	pt2.x+=1.0;
 	CUtils::AddLine(pModelSpace, pt1, pt2);
 
-	int min_zk_int = (int)min_zk;
-	int max_zk_int = static_cast<int>(std::ceil(rulerTopElev)); 
+	// 标尺范围:数据最低-1 ~ 数据最高+1,避免顶部留出大段空白
+	int min_zk_int = (int)std::floor(min_zk) - 1;
+	int max_zk_int = static_cast<int>(std::ceil(rulerTopElev)) + 1;
+	int diff_zk    = max_zk_int - min_zk_int;
+	if (diff_zk < 1) diff_zk = 1;
 
 	info.min_zk_int = min_zk_int;
 	info.max_zk_int = max_zk_int;
-	/*int max_zk_int = (int)(elevation_zero);
-	max_zk_int+=1;*/
 
-	double zk_divide = std::ceil((double)(max_zk_int - min_zk_int) / divide);
+	// 每格米数取整齐值(1/2/5/10...),格数自适应:保证顶部刻度 >= 最高标高且超出量最小
+	double zk_divide = (double)diff_zk / divide;
+	int    nGrid     = divide;
+	{
+		static const int cand[] = {1,2,5,10,20,25,50,100};
+		bool hasBest = false;
+		int  bestStep = 0, bestGrid = 0, bestScore = 0;
+		for (int ci = 0; ci < (int)(sizeof(cand)/sizeof(cand[0])); ++ci)
+		{
+			int s = cand[ci];
+			int n = (int)std::ceil((double)diff_zk / s);
+			if (n < 4 || n > divide + 6) continue;              // 格数太少或太多都不合适
+			int blank = min_zk_int + n * s - max_zk_int;        // 顶部多出来的米数
+			int score = (n > divide ? n - divide : divide - n) * 10 + blank;
+			if (!hasBest || score < bestScore)
+			{ bestScore = score; bestStep = s; bestGrid = n; hasBest = true; }
+		}
+		if (hasBest) { zk_divide = (double)bestStep; nGrid = bestGrid; }
+	}
 	info.mPerGrid = zk_divide;
-	info.unitPerM   = (height_ruler - 10) / (divide*zk_divide);
+	info.unitPerM   = (height_ruler - 10) / (nGrid*zk_divide);
+	double gridH = (height_ruler - 10) / nGrid;   // 每格在图面上的高度
+
+	CUtils::acutPrintf(_T("[剖面图] 标尺 %.0f~%.0f  每格%.2fm  共%d格\n"),
+		(double)min_zk_int, (double)max_zk_int, zk_divide, nGrid);
 
 	double height_divide=height_ruler/(divide+1);
 	double height_txt=2.5;
@@ -793,10 +816,10 @@ SectionRulerInfo CCreateSectionView::drawRuler(AcGePoint3d& basePt,double min_zk
 
 	pt2.y=pt1.y;
 	AcGePoint3d pt3(pt1),pt4(pt1);
-	for(int i=0;i<=divide;i++){
+	for(int i=0;i<=nGrid;i++){
 		pt2.x=pt1.x-7.5;
-		pt2.y+=10;
-		int height_detail=(int)(min_zk_int+i*zk_divide);
+		pt2.y+=gridH;
+		int height_detail=(int)(min_zk_int + i*zk_divide + 0.5);
 		CString txt_ruler;
 		txt_ruler.Format(_T("%d"), height_detail);
 		CUtils::AddDbText(pModelSpace,txt_ruler,
@@ -811,12 +834,12 @@ SectionRulerInfo CCreateSectionView::drawRuler(AcGePoint3d& basePt,double min_zk
 			info.labelX = pt3.x;
 			info.labelY = pt3.y;
 		}
-		if (i < divide && i % 2 == 0) {
+		if (i < nGrid && i % 2 == 0) {
 			std::vector<AcGePoint3d> arrPts;
 			pt3.x=pt1.x-0.5;
 			pt3.y=pt2.y;
 			pt4.x=pt3.x;
-			pt4.y=pt2.y+10;
+			pt4.y=pt2.y+gridH;
 			arrPts.push_back(pt3);
 			arrPts.push_back(pt4);
 			CUtils::AddDbPolyline(pModelSpace,arrPts,1.0);
