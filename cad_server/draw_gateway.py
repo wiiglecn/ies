@@ -263,9 +263,9 @@ def _normalize_one_hole(hole_no: str, rows: list) -> dict[str, Any]:
     row2 = rows[2]
     row3 = rows[3]
 
-    # ----- X/Y 交换：测量 X=北 → y；测量 Y=东 → x -----
-    x_cad = _to_float(_cell(row4, 9))   # AutoCAD 横向 X = 测量东
-    y_cad = _to_float(_cell(row4, 4))   # AutoCAD 纵向 Y = 测量北
+    # ----- X/Y 不交换：直接传原始测量值，由 CAD 插件自行转换 -----
+    x_cad = _to_float(_cell(row4, 4))   # 测量 X（北）
+    y_cad = _to_float(_cell(row4, 9))   # 测量 Y（东）
 
     node: dict[str, Any] = {
         "hole_no":            str(row4[1]),
