@@ -130,6 +130,93 @@ CCreateSectionView::CCreateSectionView(void):CCreateBaseView(),s_ConfigData(NULL
 //CCreateSectionView::~CCreateSectionView(void)
 //{
 //}
+// 本工程 cad.lin 里的自定义线型定义（dash：正=实线段、负=空白、0=点）
+struct KsLtDef
+{
+    const TCHAR* name;
+    int    nDash;
+    double dashes[6];
+    double total;
+};
+static const KsLtDef g_ksLtDefs[] = {
+    { _T("swx"),              4, {  7.0,    -1.5,  0.0,  -1.5 },                 10.0  },
+    { _T("swx_long"),         2, {  12.0,   -5.0 },                              17.0  },
+    { _T("KS_LONGGDASH_DOT"), 4, {  12.0,   -3.0,  0.0,  -3.0 },                18.0  },
+    { _T("DOT"),              2, {  0.0,    -0.25 },                             0.25  },
+    { _T("DOT2"),             4, {  0.0,    -0.25, 0.0,  -0.25 },               0.5   },
+    { _T("DASHED_SMALL"),     2, {  0.125,  -0.125 },                           0.25  },
+    { _T("DASHED_MEDIUM"),    2, {  0.25,   -0.125 },                           0.375 },
+    { _T("DASHED_LARGE"),     2, {  0.5,    -0.25 },                            0.75  },
+    { _T("CENTER_LINE"),      4, {  0.75,   -0.125, 0.0,  -0.125 },             1.0   },
+    { _T("PHANTOM_LINE"),     6, {  0.75,   -0.125, 0.0, -0.125, 0.0, -0.125 }, 1.25  },
+    { _T("BORDER_DASH"),      6, {  0.5,    -0.25,  0.5, -0.25,  0.0, -0.25 },  1.75  }
+};
+
+// 确保线型存在：先从 cad.lin 单条加载，加载不到就按定义直接建进线型表
+// 必须在 actionBefore() 之后调用（之前没有文档写锁，写线型表会失败）
+static void KsEnsureLinetype(AcDbDatabase* pDb, const ACHAR* pszName,
+                             int nDash, const double* dashes, double dTotal,
+                             const ACHAR* pszLinFile)
+{
+    if (pDb == NULL || pszName == NULL || pszName[0] == _T('\0')) return;
+    AcDbLinetypeTable* pLtTbl = NULL;
+    if (pDb->getLinetypeTable(pLtTbl, AcDb::kForRead) != Acad::eOk || pLtTbl == NULL) return;
+    AcDbLinetypeTableRecord* pOld = NULL;
+    bool bHas = (pLtTbl->getAt(pszName, pOld, AcDb::kForRead) == Acad::eOk);
+    if (bHas && pOld != NULL) pOld->close();
+    pLtTbl->close();
+    if (bHas) return;
+
+    // 1) 从 cad.lin 单条加载（只请求缺失的，避免整文件加载时触发重定义提示）
+    if (pszLinFile != NULL && pszLinFile[0] != _T('\0'))
+    {
+        acdbLoadLineTypeFile(pszName, pszLinFile, NULL);
+        if (pDb->getLinetypeTable(pLtTbl, AcDb::kForRead) == Acad::eOk && pLtTbl != NULL)
+        {
+            AcDbLinetypeTableRecord* pNew = NULL;
+            if (pLtTbl->getAt(pszName, pNew, AcDb::kForRead) == Acad::eOk)
+            {
+                if (pNew != NULL) pNew->close();
+                pLtTbl->close();
+                return;
+            }
+                pLtTbl->close();
+            }
+    }
+
+    // 2) 还缺则直接用 dash 定义建
+    if (pDb->getLinetypeTable(pLtTbl, AcDb::kForWrite) != Acad::eOk || pLtTbl == NULL) return;
+    AcDbLinetypeTableRecord* pRec = new AcDbLinetypeTableRecord;
+    Acad::ErrorStatus es = pRec->setName(pszName);
+    if (es == Acad::eOk)
+    {
+        pRec->setPatternLength(dTotal);
+        pRec->setNumDashes(nDash);
+        for (int i = 0; i < nDash; ++i) pRec->setDashLengthAt(i, dashes[i]);
+        es = pLtTbl->add(pRec);
+    }
+    if (es == Acad::eOk)
+    {
+        pRec->close();
+        CUtils::acutPrintf(_T("[CAD INFO] 线型 %s 已按定义创建\n"), pszName);
+    }
+    else
+    {
+        delete pRec;
+        CUtils::acutPrintf(_T("[CAD WARN] 线型 %s 创建失败(%d)，回落 ByLayer\n"), pszName, (int)es);
+    }
+    pLtTbl->close();
+}
+
+// 补齐本工程用到的自定义线型（swx / KS_LONGGDASH_DOT / 点线 / 虚线 等）
+static void KsEnsureCustomLinetypes(AcDbDatabase* pDb, const ACHAR* pszLinFile)
+{
+    if (pDb == NULL) return;
+    for (int i = 0; i < (int)(sizeof(g_ksLtDefs) / sizeof(g_ksLtDefs[0])); ++i)
+        KsEnsureLinetype(pDb, g_ksLtDefs[i].name, g_ksLtDefs[i].nDash,
+                         g_ksLtDefs[i].dashes, g_ksLtDefs[i].total, pszLinFile);
+}
+
 void CCreateSectionView::Execute()
 {
 	if (!prepare()) return;
@@ -150,7 +237,6 @@ void CCreateSectionView::Execute()
     }
 
 	CString cadLineTypeConfigUrl= strFilePath + _T("support/cad.lin");
-	CUtils::LoadAllLinetypesFromFile(cadLineTypeConfigUrl.GetString());
 
 
 	// 需要确保存在的图层列表（遍历创建）
@@ -178,6 +264,9 @@ void CCreateSectionView::Execute()
 	 	aboutTrans();
 	 	return;
 	 }
+
+	 // 线型补齐必须排在 actionBefore() 之后：之前没有文档写锁，写线型表会失败
+	 KsEnsureCustomLinetypes(pDb, cadLineTypeConfigUrl.GetString());
 
     for (int i = 0; i < nLayerCount; ++i)
     {
