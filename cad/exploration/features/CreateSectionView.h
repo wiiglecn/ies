@@ -36,6 +36,8 @@ protected:
 	void drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule);
 	//画土层序号+名称：每根柱体右侧、各整层层高中部标注（如 "② 黏土"）
 	void drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule);
+	//画柱内标志：取样符号（原状样●/岩样■）与风化程度符号（中风化2杠/强风化3杠等），图例 2026-10-20
+	void drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule);
 	//高度尺
 	double getRuleHeight(const SectionRulerInfo& rule,double depth);
 };

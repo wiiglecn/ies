@@ -309,6 +309,7 @@ void CCreateSectionView::Execute()
 				drawColumn(basePt,pageGps,ruler);
 				drawHoleNo(basePt,pageGps,ruler);
 				drawLayerName(basePt,pageGps,ruler);
+				drawSampleMark(basePt,pageGps,ruler);
 				drawLineFix(basePt,item,ruler);
 				drawLineDrill(basePt,pageGps,ruler);
 
@@ -1074,6 +1075,262 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
         index++;
     }
 }
+//==================== 柱内标志（取样/风化）— 符号样式来自用户图例 2026-10-20 ====================
+//红色实心填充（SOLID 预定义图案）
+static bool KsAddSolidHatch(AcDbBlockTableRecord* pMS, const AcGePoint2dArray& loop, AcDbObjectId& hatchId)
+{
+    hatchId = AcDbObjectId::kNull;
+    if (pMS == NULL || loop.length() < 3) return false;
+    AcDbHatch* pHatch = new AcDbHatch();
+    pHatch->setNormal(AcGeVector3d::kZAxis);
+    pHatch->setElevation(0.0);
+    Acad::ErrorStatus es = pHatch->setPattern(AcDbHatch::kPreDefined, _T("SOLID"));
+    if (es == Acad::eOk) es = pHatch->setPatternScale(1.0);
+    AcGeDoubleArray bulges;
+    for (int i = 0; i < loop.length(); ++i) bulges.append(0.0);
+    if (es == Acad::eOk) es = pHatch->appendLoop(AcDbHatch::kDefault, loop, bulges);
+    if (es == Acad::eOk) es = pHatch->evaluateHatch();
+    if (es == Acad::eOk) es = pHatch->setColorIndex(1);   // 红色
+    if (es == Acad::eOk) es = pMS->appendAcDbEntity(hatchId, pHatch);
+    if (es == Acad::eOk) pHatch->close(); else delete pHatch;
+    return es == Acad::eOk;
+}
+
+//原状样：红色实心圆（直径 2.4）
+static void KsDrawSampleCircle(AcDbBlockTableRecord* pMS, double cx, double cy)
+{
+    const double R = 1.2;
+    const int N = 16;
+    AcGePoint2dArray loop;
+    for (int i = 0; i < N; ++i)
+    {
+        double a = 6.28318530717958 * i / N;
+        loop.append(AcGePoint2d(cx + R*cos(a), cy + R*sin(a)));
+    }
+    AcDbObjectId id;
+    KsAddSolidHatch(pMS, loop, id);
+}
+
+//岩样：红色实心方块（边长 2.4）
+static void KsDrawSampleSquare(AcDbBlockTableRecord* pMS, double cx, double cy)
+{
+    const double H = 1.2;
+    AcGePoint2dArray loop;
+    loop.append(AcGePoint2d(cx - H, cy - H));
+    loop.append(AcGePoint2d(cx + H, cy - H));
+    loop.append(AcGePoint2d(cx + H, cy + H));
+    loop.append(AcGePoint2d(cx - H, cy + H));
+    AcDbObjectId id;
+    KsAddSolidHatch(pMS, loop, id);
+}
+
+//风化程度符号：竖杆 + 顶部开叉 + n 条横杠（红色）
+//横杠数：微风化1 / 中等风化(中风化)2 / 强风化3 / 全风化4（图例只给了 2、3，其余按风化越强杠越多递推）
+static void KsDrawWeathering(AcDbBlockTableRecord* pMS, double cx, double cy, int nBars)
+{
+    if (nBars < 1) nBars = 2;
+    const double HALF_BAR = 0.6;   // 横杠半长
+    std::vector<AcGePoint3d> arr;
+    // 竖杆
+    arr.push_back(AcGePoint3d(cx, cy - 1.2, 0.0));
+    arr.push_back(AcGePoint3d(cx, cy + 0.85, 0.0));
+    CUtils::AddDbPolyline(pMS, arr, 0.0, false, NULL, 1);
+    // 顶部开叉（两根斜线向上张开）
+    arr.clear();
+    arr.push_back(AcGePoint3d(cx, cy + 0.85, 0.0));
+    arr.push_back(AcGePoint3d(cx - 0.7, cy + 1.5, 0.0));
+    CUtils::AddDbPolyline(pMS, arr, 0.0, false, NULL, 1);
+    arr.clear();
+    arr.push_back(AcGePoint3d(cx, cy + 0.85, 0.0));
+    arr.push_back(AcGePoint3d(cx + 0.7, cy + 1.5, 0.0));
+    CUtils::AddDbPolyline(pMS, arr, 0.0, false, NULL, 1);
+    // 横杠：均匀布置在 cy+0.45 ~ cy-0.85
+    double yTop = cy + 0.45;
+    double yBot = cy - 0.85;
+    for (int i = 0; i < nBars; ++i)
+    {
+        double yb = (nBars == 1) ? yTop : (yTop + (yBot - yTop) * i / (nBars - 1));
+        arr.clear();
+        arr.push_back(AcGePoint3d(cx - HALF_BAR, yb, 0.0));
+        arr.push_back(AcGePoint3d(cx + HALF_BAR, yb, 0.0));
+        CUtils::AddDbPolyline(pMS, arr, 0.0, false, NULL, 1);
+    }
+}
+
+//解析取样深度 "13-13.3"（兼容全角横线/一/波浪号），取中点；无横线按单值处理
+static bool KsParseSampleDepth(CString s, double& dMid)
+{
+    s.Replace(_T('－'), _T('-'));
+    s.Replace(_T('—'), _T('-'));
+    s.Replace(_T('一'), _T('-'));
+    s.Replace(_T('～'), _T('-'));
+    s.Replace(_T('~'), _T('-'));
+    s.Trim();
+    double a = 0.0, b = 0.0;
+    int dash = s.Find(_T('-'));
+    if (dash >= 0)
+    {
+        a = CUtils::CStringToDouble(s.Left(dash));
+        b = CUtils::CStringToDouble(s.Mid(dash + 1));
+    }
+    else
+        a = CUtils::CStringToDouble(s);
+    if (a <= 0.0 && b <= 0.0) return false;
+    if (b > 0.0 && b < a) { double t = a; a = b; b = t; }
+    dMid = (b > 0.0) ? ((a + b) / 2.0) : a;
+    return true;
+}
+
+//风化程度 -> 横杠数（0=无）：先查 成分及其他 的"风化程度:"，再用地层名称兜底
+static int KsWeatheringBars(const CString& sDesc, const CString& sName)
+{
+    CString v;
+    int pos = sDesc.Find(_T("风化程度"));
+    if (pos >= 0)
+    {
+        int k = pos + 4;   // "风化程度" 4 个字符
+        while (k < sDesc.GetLength() && (sDesc[k] == _T(':') || sDesc[k] == _T('：') || sDesc[k] == _T(' '))) k++;
+        while (k < sDesc.GetLength() && sDesc[k] != _T(',') && sDesc[k] != _T('，')
+            && sDesc[k] != _T(';') && sDesc[k] != _T('；')) { v += sDesc[k]; k++; }
+    }
+    if (v.Find(_T("全风化")) >= 0) return 4;
+    if (v.Find(_T("强风化")) >= 0) return 3;
+    if (v.Find(_T("中风化")) >= 0) return 2;
+    if (v.Find(_T("微风化")) >= 0) return 1;
+    if (sName.Find(_T("全风化")) >= 0) return 4;
+    if (sName.Find(_T("强风化")) >= 0) return 3;
+    if (sName.Find(_T("中风化")) >= 0) return 2;
+    if (sName.Find(_T("微风化")) >= 0) return 1;
+    return 0;
+}
+
+//画钻孔柱内标志（图例 2026-10-20）：
+//  取样：原状样=红色实心圆、岩样=红色实心方块，画在取样深度中点；水样(QS)图例未定义暂不画
+//  风化：开叉+横杠符号，画在该分段层高中点；同层连续分段且风化相同只画一次
+void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule)
+{
+    int gpRows = cJSON_GetArraySize(gpsObj);
+    if (gpRows == 0) return;
+    int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 分页列数
+
+    double left = 23.0;
+    double width_valid = PAGE_WIDTH - left*2 - 30;
+    double width_per = (width_valid - 23*2) / nCols;
+    double left_pre = basePt.x + left*2 + 30.0;
+
+    ACHAR* symLayer = _T("地质-符号");
+    CUtils::EnsureLayer(symLayer, true);
+
+    cJSON* gpObj = NULL;
+    int index = 0;
+    cJSON_ArrayForEach(gpObj, gpsObj)
+    {
+        if (gpObj == NULL || !cJSON_IsString(gpObj)) { index++; continue; }
+        cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+        if (zkObj == NULL) { index++; continue; }
+        cJSON* layerObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("地层列表"));
+        if (layerObj == NULL) { index++; continue; }
+        cJSON* elevationObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("孔口高程(m)"));
+        if (elevationObj == NULL) { index++; continue; }
+        double top = CUtils::JsonValToDouble(elevationObj);
+
+        double xC = left_pre + index*width_per - 7.5;   // 柱体水平中心（柱右缘-7.5）
+
+        int segCount = cJSON_GetArraySize(layerObj);
+        for (int ii = 0; ii < segCount; ++ii)
+        {
+            cJSON* item = cJSON_GetArrayItem(layerObj, ii);
+            if (item == NULL) continue;
+            cJSON* cFrom = CUtils::GetJsonObjectItemUtf8(item, _T("进尺自(m)"));
+            cJSON* cTo   = CUtils::GetJsonObjectItemUtf8(item, _T("进尺至(m)"));
+            if (cFrom == NULL || !cJSON_IsNumber(cFrom)
+                || cTo == NULL || !cJSON_IsNumber(cTo)) continue;
+
+            // ---- 地层名称（判断岩石层；名称也可能带风化，如"岩石-强风化泥岩"）----
+            TCHAR szName[128] = { 0 };
+            bool bRock = false;
+            cJSON* cSoi = CUtils::GetJsonObjectItemUtf8(item, _T("地层名称"));
+            if (cSoi != NULL && cJSON_IsString(cSoi) && cSoi->valuestring[0] != _T('\0'))
+            {
+                CUtils::utf8ToTChar(cSoi->valuestring, szName, ARRAYSIZE(szName));
+                bRock = (_tcsncmp(szName, _T("岩石"), 2) == 0);
+            }
+
+            // ---- 1) 取样符号 ----
+            cJSON* cSample = CUtils::GetJsonObjectItemUtf8(item, _T("取岩(土、水)样"));
+            if (cSample == NULL) cSample = CUtils::GetJsonObjectItemUtf8(item, _T("取样(土、水)样"));
+            if (cSample != NULL && cJSON_IsObject(cSample))
+            {
+                cJSON* cDep = CUtils::GetJsonObjectItemUtf8(cSample, _T("取样深度"));
+                cJSON* cNo  = CUtils::GetJsonObjectItemUtf8(cSample, _T("编号"));
+                if (cDep != NULL && cJSON_IsString(cDep) && cDep->valuestring[0] != _T('\0'))
+                {
+                    double dMid = 0.0;
+                    if (KsParseSampleDepth(CString(cDep->valuestring), dMid))
+                    {
+                        double y = getRuleHeight(rule, top - dMid);
+                        if (bRock)
+                            KsDrawSampleSquare(pModelSpace, xC, y);        // 岩样 ■
+                        else
+                        {
+                            CString sNo;
+                            if (cNo != NULL && cJSON_IsString(cNo) && cNo->valuestring[0] != '\0')
+                            {
+                                TCHAR szNo[64] = { 0 };
+                                CUtils::utf8ToTChar(cNo->valuestring, szNo, ARRAYSIZE(szNo));
+                                sNo = szNo;
+                            }
+                            if (sNo.Find(_T("QS")) < 0)                    // 水样(QS)图例未定义，暂不画
+                                KsDrawSampleCircle(pModelSpace, xC, y);    // 原状样 ●
+                        }
+                    }
+                }
+            }
+
+            // ---- 2) 风化程度符号 ----
+            int nBars = KsWeatheringBars(_T(""), CString(szName));
+            {
+                TCHAR szDesc[512] = { 0 };
+                cJSON* cDesc = CUtils::GetJsonObjectItemUtf8(item, _T("成分及其他"));
+                if (cDesc != NULL && cJSON_IsString(cDesc))
+                    CUtils::utf8ToTChar(cDesc->valuestring, szDesc, ARRAYSIZE(szDesc));
+                int nb = KsWeatheringBars(CString(szDesc), _T(""));
+                if (nb > 0) nBars = nb;   // 成分及其他优先，名称兜底
+            }
+            if (nBars > 0)
+            {
+                // 同层连续分段且风化相同 -> 只画一次
+                bool bDup = false;
+                if (ii > 0)
+                {
+                    cJSON* prev = cJSON_GetArrayItem(layerObj, ii - 1);
+                    if (prev != NULL && KsSameCode(prev, item))
+                    {
+                        int nb2 = 0;
+                        TCHAR szD2[512] = { 0 }, szN2[128] = { 0 };
+                        cJSON* cD2 = CUtils::GetJsonObjectItemUtf8(prev, _T("成分及其他"));
+                        if (cD2 != NULL && cJSON_IsString(cD2))
+                            CUtils::utf8ToTChar(cD2->valuestring, szD2, ARRAYSIZE(szD2));
+                        cJSON* cN2 = CUtils::GetJsonObjectItemUtf8(prev, _T("地层名称"));
+                        if (cN2 != NULL && cJSON_IsString(cN2))
+                            CUtils::utf8ToTChar(cN2->valuestring, szN2, ARRAYSIZE(szN2));
+                        nb2 = KsWeatheringBars(CString(szD2), CString(szN2));
+                        bDup = (nb2 == nBars);
+                    }
+                }
+                if (!bDup)
+                {
+                    double dMid = (cFrom->valuedouble + cTo->valuedouble) / 2.0;
+                    double y = getRuleHeight(rule, top - dMid);
+                    KsDrawWeathering(pModelSpace, xC, y, nBars);
+                }
+            }
+        }
+        index++;
+    }
+}
+
+
 void CCreateSectionView::drawLineFix(AcGePoint3d& basePt,cJSON* itemObj,const SectionRulerInfo& rule)
 {
 
