@@ -1221,9 +1221,22 @@ static int KsWeatheringBars(const CString& sDesc, const CString& sName)
     return 0;
 }
 
+//柱内标志条目（取样/风化），用于同孔内竖向避让
+//  kind: 1=原状样● 2=岩样■ 3=风化符号
+struct KsMarkItem
+{
+    double yRaw;     // 按真实深度算出的理论基线 y
+    double y;        // 避让后的实际基线 y
+    double depth;    // 孔内深度（用于左侧文字）
+    int    kind;
+    int    bars;     // 风化横杠数（kind=3 时有效）
+};
+
 //画钻孔柱内标志（图例 2026-10-20）：
 //  取样：原状样=红色实心圆、岩样=红色实心方块，画在取样深度中点；水样(QS)图例未定义暂不画
 //  风化：开叉+横杠符号，画在该分段层高中点；同层连续分段且风化相同只画一次
+//★同一孔内所有标志先收集再统一排版：自上而下排序后级联避让（最小间距 MARK_GAP），
+//  避免薄层处取样点与风化符号、或相邻两层的取样点竖向重叠
 void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule)
 {
     int gpRows = cJSON_GetArraySize(gpsObj);
@@ -1237,6 +1250,9 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
 
     ACHAR* symLayer = _T("地质-符号");
     CUtils::EnsureLayer(symLayer, true);
+
+    // 标志竖向最小间距：圆/方块直径 2.4、风化符号高约 2.7，取 3.2 留 0.5 余量
+    const double MARK_GAP = 3.2;
 
     cJSON* gpObj = NULL;
     int index = 0;
@@ -1253,6 +1269,7 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
 
         double xC = left_pre + index*width_per - 7.5;   // 柱体水平中心（柱右缘-7.5）
 
+        std::vector<KsMarkItem> marks;                  // 本孔全部标志
         int segCount = cJSON_GetArraySize(layerObj);
         for (int ii = 0; ii < segCount; ++ii)
         {
@@ -1273,7 +1290,7 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
                 bRock = (_tcsncmp(szName, _T("岩石"), 2) == 0);
             }
 
-            // ---- 1) 取样符号 ----
+            // ---- 1) 取样符号（先只收集，统一排版后再画）----
             cJSON* cSample = CUtils::GetJsonObjectItemUtf8(item, _T("取岩(土、水)样"));
             if (cSample == NULL) cSample = CUtils::GetJsonObjectItemUtf8(item, _T("取样(土、水)样"));
             if (cSample != NULL && cJSON_IsObject(cSample))
@@ -1285,11 +1302,8 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
                     double dMid = 0.0;
                     if (KsParseSampleDepth(CString(cDep->valuestring), dMid))
                     {
-                        double y = getRuleHeight(rule, top - dMid);
-                        bool bDrawn = true;
-                        if (bRock)
-                            KsDrawSampleSquare(pModelSpace, xC, y);        // 岩样 ■
-                        else
+                        bool bWater = false;
+                        if (!bRock)
                         {
                             CString sNo;
                             if (cNo != NULL && cJSON_IsString(cNo) && cNo->valuestring[0] != '\0')
@@ -1298,18 +1312,17 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
                                 CUtils::utf8ToTChar(cNo->valuestring, szNo, ARRAYSIZE(szNo));
                                 sNo = szNo;
                             }
-                            if (sNo.Find(_T("QS")) < 0)                    // 水样(QS)图例未定义，暂不画
-                                KsDrawSampleCircle(pModelSpace, xC, y);    // 原状样 ●
-                            else
-                                bDrawn = false;
+                            bWater = (sNo.Find(_T("QS")) >= 0);   // 水样(QS)图例未定义，暂不画
                         }
-                        // 标识左侧标孔内深度（同红色）：右对齐贴住符号左缘
-                        if (bDrawn)
+                        if (!bWater)
                         {
-                            CString sDep;
-                            sDep.Format(_T("%.2f"), dMid);
-                            KsDrawRedText(pModelSpace, sDep, AcGePoint3d(xC - 2.0, y - 0.55, 0.0),
-                                          1.5, _T("SLNormal"), DBTA_RIGHT);
+                            KsMarkItem mk;
+                            mk.yRaw  = getRuleHeight(rule, top - dMid);
+                            mk.y     = mk.yRaw;
+                            mk.depth = dMid;
+                            mk.kind  = bRock ? 2 : 1;
+                            mk.bars  = 0;
+                            marks.push_back(mk);
                         }
                     }
                 }
@@ -1349,21 +1362,83 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
                 if (!bDup)
                 {
                     double dMid = (cFrom->valuedouble + cTo->valuedouble) / 2.0;
-                    double y = getRuleHeight(rule, top - dMid);
-                    KsDrawWeathering(pModelSpace, xC, y, nBars);
-                    // 标识左侧标孔内深度（同红色）：右对齐贴住符号左缘
-                    {
-                        CString sDep;
-                        sDep.Format(_T("%.2f"), dMid);
-                        KsDrawRedText(pModelSpace, sDep, AcGePoint3d(xC - 1.2, y - 0.55, 0.0),
-                                      1.5, _T("SLNormal"), DBTA_RIGHT);
-                    }
+                    KsMarkItem mk;
+                    mk.yRaw  = getRuleHeight(rule, top - dMid);
+                    mk.y     = mk.yRaw;
+                    mk.depth = dMid;
+                    mk.kind  = 3;
+                    mk.bars  = nBars;
+                    marks.push_back(mk);
                 }
             }
         }
+
+        // ---- 统一排版：自上而下（y 由大到小）排序，再级联避让 ----
+        int nMark = (int)marks.size();
+        for (int a = 0; a < nMark; ++a)
+        {
+            for (int b = a + 1; b < nMark; ++b)
+            {
+                if (marks[b].yRaw > marks[a].yRaw)
+                {
+                    KsMarkItem t = marks[a]; marks[a] = marks[b]; marks[b] = t;
+                }
+            }
+        }
+        // 孔底限制：避让下移不越过孔底
+        double yBottom = 0.0;
+        bool bHasBottom = false;
+        {
+            cJSON* last = cJSON_GetArrayItem(layerObj, segCount - 1);
+            if (last != NULL)
+            {
+                cJSON* cLastTo = CUtils::GetJsonObjectItemUtf8(last, _T("进尺至(m)"));
+                if (cLastTo != NULL && cJSON_IsNumber(cLastTo))
+                {
+                    yBottom = getRuleHeight(rule, top - cLastTo->valuedouble);
+                    bHasBottom = true;
+                }
+            }
+        }
+        for (int a = 0; a < nMark; ++a)
+        {
+            if (a > 0 && (marks[a - 1].y - marks[a].y) < MARK_GAP)
+                marks[a].y = marks[a - 1].y - MARK_GAP;   // 与上一个标志挤在一起时依次下移
+            if (bHasBottom && marks[a].y < yBottom)
+                marks[a].y = yBottom;                     // 兜底：不画出孔底（极端密集时接受重叠）
+        }
+
+        // ---- 按排版结果绘制标志与左侧深度文字（同红色）----
+        for (int a = 0; a < nMark; ++a)
+        {
+            double y = marks[a].y;
+            double xText;
+            if (marks[a].kind == 2)
+            {
+                KsDrawSampleSquare(pModelSpace, xC, y);       // 岩样 ■
+                xText = xC - 2.0;
+            }
+            else if (marks[a].kind == 1)
+            {
+                KsDrawSampleCircle(pModelSpace, xC, y);       // 原状样 ●
+                xText = xC - 2.0;
+            }
+            else
+            {
+                KsDrawWeathering(pModelSpace, xC, y, marks[a].bars);
+                xText = xC - 1.2;
+            }
+
+            CString sDep;
+            sDep.Format(_T("%.2f"), marks[a].depth);
+            KsDrawRedText(pModelSpace, sDep, AcGePoint3d(xText, y - 0.55, 0.0),
+                          1.5, _T("SLNormal"), DBTA_RIGHT);
+        }
+
         index++;
     }
 }
+
 //画表头（每页，版式来自用户截图 2026-10-20；表头整体水平居中、竖向不贴顶）：
 //  第一行：工程地质剖面图 + 剖面编号（总页数------当前页码′，如 8------3′），行下画下划线
 //  第二行：比例尺  水平 1:水平比例  垂直 1:垂直比例
