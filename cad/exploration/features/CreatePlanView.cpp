@@ -143,9 +143,10 @@ void CCreatePlanView::Execute()
 					}
 					dY = columnTry->valuedouble;
 				}
-				// ★坐标映射：请求数据的 X → CAD 的 Y，请求数据的 Y → CAD 的 X
-				ptInsert.y = dX;
-				ptInsert.x = dY;
+				// ★坐标映射：实测底图 X≈36524934 / Y≈2747316 与请求数据 X/Y 同序同量级，直接对应，不做互换
+				//   （若后续底图坐标系变化需要互换，把下面两行改成 ptInsert.y=dX; ptInsert.x=dY; 即可）
+				ptInsert.x = dX;
+				ptInsert.y = dY;
 
 				arrInsert.push_back(ptInsert);
 				CUtils::acutPrintf(_T("[平面图] %s 插入点 CAD(X=%.3f, Y=%.3f) ← 数据(X=%.3f, Y=%.3f)\n"),
@@ -194,7 +195,35 @@ void CCreatePlanView::Execute()
 		}
 	}
 
-	CreateLegend(arrUsedHoles, fistCadBlockUrl,firstBlockStyleName);
+	// ★统一计算「底图 ∪ 钻孔」范围：图例与视图缩放共用，避免图例被杂散实体带偏
+	bool   bHasAll  = false;
+	double allMinX = 0.0, allMaxX = 0.0, allMinY = 0.0, allMaxY = 0.0;
+	if (bHasBase)
+	{
+		allMinX = baseMin.x; allMaxX = baseMax.x;
+		allMinY = baseMin.y; allMaxY = baseMax.y;
+		bHasAll = true;
+	}
+	for (size_t i = 0; i < arrInsert.size(); ++i)
+	{
+		double px = arrInsert[i].x, py = arrInsert[i].y;
+		if (!bHasAll)
+		{
+			allMinX = allMaxX = px; allMinY = allMaxY = py; bHasAll = true;
+		}
+		else
+		{
+			if (px < allMinX) allMinX = px;
+			if (px > allMaxX) allMaxX = px;
+			if (py < allMinY) allMinY = py;
+			if (py > allMaxY) allMaxY = py;
+		}
+	}
+	CUtils::acutPrintf(_T("[平面图] 底图∪钻孔范围：X[%.2f~%.2f] Y[%.2f~%.2f]\n"),
+		allMinX, allMaxX, allMinY, allMaxY);
+
+	CreateLegend(arrUsedHoles, fistCadBlockUrl,firstBlockStyleName,
+		AcGePoint3d(allMinX, allMinY, 0.0), AcGePoint3d(allMaxX, allMaxY, 0.0), bHasAll);
 
 	this->commitTrans();
 	this->actionEnd();
@@ -252,10 +281,28 @@ void CCreatePlanView::ZoomToHoles(const std::vector<AcGePoint3d>& arrHole,
 		}
 		else
 		{
-			if (hMinX < minX) minX = hMinX;
-			if (hMaxX > maxX) maxX = hMaxX;
-			if (hMinY < minY) minY = hMinY;
-			if (hMaxY > maxY) maxY = hMaxY;
+			// 底图与钻孔量级相近时才取并集；底图过大时取并集会把钻孔缩成一个像素，
+			// 此时以钻孔范围为准，保证一眼能看到钻孔
+			double baseSpanX = baseMax.x - baseMin.x;
+			double baseSpanY = baseMax.y - baseMin.y;
+			double baseSpan = (baseSpanX > baseSpanY) ? baseSpanX : baseSpanY;
+			double holeSpanX = hMaxX - hMinX;
+			double holeSpanY = hMaxY - hMinY;
+			double holeSpan = (holeSpanX > holeSpanY) ? holeSpanX : holeSpanY;
+
+			if (baseSpan <= holeSpan * 10.0 + 500.0 && baseSpan <= 3000.0)
+			{
+				if (hMinX < minX) minX = hMinX;
+				if (hMaxX > maxX) maxX = hMaxX;
+				if (hMinY < minY) minY = hMinY;
+				if (hMaxY > maxY) maxY = hMaxY;
+			}
+			else
+			{
+				CUtils::acutPrintf(_T("[平面图] 底图跨度 %.1fm 远大于钻孔跨度 %.1fm，视图以钻孔为准\n"),
+					baseSpan, holeSpan);
+				minX = hMinX; maxX = hMaxX; minY = hMinY; maxY = hMaxY;
+			}
 		}
 	}
 
@@ -343,7 +390,10 @@ void CCreatePlanView::ChangeText(AcDbObjectId blkDefId,AcDbObjectId styleId, ACH
 
 void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
                                 const CString& fistCadBlockUrl,
-                    			const CString& blockStyleName)
+                    			const CString& blockStyleName,
+                    			const AcGePoint3d& allMin,
+                    			const AcGePoint3d& allMax,
+                    			bool bHasAll)
 {
 	if (arrUsedHoles.empty())
 		return;
@@ -355,22 +405,27 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 	// 清除当前层旧元素（pModelSpace 由基类管理开关，本函数不动它）
     int n = CUtils::EraseLayerEntities(this->pModelSpace, layerName); 
 
-	// ---- 计算图形范围，取底部中点作为图例绘制起点 ----
-    AcDbExtents extAll;
-    if (!CUtils::GetModelSpaceBounds(this->pModelSpace, extAll))
+	// ---- 定位图例锚点：取「底图∪钻孔」范围的左下角 ----
+	//  （原逻辑取模型空间全体包围盒的"底部中点"，一旦钻孔与底图分离就会被带到图幅外，例如 X=19636411）
+    AcGePoint3d ptLegend;
+    if (bHasAll)
     {
-        CUtils::acutPrintf(_T("[CAD ERROR] 图形范围为空，无法定位图例\n"));
-        return;
+        ptLegend.x = allMin.x + 25.0;            // 从图幅左边界内缩，避免压住图框
+        ptLegend.y = allMin.y - 10.0;            // 图幅底边下方
     }
-    AcGePoint3d ptMin = extAll.minPoint();
-    AcGePoint3d ptMax = extAll.maxPoint();
-
-    AcGePoint3d ptLegend;                        // 图例起点：图形中间底部
-    ptLegend.x = (ptMin.x + ptMax.x) * 0.5;      // 水平居中
-    ptLegend.y = ptMin.y;                        // 底部
-
-    double dMargin = 10.0;                        // 与图形底边留点间距，按需调
-    ptLegend.y -= dMargin;
+    else
+    {
+        AcDbExtents extAll;
+        if (!CUtils::GetModelSpaceBounds(this->pModelSpace, extAll))
+        {
+            CUtils::acutPrintf(_T("[CAD ERROR] 图形范围为空，无法定位图例\n"));
+            return;
+        }
+        ptLegend.x = extAll.minPoint().x + 25.0;
+        ptLegend.y = extAll.minPoint().y - 10.0;
+    }
+	CUtils::acutPrintf(_T("[平面图] 图例锚点(左下角)：%.3f, %.3f（图幅 X[%.2f~%.2f] Y[%.2f~%.2f]）\n"),
+		ptLegend.x, ptLegend.y, allMin.x, allMax.x, allMin.y, allMax.y);
 	Acad::ErrorStatus es;
 	double radius = 2.15;
 
