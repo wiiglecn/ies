@@ -995,7 +995,12 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
         double top = CUtils::JsonValToDouble(elevationObj);
 
         int segCount = cJSON_GetArraySize(layerObj);
-        double x = left_pre + index*width_per + 1.5;   // 柱右缘右侧
+        // 本页最后一列(第 5 个钻孔):土层名称改放柱体左侧并右对齐,
+        // 避免名称向右伸出图幅、与右侧高程/标尺等数据重叠
+        bool bLastCol = (index == nCols - 1);
+        double x = bLastCol ? (left_pre + index*width_per - COL_W - 1.5)   // 柱左缘左侧
+                            : (left_pre + index*width_per + 1.5);          // 柱右缘右侧
+        int hAlign = bLastCol ? DBTA_RIGHT : DBTA_LEFT;
 
         for (int ii = 0; ii < segCount; ++ii)
         {
@@ -1050,7 +1055,7 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
             // ★getRuleHeight 接收标高（不是进尺）：换算 elevation = 孔口高程 - 进尺
             double elevMid = top - depthMid;
             AcGePoint3d pt(x, getRuleHeight(rule, elevMid), 0.0);
-            CUtils::AddDbText(pModelSpace, txt, pt, 2.2, pszStyleName, DBTA_LEFT, 0.8);
+            CUtils::AddDbText(pModelSpace, txt, pt, 2.2, pszStyleName, hAlign, 0.8);
         }
         index++;
     }
