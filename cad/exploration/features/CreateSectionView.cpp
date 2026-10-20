@@ -771,6 +771,11 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 
 			cJSON* layerObj = CUtils::GetJsonObjectItemUtf8(zkObj,_T("地层列表"));
 			int segCount = cJSON_GetArraySize(layerObj);
+			// ★薄层防重叠:同一孔内相邻层底标注的竖向间距不得小于 LABEL_GAP,
+			//   冲突时把后一个标注依次下移(自上而下的读数顺序不变)
+			const double LABEL_GAP = 2.2;      // 文字高 1.8 + 0.4 余量
+			double lastLabelY = 0.0;           // 上一个标注的基线 y
+			bool bHasLastLabel = false;
 			for (int ii = 0; ii < segCount; ++ii)
 			{
 				cJSON* item = cJSON_GetArrayItem(layerObj, ii);
@@ -784,7 +789,14 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 				double bottom = top - depth;
 
 				pt1.x = left_pre+index*width_per+3.0;
-				pt1.y = getRuleHeight(rule,bottom);
+				double yLabel = getRuleHeight(rule,bottom);
+				if (bHasLastLabel && (lastLabelY - yLabel) < LABEL_GAP)
+				{
+					yLabel = lastLabelY - LABEL_GAP;     // 薄层:下移到与上一个标注不重叠
+				}
+				pt1.y = yLabel;
+				lastLabelY = yLabel;
+				bHasLastLabel = true;
 
 				CString txt;
 				txt.Format(_T("%.2f(%.2f)"),depth,bottom);
@@ -1022,6 +1034,8 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
                 cJSON* nTo = CUtils::GetJsonObjectItemUtf8(cJSON_GetArrayItem(layerObj, nx), _T("进尺至(m)"));
                 if (nTo != NULL && cJSON_IsNumber(nTo)) depthBottom = nTo->valuedouble;
             }
+            // ★薄层不标土层名称:整层画高不足 4.6 个图面单位时,名称会与上下层底标注重叠
+            if ((depthBottom - depthTop) * rule.unitPerM < 4.6) continue;
             double depthMid = (depthTop + depthBottom) / 2.0;
 
             // 序号 = 地层编号首位
