@@ -75,6 +75,49 @@ void CCreatePlanView::Execute()
 		}
 	}
 
+	// 预扫描:先取全部孔的原始坐标,结合底图范围自动判定数据 X/Y 需不需要互换。
+	// 原因:数据源在两轮请求里 X/Y 顺序不一样(请求A 数据X=3652万/数据Y=274万;请求B 反之),
+	// 写死映射会出现镜像问题。这里在两种方案中选与底图包围盒中心偏移更小的一种;
+	// 底图不可用时默认按用户约定互换(数据X->CAD Y, 数据Y->CAD X)。
+	bool bSwapXY = true;
+	{
+		double rMinX=0,rMaxX=0,rMinY=0,rMaxY=0; bool bHasRaw=false;
+		cJSON* scan = NULL;
+		cJSON_ArrayForEach(scan, s_pJsonData)
+		{
+			if (scan == NULL) continue;
+			cJSON* sx = CUtils::GetJsonObjectItemUtf8(scan, _T("X坐标(m)"));
+			cJSON* sy = CUtils::GetJsonObjectItemUtf8(scan, _T("Y坐标(m)"));
+			if (sx == NULL || sy == NULL || !cJSON_IsNumber(sx) || !cJSON_IsNumber(sy)) continue;
+			double x = sx->valuedouble, y = sy->valuedouble;
+			if (!bHasRaw) { rMinX=rMaxX=x; rMinY=rMaxY=y; bHasRaw=true; }
+			else {
+				if (x<rMinX) rMinX=x; if (x>rMaxX) rMaxX=x;
+				if (y<rMinY) rMinY=y; if (y>rMaxY) rMaxY=y;
+			}
+		}
+		if (bHasRaw)
+		{
+			double rawCx=(rMinX+rMaxX)/2.0, rawCy=(rMinY+rMaxY)/2.0;
+			CUtils::acutPrintf(_T("[平面图] 数据包围盒中心:(%.2f, %.2f)\n"), rawCx, rawCy);
+			if (bHasBase)
+			{
+				double baseCx=(baseMin.x+baseMax.x)/2.0, baseCy=(baseMin.y+baseMax.y)/2.0;
+				double dNoSwap = fabs(rawCx-baseCx) + fabs(rawCy-baseCy);
+				double dSwap   = fabs(rawCy-baseCx) + fabs(rawCx-baseCy);
+				bSwapXY = (dSwap < dNoSwap);
+				CUtils::acutPrintf(_T("[平面图] 坐标自动判定:%s (底图中心=(%.2f,%.2f), 直接偏移=%.1f, 互换偏移=%.1f)\n"),
+					bSwapXY ? _T("数据X->CAD Y, 数据Y->CAD X (互换)")
+							: _T("数据X->CAD X, 数据Y->CAD Y (直接对应)"),
+					baseCx, baseCy, dNoSwap, dSwap);
+			}
+			else
+			{
+				CUtils::acutPrintf(_T("[平面图] 坐标映射:底图不可用,按用户约定默认互换\n"));
+			}
+		}
+	}
+
 	bool bFirstSaved = false;
 	cJSON* item = NULL;
 	cJSON_ArrayForEach(item, s_pJsonData) {
@@ -145,8 +188,17 @@ void CCreatePlanView::Execute()
 				}
 				// ★坐标映射：实测底图 X≈36524934 / Y≈2747316 与请求数据 X/Y 同序同量级，直接对应，不做互换
 				//   （若后续底图坐标系变化需要互换，把下面两行改成 ptInsert.y=dX; ptInsert.x=dY; 即可）
-				ptInsert.x = dX;
-				ptInsert.y = dY;
+				// 坐标映射:由 bSwapXY 决定(前面预扫描时已自动判定)
+				if (bSwapXY)
+				{
+					ptInsert.x = dY;   // 数据 X -> CAD Y
+					ptInsert.y = dX;   // 数据 Y -> CAD X
+				}
+				else
+				{
+					ptInsert.x = dX;
+					ptInsert.y = dY;
+				}
 
 				arrInsert.push_back(ptInsert);
 				CUtils::acutPrintf(_T("[平面图] %s 插入点 CAD(X=%.3f, Y=%.3f) ← 数据(X=%.3f, Y=%.3f)\n"),
