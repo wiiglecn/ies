@@ -262,11 +262,45 @@ void CCreateSectionView::Execute()
 			}
 
 			int divide = 12;
-			double elevation_zero = 208.55;
-			if (elevation_zero>max_zk) max_zk = elevation_zero;
-			int max_zk_int = static_cast<int>(std::ceil(elevation_zero)); 
-			int min_zk_int = (int)min_zk;
-			double zk_divide = (double)(divide*10)/(double)(max_zk_int-min_zk_int);
+
+			// ★标高基准改由接口提供（剖面参数：零标高 / 开挖标高），不再硬编码 208.55
+			//   零标高：±0.000 对应的绝对标高；开挖标高：基础底设计标高（画“基础底设计标高线”）
+			//   兼容别名：零点标高；基底标高 / 基础底设计标高
+			double elevation_zero = max_zk;      // 接口未给时，退回最高孔口高程
+			double elevation_dig  = 0.0;
+			bool   bHasZero = false, bHasDig = false;
+			{
+				cJSON* cZero = CUtils::GetJsonObjectItemUtf8(item, _T("零标高"));
+				if (cZero == NULL || !cJSON_IsNumber(cZero))
+					cZero = CUtils::GetJsonObjectItemUtf8(item, _T("零点标高"));
+				if (cZero != NULL && cJSON_IsNumber(cZero))
+				{
+					elevation_zero = cZero->valuedouble;
+					bHasZero = true;
+				}
+
+				cJSON* cDig = CUtils::GetJsonObjectItemUtf8(item, _T("开挖标高"));
+				if (cDig == NULL || !cJSON_IsNumber(cDig))
+					cDig = CUtils::GetJsonObjectItemUtf8(item, _T("基底标高"));
+				if (cDig == NULL || !cJSON_IsNumber(cDig))
+					cDig = CUtils::GetJsonObjectItemUtf8(item, _T("基础底设计标高"));
+				if (cDig != NULL && cJSON_IsNumber(cDig))
+				{
+					elevation_dig = cDig->valuedouble;
+					bHasDig = true;
+				}
+			}
+
+			// 标尺顶端必须同时覆盖 最高孔口 / 零标高 / 开挖标高，
+			// 否则接口给的标高高于原固定值时会画到标尺之外
+			double rulerTop = max_zk;
+			if (bHasZero && elevation_zero > rulerTop) rulerTop = elevation_zero;
+			if (bHasDig  && elevation_dig  > rulerTop) rulerTop  = elevation_dig;
+
+			CUtils::acutPrintf(_T("[剖面图] 标高基准：零标高=%.2f%s  开挖标高=%.2f%s  标尺顶=%.0f\n"),
+				elevation_zero, bHasZero ? _T("") : _T("(接口未给,取最高孔口)"),
+				elevation_dig,  bHasDig  ? _T("") : _T("(接口未给,不画基础底设计标高线)"),
+				std::ceil(rulerTop));
 
 			// 分页绘制:每页最多 HOLES_PER_PAGE 个钻孔
 			for (int pg = 0; pg < pageCount; ++pg)
@@ -304,7 +338,7 @@ void CCreateSectionView::Execute()
 
 				drawHeader(basePt,item,pageGps,pg+1,pageCount);
 				drawTable(basePt, pageGps);
-				SectionRulerInfo ruler = drawRuler(basePt,min_zk,divide,elevation_zero);
+				SectionRulerInfo ruler = drawRuler(basePt,min_zk,divide,rulerTop);
 				ruler.index = index;
 
 				drawColumn(basePt,pageGps,ruler);
@@ -582,7 +616,8 @@ void CCreateSectionView::drawTable(AcGePoint3d& basePt, cJSON* gpsObj)
 	
 
 }
-SectionRulerInfo CCreateSectionView::drawRuler(AcGePoint3d& basePt,double min_zk,int divide,double elevation_zero)
+//rulerTopElev = 标尺顶端需覆盖的最高标高（已含零标高/开挖标高/最高孔口，单位 m）；内部向上取整
+SectionRulerInfo CCreateSectionView::drawRuler(AcGePoint3d& basePt,double min_zk,int divide,double rulerTopElev)
 {
 	SectionRulerInfo info;
 
@@ -612,7 +647,7 @@ SectionRulerInfo CCreateSectionView::drawRuler(AcGePoint3d& basePt,double min_zk
 	CUtils::AddLine(pModelSpace, pt1, pt2);
 
 	int min_zk_int = (int)min_zk;
-	int max_zk_int = static_cast<int>(std::ceil(elevation_zero)); 
+	int max_zk_int = static_cast<int>(std::ceil(rulerTopElev)); 
 
 	info.min_zk_int = min_zk_int;
 	info.max_zk_int = max_zk_int;
@@ -1552,7 +1587,10 @@ void CCreateSectionView::drawLineFix(AcGePoint3d& basePt,cJSON* itemObj,const Se
 	AcGePoint3d pt1(basePt),pt2;
 	Acad::ErrorStatus es;
 
+	// 零标高（接口提供；兼容别名 零点标高）。缺失则不画该线，避免用错误基准
 	cJSON* zeroObj = CUtils::GetJsonObjectItemUtf8(itemObj,_T("零标高"));
+	if (zeroObj == NULL || !cJSON_IsNumber(zeroObj))
+		zeroObj = CUtils::GetJsonObjectItemUtf8(itemObj,_T("零点标高"));
 	if (zeroObj && cJSON_IsNumber(zeroObj))
 	{
 		double bottom = zeroObj->valuedouble;
@@ -1612,7 +1650,14 @@ void CCreateSectionView::drawLineFix(AcGePoint3d& basePt,cJSON* itemObj,const Se
 	layerName = _T("地质-地层线");
 	CUtils::EnsureLayer(layerName,true);
 	
+	// 开挖标高 = 基础底设计标高（接口提供；兼容别名 基底标高 / 基础底设计标高）
 	cJSON* digObj = CUtils::GetJsonObjectItemUtf8(itemObj,_T("开挖标高"));
+	if (digObj == NULL || !cJSON_IsNumber(digObj))
+		digObj = CUtils::GetJsonObjectItemUtf8(itemObj,_T("基底标高"));
+	if (digObj == NULL || !cJSON_IsNumber(digObj))
+		digObj = CUtils::GetJsonObjectItemUtf8(itemObj,_T("基础底设计标高"));
+	if (digObj == NULL || !cJSON_IsNumber(digObj))
+		CUtils::acutPrintf(_T("[剖面图] 接口未提供 开挖标高(基底标高)，本页不画基础底设计标高线\n"));
 	if (digObj && cJSON_IsNumber(digObj))
 	{
 		double bottom = digObj->valuedouble;

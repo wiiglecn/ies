@@ -320,6 +320,48 @@ Content-Type: application/json; charset=utf-8
 | `section_params` | object | 否 | JSON body / form | — | 剖面参数（剖面线选孔与布置），缺省按现状 |
 | `auto_zoom` | bool | 否 | JSON body / form | `true` | 出图后是否自动全图缩放 |
 
+#### 6.2.1 `section_params` 结构与标高字段（V1.3 新增）
+
+```json
+{
+  "sections": [
+    {
+      "title": "A-A",
+      "h_scale": 500,
+      "v_scale": 100,
+      "holes": ["ZK1", "ZK2", "ZK3"],
+      "zero_elev": 208.55,
+      "excav_elev": 205.50
+    }
+  ]
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `title` | string | 否 | 剖面编号（如 `A-A`），用于表头 |
+| `h_scale` / `v_scale` | number | 否 | 水平 / 垂直比例分母，缺省 500 / 100 |
+| `holes` | string[] | **是** | 本剖面经过的孔号，顺序即出图顺序 |
+| `zero_elev` | number | 否 | **零标高**：±0.000 对应的绝对标高（m），决定蓝色零标高线位置与标尺顶端 |
+| `excav_elev` | number | 否 | **开挖标高 = 基础底设计标高**（m），画洋红色“基础底设计标高线” |
+
+**字段别名**（等价，网关统一归一为 `零标高` / `开挖标高`）：
+
+| 规范名 | 可接受的键 |
+| --- | --- |
+| 零标高 | `zero_elev` / `zero_elevation` / `zero_level_elev` / `零标高` / `零点标高` |
+| 开挖标高 | `excav_elev` / `excavation_elev` / `basement_elev` / `base_elev` / `foundation_elev` / `design_bottom_elev` / `开挖标高` / `基底标高` / `基础底设计标高` |
+
+**校验与缺省**：
+
+- 值可为 number 或可转数字的字符串（`"205.50"`）；**非法值一律 `HTTP 400`**，错误信息形如
+  `section_params.excav_elev 必须是数字（绝对标高，单位 m），收到 'abc'`；
+- `null` / 空串视为**未提供**；
+- 未提供 `零标高` → ARX 以本次剖面**最高孔口高程**为标尺顶端；
+- 未提供 `开挖标高` → 该页**不画**基础底设计标高线（CAD 命令行给出提示）；
+- 标尺顶端自动取 `ceil(max(最高孔口, 零标高, 开挖标高))`，保证两条标高线始终落在标尺范围内
+  （V1.3 之前该值硬编码 208.55，接口传更高标高时线会画到标尺之外）。
+
 ### 6.3 响应
 
 ```json

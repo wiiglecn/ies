@@ -134,9 +134,84 @@ SECTION_KEY_MAP = {
     "v_scale":    "垂直比例",
     "title":      "标题",
     "holes":      "勘察组",
-    "zero_elev":  "零标高",
-    "excav_elev": "开挖标高",
+    # 零标高：±0.000 对应的绝对标高（决定标尺顶端与蓝色标高线）
+    "zero_elev":        "零标高",
+    "zero_elevation":   "零标高",
+    "zero_level_elev":  "零标高",
+    # 开挖标高 = 基础底设计标高（画洋红色“基础底设计标高线”）
+    "excav_elev":         "开挖标高",
+    "excavation_elev":    "开挖标高",
+    "basement_elev":      "开挖标高",
+    "base_elev":          "开挖标高",
+    "foundation_elev":    "开挖标高",
+    "design_bottom_elev": "开挖标高",
 }
+
+# 剖面标高类字段：中文规范名 -> 允许的输入键（英文别名 + 中文别名）
+SECTION_ELEV_KEYS = {
+    "零标高":   ("零标高", "零点标高", "zero_elev", "zero_elevation", "zero_level_elev"),
+    "开挖标高": ("开挖标高", "基底标高", "基础底设计标高", "excav_elev", "excavation_elev",
+                 "basement_elev", "base_elev", "foundation_elev", "design_bottom_elev"),
+}
+SECTION_ELEV_ALIASES = {alias: cn for cn, aliases in SECTION_ELEV_KEYS.items()
+                        for alias in aliases}
+
+
+def _iter_section_scopes(raw):
+    """遍历 section_params 内所有可能带标高字段的层级：根对象 + 剖面组各元素。"""
+    if not isinstance(raw, dict):
+        return
+    yield raw
+    groups = raw.get("剖面组")
+    if groups is None:
+        groups = raw.get("sections")
+    if isinstance(groups, list):
+        for g in groups:
+            if isinstance(g, dict):
+                yield g
+
+
+def _validate_section_elevs(raw):
+    """校验 零标高 / 开挖标高：必须是数字（或可转数字的字符串）。
+
+    非法值抛 ValueError，由接口统一转 400，避免 "abc" 之类的值落到 CAD 端
+    变成 0 米基准线却无人察觉。null / 空串视为未提供（合法，ARX 侧有缺省逻辑）。
+    """
+    for scope in _iter_section_scopes(raw):
+        for key, val in scope.items():
+            if key not in SECTION_ELEV_ALIASES:
+                continue
+            if val is None or (isinstance(val, str) and not val.strip()):
+                continue
+            if isinstance(val, bool) or not isinstance(val, (int, float, str)):
+                raise ValueError(
+                    f"section_params.{key} 必须是数字（绝对标高，单位 m），收到 {val!r}")
+            try:
+                float(val)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"section_params.{key} 必须是数字（绝对标高，单位 m），收到 {val!r}")
+
+
+def _coerce_section_elevs(root):
+    """把标高类字段统一成规范中文键 + float 值。
+
+    - 任意别名（英文 / 中文，如 zero_elev / 基底标高）都归一到 零标高 / 开挖标高；
+    - null / 空串视为未提供：删除该键（ARX 侧有缺省逻辑）；
+    - 同一规范名下出现多个别名时，取最后一个非空值。
+    """
+    for canonical, aliases in SECTION_ELEV_KEYS.items():
+        value = None
+        for alias in aliases:                 # aliases 首位即规范名本身
+            if alias not in root:
+                continue
+            raw = root.pop(alias)
+            if raw is None or (isinstance(raw, str) and not raw.strip()):
+                continue
+            value = float(raw)
+        if value is not None:
+            root[canonical] = value
+    return root
 
 
 def _remap_keys(obj, key_map):
@@ -375,6 +450,12 @@ def _translate_section(eng):
     if isinstance(groups, list):
         root["剖面组"] = [_remap_keys(g, SECTION_KEY_MAP) if isinstance(g, dict) else g
                           for g in groups]
+    # 标高类字段（零标高 / 开挖标高）统一转 float，禁止字符串/非法值流到 ARX
+    _coerce_section_elevs(root)
+    if isinstance(root.get("剖面组"), list):
+        for g in root["剖面组"]:
+            if isinstance(g, dict):
+                _coerce_section_elevs(g)
     return root
 
 
@@ -768,6 +849,9 @@ def draw_section():
     try:
         bh = _resolve_form_json("borehole_data", required=True)
         sp = _resolve_form_json("section_params", required=False)
+        # 零标高 / 开挖标高：接口必须提供合法数字（null/空串视为未提供）
+        if sp is not None:
+            _validate_section_elevs(sp)
     except ValueError as e:
         return jsonify({"status": "error", "message": str(e)}), 400
     if not isinstance(bh, dict):
@@ -960,6 +1044,11 @@ def draw():
                         "message": f"unknown views: {unknown}, allowed: {list(VIEW_ROUTES)}"}), 400
 
     section_params = body.get("section_params")
+    if section_params is not None:
+        try:
+            _validate_section_elevs(section_params)
+        except ValueError as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
     auto_zoom = body.get("auto_zoom", True)
 
     # borehole_data 兼容形态B（二维数组 JSON）
