@@ -50,6 +50,7 @@ void CCreatePlanView::Execute()
 
 
 	std::vector<CString> arrUsedHoles;   // 收集用到的块名（去重）
+	std::vector<AcGePoint3d> arrInsert;  // 收集钻孔插入点，供生成后自动缩放视图用
 	CString fistCadBlockUrl,firstBlockStyleName; 
 	bool bFirstSaved = false;
 	cJSON* item = NULL;
@@ -103,12 +104,13 @@ void CCreatePlanView::Execute()
 
 			AcGePoint3d ptInsert;
 			{
+				double dX = 0.0, dY = 0.0;
 				{
 					cJSON* columnTry = CUtils::GetJsonObjectItemUtf8(item,_T("X坐标(m)"));
 					if (columnTry == NULL){
 						continue;  
 					}
-					ptInsert.x = columnTry->valuedouble;
+					dX = columnTry->valuedouble;
 
 				}
 				{
@@ -116,8 +118,15 @@ void CCreatePlanView::Execute()
 					if (columnTry == NULL){
 						continue;  
 					}
-					ptInsert.y = columnTry->valuedouble;
+					dY = columnTry->valuedouble;
 				}
+				// ★坐标映射：请求数据的 X → CAD 的 Y，请求数据的 Y → CAD 的 X
+				ptInsert.y = dX;
+				ptInsert.x = dY;
+
+				arrInsert.push_back(ptInsert);
+				CUtils::acutPrintf(_T("[平面图] %s 插入点 CAD(X=%.3f, Y=%.3f) ← 数据(X=%.3f, Y=%.3f)\n"),
+					arrayName, ptInsert.x, ptInsert.y, dX, dY);
 			}
 			// 同名旧块先删（含其参照），强制按最新 DWG 重建
             CUtils::EraseBlock(this->pModelSpace, blockStyleName.GetString());
@@ -168,6 +177,36 @@ void CCreatePlanView::Execute()
 	this->actionEnd();
 	this->regen();
 
+	// ★生成完成后把视图缩放到本次钻孔范围，否则钻孔在几十万坐标处，当前视图里根本看不到
+	ZoomToHoles(arrInsert);
+}
+
+//缩放到本次生成的全部钻孔范围（含块半径与右侧孔号/高程标注的余量）
+void CCreatePlanView::ZoomToHoles(const std::vector<AcGePoint3d>& arrHole)
+{
+	if (arrHole.empty()) return;
+
+	double minX = arrHole[0].x, maxX = arrHole[0].x;
+	double minY = arrHole[0].y, maxY = arrHole[0].y;
+	for (size_t i = 1; i < arrHole.size(); ++i)
+	{
+		if (arrHole[i].x < minX) minX = arrHole[i].x;
+		if (arrHole[i].x > maxX) maxX = arrHole[i].x;
+		if (arrHole[i].y < minY) minY = arrHole[i].y;
+		if (arrHole[i].y > maxY) maxY = arrHole[i].y;
+	}
+
+	const double MARGIN = 30.0;              // 块半径 2.15 + 右侧标注宽度，留足余量
+	// 只有一个孔（或孔距过小）时给最小窗口，避免零面积窗口被 CAD 拒绝
+	if (maxX - minX < 1.0) { minX -= 50.0; maxX += 50.0; }
+	if (maxY - minY < 1.0) { minY -= 50.0; maxY += 50.0; }
+
+	CString cmd;
+	cmd.Format(_T("_.ZOOM _W %f,%f %f,%f "),
+		minX - MARGIN, minY - MARGIN, maxX + MARGIN, maxY + MARGIN);
+	acDocManager->sendStringToExecute(acDocManager->curDocument(), cmd);
+	CUtils::acutPrintf(_T("[平面图] 视图已缩放到钻孔范围：%.3f,%.3f ~ %.3f,%.3f\n"),
+		minX - MARGIN, minY - MARGIN, maxX + MARGIN, maxY + MARGIN);
 }
 void CCreatePlanView::ClearExtDbCache()
 {
