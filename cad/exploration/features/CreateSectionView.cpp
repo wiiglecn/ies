@@ -1182,7 +1182,7 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
             AcGePoint3d pt(x, getRuleHeight(rule, elevMid), 0.0);
             AcDbObjectId txtId = CUtils::AddDbText(pModelSpace, txt, pt, 2.2, pszStyleName, hAlign, 0.8);
 
-            // 时代成因标识：描述里带 地层年代/地层成因 时，层名后画带框堆叠代号（如 Q4 上标 al）
+            // 时代成因标识：描述里带 地层年代/地层成因 时，层名后接 MText 堆叠代号（如 Q4 上标 al）
             CString sDesc;
             cJSON* cDes = CUtils::GetJsonObjectItemUtf8(item, _T("成分及其他"));
             if (cDes != NULL && cJSON_IsString(cDes) && cDes->valuestring[0] != '\0')
@@ -1200,14 +1200,14 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
                 double nameW = 0.0, nameH = 0.0;
                 CUtils::GetEntExtentById(txtId, nameW, nameH);
                 if (nameW <= 0.01) nameW = txt.GetLength() * 1.6;   // 量不到宽度时按字数估
-                const double BOX_W = 8.0, BOX_H = 4.6, GAP = 1.2, TXT_H = 1.8;
-                // 末孔层名靠左（右对齐），框放层名左侧；其余孔框放层名右侧
-                double cxBox = bLastCol ? (pt.x - nameW - GAP - BOX_W / 2.0)
-                                        : (pt.x + nameW + GAP + BOX_W / 2.0);
-                double cyBox = pt.y + TXT_H;
-                CUtils::AddDbRect(pModelSpace, AcGePoint3d(cxBox, cyBox, 0.0), BOX_W, BOX_H, 0.0);
-                CUtils::AddDbMText(pModelSpace, sCode, AcGePoint3d(cxBox, cyBox, 0.0),
-                                   TXT_H, 0.0, pszStyleName, AcDbMText::kMiddleCenter);
+                const double GAP = 1.0;
+                const double TXT_H = 2.0;      // 代号字高，堆叠部分由 CAD 自动缩小
+                // 末孔层名靠左（右对齐），代号接层名左侧；其余孔接层名右侧
+                AcGePoint3d ptCode(bLastCol ? (pt.x - nameW - GAP) : (pt.x + nameW + GAP),
+                                   pt.y + 1.1, 0.0);
+                AcDbMText::AttachmentPoint attach =
+                    bLastCol ? AcDbMText::kMiddleRight : AcDbMText::kMiddleLeft;
+                CUtils::AddDbMText(pModelSpace, sCode, ptCode, TXT_H, 0.0, pszStyleName, attach);
             }
         }
         index++;
