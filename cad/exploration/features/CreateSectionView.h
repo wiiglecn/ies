@@ -38,6 +38,8 @@ protected:
 	void drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule);
 	//画柱内标志：取样符号（原状样●/岩样■）与风化程度符号（中风化2杠/强风化3杠等），图例 2026-10-20
 	void drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule);
+	//画表头（每页）：工程地质剖面图 + 剖面编号(A------A′) + 下划线 + 比例尺行 + 工程名称(黄)
+	void drawHeader(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gpsObj);
 	//高度尺
 	double getRuleHeight(const SectionRulerInfo& rule,double depth);
 };

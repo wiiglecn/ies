@@ -302,6 +302,7 @@ void CCreateSectionView::Execute()
 					pBlkRef->close();
 				}
 
+				drawHeader(basePt,item,pageGps);
 				drawTable(basePt, pageGps);
 				SectionRulerInfo ruler = drawRuler(basePt,min_zk,divide,elevation_zero);
 				ruler.index = index;
@@ -1363,7 +1364,92 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
         index++;
     }
 }
+//画表头（每页，版式来自用户截图 2026-10-20）：
+//  第一行：工程地质剖面图 + 剖面编号（A-A -> A------A′），行下画通长下划线
+//  第二行：比例尺  水平 1:水平比例  垂直 1:垂直比例
+//  第三行：工程名称（黄色，取本页第一个钻孔的 工程名称）
+void CCreateSectionView::drawHeader(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gpsObj)
+{
+    ACHAR* layerName = _T("地质-文字");
+    CUtils::EnsureLayer(layerName,true);
+    ACHAR* pszStyleName=_T("SLNormal");
 
+    double x0     = basePt.x + 30.0;
+    double yTitle = basePt.y + 280.0;   // 图框 A3 高 297，表头放顶部留白区
+
+    // 1) 标题 + 剖面编号
+    CUtils::AddDbText(pModelSpace,_T("工程地质剖面图"),
+        AcGePoint3d(x0,yTitle,0.0),7.0,pszStyleName,DBTA_LEFT,1.0);
+
+    cJSON* cTitle = CUtils::GetJsonObjectItemUtf8(itemObj,_T("标题"));
+    if (cTitle != NULL && cJSON_IsString(cTitle) && cTitle->valuestring[0] != '\0')
+    {
+        TCHAR szT[64] = { 0 };
+        CUtils::utf8ToTChar(cTitle->valuestring, szT, ARRAYSIZE(szT));
+        CString sNo(szT);
+        int dash = sNo.Find(_T('-'));
+        if (dash > 0)   // "A-A" -> "A------A′"
+            sNo = sNo.Left(dash) + _T("------") + sNo.Mid(dash + 1) + _T("′");
+        CUtils::AddDbText(pModelSpace,sNo,
+            AcGePoint3d(x0 + 105.0,yTitle,0.0),7.0,pszStyleName,DBTA_LEFT,1.0);
+    }
+
+    // 标题行下划线
+    {
+        AcGePoint3d p1(basePt.x + 25.0, yTitle - 3.0, 0.0);
+        AcGePoint3d p2(basePt.x + 230.0, yTitle - 3.0, 0.0);
+        CUtils::AddLine(pModelSpace,p1,p2);
+    }
+
+    // 2) 比例尺行
+    double yScale = yTitle - 13.0;
+    {
+        int nH = 500, nV = 100;
+        cJSON* cH = CUtils::GetJsonObjectItemUtf8(itemObj,_T("水平比例"));
+        if (cH != NULL && cJSON_IsNumber(cH) && cH->valuedouble > 0) nH = (int)cH->valuedouble;
+        cJSON* cV = CUtils::GetJsonObjectItemUtf8(itemObj,_T("垂直比例"));
+        if (cV != NULL && cJSON_IsNumber(cV) && cV->valuedouble > 0) nV = (int)cV->valuedouble;
+        CString sScale;
+        sScale.Format(_T("比例尺  水平 1:%d     垂直 1:%d"), nH, nV);
+        CUtils::AddDbText(pModelSpace,sScale.GetString(),
+            AcGePoint3d(x0 + 8.0,yScale,0.0),4.2,pszStyleName,DBTA_LEFT,1.0);
+    }
+
+    // 3) 工程名称（黄色，取本页第一个钻孔的 工程名称）
+    if (gpsObj != NULL)
+    {
+        CString sProj;
+        cJSON* gpObj = NULL;
+        cJSON_ArrayForEach(gpObj, gpsObj)
+        {
+            if (gpObj == NULL || !cJSON_IsString(gpObj)) continue;
+            cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+            if (zkObj == NULL) continue;
+            cJSON* cP = CUtils::GetJsonObjectItemUtf8(zkObj,_T("工程名称"));
+            if (cP != NULL && cJSON_IsString(cP) && cP->valuestring[0] != '\0')
+            {
+                TCHAR szP[128] = { 0 };
+                CUtils::utf8ToTChar(cP->valuestring, szP, ARRAYSIZE(szP));
+                sProj = szP;
+            }
+            break;   // 只取第一个孔的工程名称
+        }
+        if (!sProj.IsEmpty())
+        {
+            AcDbObjectId idTxt = CUtils::AddDbText(pModelSpace,sProj.GetString(),
+                AcGePoint3d(x0 + 55.0,yScale - 10.0,0.0),4.2,pszStyleName,DBTA_LEFT,1.0);
+            if (idTxt != AcDbObjectId::kNull)
+            {
+                AcDbEntity* pEnt = NULL;
+                if (acdbOpenObject(pEnt,idTxt,AcDb::kForWrite) == Acad::eOk && pEnt != NULL)
+                {
+                    pEnt->setColorIndex(2);   // 黄色，与截图一致
+                    pEnt->close();
+                }
+            }
+        }
+    }
+}
 
 void CCreateSectionView::drawLineFix(AcGePoint3d& basePt,cJSON* itemObj,const SectionRulerInfo& rule)
 {
