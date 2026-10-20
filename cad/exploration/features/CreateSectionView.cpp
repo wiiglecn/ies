@@ -1096,6 +1096,22 @@ static bool KsAddSolidHatch(AcDbBlockTableRecord* pMS, const AcGePoint2dArray& l
     return es == Acad::eOk;
 }
 
+//红色文字：柱内标识的孔内深度标注，颜色与标识一致（1=红）
+//AddDbText 没有颜色参数，取回实体 id 后改色
+static void KsDrawRedText(AcDbBlockTableRecord* pMS, const CString& sTxt,
+                          const AcGePoint3d& pt, double h,
+                          const ACHAR* pszStyle, int hAlign)
+{
+    if (pMS == NULL || sTxt.IsEmpty()) return;
+    AcDbObjectId id = CUtils::AddDbText(pMS, sTxt.GetString(), pt, h, pszStyle, hAlign, 0.7);
+    if (id == AcDbObjectId::kNull) return;
+    AcDbEntity* pEnt = NULL;
+    if (acdbOpenObject(pEnt, id, AcDb::kForWrite) == Acad::eOk && pEnt != NULL)
+    {
+        pEnt->setColorIndex(1);      // 与标识同色（红）
+        pEnt->close();
+    }
+}
 //原状样：红色实心圆（直径 2.4）
 static void KsDrawSampleCircle(AcDbBlockTableRecord* pMS, double cx, double cy)
 {
@@ -1269,6 +1285,7 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
                     if (KsParseSampleDepth(CString(cDep->valuestring), dMid))
                     {
                         double y = getRuleHeight(rule, top - dMid);
+                        bool bDrawn = true;
                         if (bRock)
                             KsDrawSampleSquare(pModelSpace, xC, y);        // 岩样 ■
                         else
@@ -1282,6 +1299,16 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
                             }
                             if (sNo.Find(_T("QS")) < 0)                    // 水样(QS)图例未定义，暂不画
                                 KsDrawSampleCircle(pModelSpace, xC, y);    // 原状样 ●
+                            else
+                                bDrawn = false;
+                        }
+                        // 标识左侧标孔内深度（同红色）：右对齐贴住符号左缘
+                        if (bDrawn)
+                        {
+                            CString sDep;
+                            sDep.Format(_T("%.2f"), dMid);
+                            KsDrawRedText(pModelSpace, sDep, AcGePoint3d(xC - 2.0, y - 0.55, 0.0),
+                                          1.5, _T("SLNormal"), DBTA_RIGHT);
                         }
                     }
                 }
@@ -1323,6 +1350,13 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
                     double dMid = (cFrom->valuedouble + cTo->valuedouble) / 2.0;
                     double y = getRuleHeight(rule, top - dMid);
                     KsDrawWeathering(pModelSpace, xC, y, nBars);
+                    // 标识左侧标孔内深度（同红色）：右对齐贴住符号左缘
+                    {
+                        CString sDep;
+                        sDep.Format(_T("%.2f"), dMid);
+                        KsDrawRedText(pModelSpace, sDep, AcGePoint3d(xC - 1.2, y - 0.55, 0.0),
+                                      1.5, _T("SLNormal"), DBTA_RIGHT);
+                    }
                 }
             }
         }
