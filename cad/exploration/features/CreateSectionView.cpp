@@ -302,7 +302,7 @@ void CCreateSectionView::Execute()
 					pBlkRef->close();
 				}
 
-				drawHeader(basePt,item,pageGps);
+				drawHeader(basePt,item,pageGps,pg+1,pageCount);
 				drawTable(basePt, pageGps);
 				SectionRulerInfo ruler = drawRuler(basePt,min_zk,divide,elevation_zero);
 				ruler.index = index;
@@ -1364,44 +1364,50 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
         index++;
     }
 }
-//画表头（每页，版式来自用户截图 2026-10-20）：
-//  第一行：工程地质剖面图 + 剖面编号（A-A -> A------A′），行下画通长下划线
+//画表头（每页，版式来自用户截图 2026-10-20；表头整体水平居中、竖向不贴顶）：
+//  第一行：工程地质剖面图 + 剖面编号（总页数------当前页码′，如 8------3′），行下画下划线
 //  第二行：比例尺  水平 1:水平比例  垂直 1:垂直比例
 //  第三行：工程名称（黄色，取本页第一个钻孔的 工程名称）
-void CCreateSectionView::drawHeader(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gpsObj)
+void CCreateSectionView::drawHeader(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gpsObj,int pageNo,int pageCount)
 {
     ACHAR* layerName = _T("地质-文字");
     CUtils::EnsureLayer(layerName,true);
     ACHAR* pszStyleName=_T("SLNormal");
 
-    double x0     = basePt.x + 30.0;
-    double yTitle = basePt.y + 280.0;   // 图框 A3 高 297，表头放顶部留白区
+    const double H_TITLE = 7.0;                            // 标题字高
+    const double H_SUB   = 4.2;                            // 副行字高
+    const double centerX = basePt.x + PAGE_WIDTH / 2.0;    // 图幅水平中心
+    double yTitle = basePt.y + 272.0;                      // 顶部留白区内下移，不贴顶
 
-    // 1) 标题 + 剖面编号
-    CUtils::AddDbText(pModelSpace,_T("工程地质剖面图"),
-        AcGePoint3d(x0,yTitle,0.0),7.0,pszStyleName,DBTA_LEFT,1.0);
+    // 1) 标题 + 剖面编号（编号 = 总页数------当前页码′）
+    CString sNo;
+    sNo.Format(_T("%d------%d′"), pageCount, pageNo);
 
-    cJSON* cTitle = CUtils::GetJsonObjectItemUtf8(itemObj,_T("标题"));
-    if (cTitle != NULL && cJSON_IsString(cTitle) && cTitle->valuestring[0] != '\0')
+    // 估宽用于整体居中（汉字宽≈字高；数字/′≈0.6 倍字高，横线≈0.45 倍）
+    double wTitle = 7.0 * H_TITLE;                          // “工程地质剖面图”7 个汉字
+    double wNo = 0.0;
+    for (int k = 0; k < sNo.GetLength(); ++k)
     {
-        TCHAR szT[64] = { 0 };
-        CUtils::utf8ToTChar(cTitle->valuestring, szT, ARRAYSIZE(szT));
-        CString sNo(szT);
-        int dash = sNo.Find(_T('-'));
-        if (dash > 0)   // "A-A" -> "A------A′"
-            sNo = sNo.Left(dash) + _T("------") + sNo.Mid(dash + 1) + _T("′");
-        CUtils::AddDbText(pModelSpace,sNo,
-            AcGePoint3d(x0 + 105.0,yTitle,0.0),7.0,pszStyleName,DBTA_LEFT,1.0);
+        if (sNo[k] == _T('-')) wNo += 0.45 * H_TITLE;
+        else                   wNo += 0.60 * H_TITLE;
     }
+    const double GAP = 16.0;
+    double xTitle = centerX - (wTitle + GAP + wNo) / 2.0;
+    double xNo    = xTitle + wTitle + GAP;
 
-    // 标题行下划线
+    CUtils::AddDbText(pModelSpace,_T("工程地质剖面图"),
+        AcGePoint3d(xTitle,yTitle,0.0),H_TITLE,pszStyleName,DBTA_LEFT,1.0);
+    CUtils::AddDbText(pModelSpace,sNo.GetString(),
+        AcGePoint3d(xNo,yTitle,0.0),H_TITLE,pszStyleName,DBTA_LEFT,1.0);
+
+    // 标题行下划线（两端各外伸 5）
     {
-        AcGePoint3d p1(basePt.x + 25.0, yTitle - 3.0, 0.0);
-        AcGePoint3d p2(basePt.x + 230.0, yTitle - 3.0, 0.0);
+        AcGePoint3d p1(xTitle - 5.0, yTitle - 3.0, 0.0);
+        AcGePoint3d p2(xNo + wNo + 5.0, yTitle - 3.0, 0.0);
         CUtils::AddLine(pModelSpace,p1,p2);
     }
 
-    // 2) 比例尺行
+    // 2) 比例尺行（水平居中）
     double yScale = yTitle - 13.0;
     {
         int nH = 500, nV = 100;
@@ -1412,10 +1418,11 @@ void CCreateSectionView::drawHeader(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gp
         CString sScale;
         sScale.Format(_T("比例尺  水平 1:%d     垂直 1:%d"), nH, nV);
         CUtils::AddDbText(pModelSpace,sScale.GetString(),
-            AcGePoint3d(x0 + 8.0,yScale,0.0),4.2,pszStyleName,DBTA_LEFT,1.0);
+            AcGePoint3d(centerX,yScale,0.0),H_SUB,pszStyleName,DBTA_CENTER,1.0);
     }
 
-    // 3) 工程名称（黄色，取本页第一个钻孔的 工程名称）
+    // 3) 工程名称（黄色，水平居中；取本页第一个钻孔的 工程名称）
+    double yProj = yScale - 10.0;
     if (gpsObj != NULL)
     {
         CString sProj;
@@ -1437,7 +1444,7 @@ void CCreateSectionView::drawHeader(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gp
         if (!sProj.IsEmpty())
         {
             AcDbObjectId idTxt = CUtils::AddDbText(pModelSpace,sProj.GetString(),
-                AcGePoint3d(x0 + 55.0,yScale - 10.0,0.0),4.2,pszStyleName,DBTA_LEFT,1.0);
+                AcGePoint3d(centerX,yProj,0.0),H_SUB,pszStyleName,DBTA_CENTER,1.0);
             if (idTxt != AcDbObjectId::kNull)
             {
                 AcDbEntity* pEnt = NULL;
