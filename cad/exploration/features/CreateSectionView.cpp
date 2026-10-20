@@ -31,6 +31,7 @@ struct SectionRulerInfo
 struct KsDrillLayer
 {
     CString code;       // 地层编号
+    CString name;       // 地层名称（跨孔关联的主键，编号是分孔流水号不可比）       // 地层编号
     double depthFrom;   // 进尺自(m)
     double depthTo;     // 进尺至(m)
     bool isRock;        // ★岩石类地层（地层名称首段为"岩石"，如"岩石-灰岩"）
@@ -54,6 +55,31 @@ static int KsFindLayer(const KsDrillHole& hole, const CString& code, const std::
         if (hole.layers[i].code.Compare(code) == 0) return (int)i;
     }
     return -1;
+}
+// 按地层名称找该层下标；used 非空时跳过已用过的（防止同一层被复用多次）
+static int KsFindLayerByName(const KsDrillHole& hole, const CString& name, const std::vector<int>& used)
+{
+    if (name.IsEmpty()) return -1;
+    for (size_t i = 0; i < hole.layers.size(); ++i)
+    {
+        if (!used.empty() && used[i] != 0) continue;
+        if (hole.layers[i].name.Compare(name) == 0) return (int)i;
+    }
+    return -1;
+}
+// 跨孔关联主控：按地层名称匹配；名称缺失才退回编号
+static int KsMatchLayer(const KsDrillHole& hole, const KsDrillLayer& la, const std::vector<int>& used)
+{
+    int i = KsFindLayerByName(hole, la.name, used);
+    if (i >= 0) return i;
+    return KsFindLayer(hole, la.code, used);
+}
+// 连续两段是否同一层：先按名称，名称缺失才按编号（同一岩性分多段录入要合并）
+static bool KsSameLayerKey(const KsDrillLayer& a, const KsDrillLayer& b)
+{
+    if (!a.name.IsEmpty() && !b.name.IsEmpty())
+        return a.name.Compare(b.name) == 0;
+    return a.code.Compare(b.code) == 0;
 }
 // 线型 ObjectId → 名称（AddDbPolyline 只认名称）；失败返回空串
 static CString KsLinetypeNameById(const AcDbObjectId& id)
@@ -112,15 +138,29 @@ static double KsPinchElev(const KsDrillHole& T, int refIdx, double elev)
     if (refIdx >= 0 && refIdx <  (int)T.layers.size())
         return T.top - T.layers[refIdx].depthFrom;      // ref 层顶面
 
-    double best = T.top - T.totalDepth;                 // 兜底：孔底
-    double bestDiff = fabs(best - elev);
-    for (size_t i = 0; i < T.layers.size(); ++i)        // 各层底面挑最接近的
+    // 未命中：只在"非末层的层底"里取最接近的；末层底 = 孔底，不能当落点，
+    // 否则尖灭线会一路画到孔底（ZK4/ZK5 常见症状）
+    double best = elev;                                 // 没有候选时保持水平
+    double bestDiff = 1e30;
+    for (size_t i = 0; i + 1 < T.layers.size(); ++i)
     {
         double b = T.top - T.layers[i].depthTo;
         double d = fabs(b - elev);
         if (d < bestDiff) { bestDiff = d; best = b; }
     }
     return best;
+}
+// 同一根线只画一次：A 侧尖灭与 B 侧尖灭可能得到相同端点（如两侧都指向对方泥灰岩顶）
+static bool KsSegDrawn(std::vector<CString>& drawn, double x1, double y1, double x2, double y2)
+{
+    if (x1 > x2 || (fabs(x1 - x2) < 0.01 && y1 > y2))
+    { double t = x1; x1 = x2; x2 = t; t = y1; y1 = y2; y2 = t; }
+    CString k;
+    k.Format(_T("%.2f|%.2f|%.2f|%.2f"), x1, y1, x2, y2);
+    for (size_t i = 0; i < drawn.size(); ++i)
+        if (drawn[i].Compare(k) == 0) return true;
+    drawn.push_back(k);
+    return false;
 }
 //
 CCreateSectionView::CCreateSectionView(void):CCreateBaseView(),s_ConfigData(NULL),patLoader(NULL)
@@ -1954,6 +1994,10 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const S
                     cJSON* cName = CUtils::GetJsonObjectItemUtf8(layerObj,_T("地层名称"));
                     if (cName != NULL && cJSON_IsString(cName))
                     {
+                        TCHAR szNm[128] = { 0 };
+                        CUtils::utf8ToTChar(cName->valuestring, szNm, ARRAYSIZE(szNm));
+                        li.name = szNm;
+                        li.name.TrimLeft();  li.name.TrimRight();
                         std::vector<CString> arrSeg;
                         if (CUtils::SplitUtf8(cName->valuestring, '-', arrSeg) > 0)
                             li.isRock = (arrSeg[0].Compare(_T("岩石")) == 0);
@@ -1972,7 +2016,7 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const S
                     std::vector<KsDrillLayer> merged;
                     for (size_t k = 0; k < hole.layers.size(); ++k)
                     {
-                        if (!merged.empty() && merged.back().code.Compare(hole.layers[k].code) == 0)
+                        if (!merged.empty() && KsSameLayerKey(merged.back(), hole.layers[k]))
                             merged.back().depthTo = hole.layers[k].depthTo;   // 同层 → 延伸底界
                         else
                             merged.push_back(hole.layers[k]);
@@ -2058,6 +2102,7 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const S
             const KsDrillHole& B = holes[i+1];
 
             std::vector<int> usedB(B.layers.size(), 0);
+            std::vector<CString> drawnSegs;   // 已画过的线段（端点相同不重复画）
 
             // A 有 → 连 B（同层对底；B 缺层则尖灭到 B.xL）
             for (size_t a = 0; a < A.layers.size(); ++a)
@@ -2067,7 +2112,11 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const S
                 // ★A 最后一层的底面 = 孔底，跨孔连线同样不画
                 if (a + 1 >= A.layers.size()) continue;
 
-                int b = KsFindLayer(B, la.code, usedB);
+                int b = KsMatchLayer(B, la, usedB);
+                // 对方同名层已延伸到孔底（是末层）时，这根分界线在对方并不存在，
+                // 不能连到对方孔底，改走尖灭：如 ZK4 强风化泥岩 与 ZK5 泥灰岩 同编号 3-2-0 的旧误连
+                if (b >= 0 && (size_t)(b + 1) >= B.layers.size())
+                    b = -1;
 
                 double elevA = A.top - la.depthTo;
                 double elevB;
@@ -2080,23 +2129,27 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const S
                 {
                     int yIdx = -1;
                     if (a + 1 < A.layers.size())
-                        yIdx = KsFindLayer(B, A.layers[a+1].code, std::vector<int>());
+                        yIdx = KsMatchLayer(B, A.layers[a+1], std::vector<int>());
                     elevB = KsPinchElev(B, yIdx, elevA);
                 }
 
-                std::vector<AcGePoint3d> arrPts;
-                arrPts.push_back(AcGePoint3d(A.x,  getRuleHeight(rule, elevA), 0.0));
-                arrPts.push_back(AcGePoint3d(B.xL, getRuleHeight(rule, elevB), 0.0));
+                double yA = getRuleHeight(rule, elevA);
+                double yB = getRuleHeight(rule, elevB);
+                if (!KsSegDrawn(drawnSegs, A.x, yA, B.xL, yB))
+                {
+                    std::vector<AcGePoint3d> arrPts;
+                    arrPts.push_back(AcGePoint3d(A.x, yA, 0.0));
+                    arrPts.push_back(AcGePoint3d(B.xL, yB, 0.0));
 
-                Adesk::UInt16 colorIdx;
-				double lw;                                                   // ★新增
-				const ACHAR* pszLt = KsStyleFor(codes, styles, ltNames, la.code, colorIdx, lw);
-                // ★任一侧紧邻下方是岩石类地层 → 带点虚线
-                bool rockTop = A.layers[a+1].isRock
-                            || (b >= 0 && (size_t)(b+1) < B.layers.size() && B.layers[b+1].isRock);
-                if (rockTop)
-                    pszLt = _T("swx");
-				CUtils::AddDbPolyline(pModelSpace, arrPts, lw, false, pszLt, colorIdx);
+                    Adesk::UInt16 colorIdx;
+                    double lw;
+                    const ACHAR* pszLt = KsStyleFor(codes, styles, ltNames, la.code, colorIdx, lw);
+                    bool rockTop = A.layers[a+1].isRock
+                                || (b >= 0 && (size_t)(b+1) < B.layers.size() && B.layers[b+1].isRock);
+                    if (rockTop)
+                        pszLt = _T("swx");
+                    CUtils::AddDbPolyline(pModelSpace, arrPts, lw, false, pszLt, colorIdx);
+                }
             }
 
             // B 有 A 无 → 反向尖灭：A.x → B.xL
@@ -2111,22 +2164,26 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const S
                 double elevB2 = B.top - lb.depthTo;
                 int yIdx = -1;
                 if (b2 + 1 < B.layers.size())
-                    yIdx = KsFindLayer(A, B.layers[b2+1].code, std::vector<int>());
+                    yIdx = KsMatchLayer(A, B.layers[b2+1], std::vector<int>());
                 double elevA2 = KsPinchElev(A, yIdx, elevB2);
 
-                std::vector<AcGePoint3d> arrPts;
-                arrPts.push_back(AcGePoint3d(B.xL, getRuleHeight(rule, elevB2), 0.0));
-                arrPts.push_back(AcGePoint3d(A.x,  getRuleHeight(rule, elevA2), 0.0));
+                double yA = getRuleHeight(rule, elevB2);
+                double yB = getRuleHeight(rule, elevA2);
+                if (!KsSegDrawn(drawnSegs, B.xL, yA, A.x, yB))
+                {
+                    std::vector<AcGePoint3d> arrPts;
+                    arrPts.push_back(AcGePoint3d(B.xL, yA, 0.0));
+                    arrPts.push_back(AcGePoint3d(A.x, yB, 0.0));
 
-                Adesk::UInt16 colorIdx;
-				double lw;                                                   // ★新增
-				const ACHAR* pszLt = KsStyleFor(codes, styles, ltNames, lb.code, colorIdx, lw);
-                // ★任一侧紧邻下方是岩石类地层 → 带点虚线
-                bool rockTop = B.layers[b2+1].isRock
-                            || (yIdx >= 0 && (size_t)(yIdx+1) < A.layers.size() && A.layers[yIdx+1].isRock);
-                if (rockTop)
-                    pszLt = _T("swx");
-				CUtils::AddDbPolyline(pModelSpace, arrPts, lw, false, pszLt, colorIdx);
+                    Adesk::UInt16 colorIdx;
+                    double lw;
+                    const ACHAR* pszLt = KsStyleFor(codes, styles, ltNames, lb.code, colorIdx, lw);
+                    bool rockTop = B.layers[b2+1].isRock
+                                || (yIdx >= 0 && (size_t)(yIdx+1) < A.layers.size() && A.layers[yIdx+1].isRock);
+                    if (rockTop)
+                        pszLt = _T("swx");
+                    CUtils::AddDbPolyline(pModelSpace, arrPts, lw, false, pszLt, colorIdx);
+                }
             }
         }
     }
