@@ -1176,9 +1176,9 @@ static bool KsDescField(const CString& sDesc, const CString& sKey, CString& vOut
 //由 地层年代/堆积年代/地层成因 推时代成因代号，识别成功返回 true（如 "Q\Sal^4;"）
 //MText 堆叠格式 \S上^下;：成因代号在上标、年代数字在下标
 static bool KsEraIdentity(const CString& sEra, const CString& sAccu, const CString& sCause,
-                          CString& sMain, CString& sSub, CString& sSup)
+                          CString& sMain, CString& sSub, CString& sSup, CString& sTail)
 {
-    sMain.Empty(); sSub.Empty(); sSup.Empty();
+    sMain.Empty(); sSub.Empty(); sSup.Empty(); sTail.Empty();
     if (sEra.IsEmpty()) return false;
     TCHAR szBase[4] = { 0 };
     if (sEra.Find(_T("第四")) >= 0)      szBase[0] = _T('Q');
@@ -1202,18 +1202,49 @@ static bool KsEraIdentity(const CString& sEra, const CString& sAccu, const CStri
     else if (sEra.Find(_T("中统")) >= 0)   sSub = _T("2");
     else if (sEra.Find(_T("上统")) >= 0)   sSub = _T("3");
 
-    if (sCause.Find(_T("冲洪积")) >= 0)      sSup = _T("al+pl");
-    else if (sCause.Find(_T("残坡积")) >= 0) sSup = _T("el+dl");
-    else if (sCause.Find(_T("填土")) >= 0)   sSup = _T("ml");
-    else if (sCause.Find(_T("冲积")) >= 0)   sSup = _T("al");
-    else if (sCause.Find(_T("洪积")) >= 0)   sSup = _T("pl");
-    else if (sCause.Find(_T("坡积")) >= 0)   sSup = _T("dl");
-    else if (sCause.Find(_T("残积")) >= 0)   sSup = _T("el");
-    else if (sCause.Find(_T("湖积")) >= 0)   sSup = _T("l");
-    else if (sCause.Find(_T("海积")) >= 0)   sSup = _T("m");
-    else if (sCause.Find(_T("风积")) >= 0)   sSup = _T("eol");
-    else if (sCause.Find(_T("冰积")) >= 0)   sSup = _T("gl");
-    else if (sCause.Find(_T("沼泽")) >= 0)   sSup = _T("h");
+
+    // 阶代号:完整年代描述如"石炭系下统岩关阶" -> C1Y;与成因互斥(有阶就画阶)
+    if      (sEra.Find(_T("岩关阶")) >= 0)   sTail = _T("Y");
+    else if (sEra.Find(_T("大塘阶")) >= 0)   sTail = _T("D");
+    else if (sEra.Find(_T("摆佐阶")) >= 0)   sTail = _T("B");
+    else if (sEra.Find(_T("滑石板阶")) >= 0) sTail = _T("H");
+    else if (sEra.Find(_T("达拉阶")) >= 0)   sTail = _T("Dl");
+    else if (sEra.Find(_T("马平阶")) >= 0)   sTail = _T("M");
+    else if (sEra.Find(_T("栖霞阶")) >= 0)   sTail = _T("Q");
+    else if (sEra.Find(_T("茅口阶")) >= 0)   sTail = _T("M");
+    else if (sEra.Find(_T("龙潭阶")) >= 0)   sTail = _T("L");
+    else if (sEra.Find(_T("长兴阶")) >= 0)   sTail = _T("C");
+    else if (sEra.Find(_T("大冶阶")) >= 0)   sTail = _T("D");
+    else if (sEra.Find(_T("嘉陵江阶")) >= 0) sTail = _T("J");
+    else if (sEra.Find(_T("巴东阶")) >= 0)   sTail = _T("B");
+    else if (sEra.Find(_T("莲花山阶")) >= 0) sTail = _T("L");
+    else if (sEra.Find(_T("那高岭阶")) >= 0) sTail = _T("N");
+    else if (sEra.Find(_T("郁江阶")) >= 0)   sTail = _T("Y");
+    else if (sEra.Find(_T("东岗岭阶")) >= 0) sTail = _T("D");
+    else if (sEra.Find(_T("融县阶")) >= 0)   sTail = _T("R");
+    else if (sEra.Find(_T("珍珠冲阶")) >= 0) sTail = _T("Z");
+    else if (sEra.Find(_T("自流井阶")) >= 0) sTail = _T("Zi");
+    else if (sEra.Find(_T("新田沟阶")) >= 0) sTail = _T("X");
+    else if (sEra.Find(_T("沙溪庙阶")) >= 0) sTail = _T("S");
+    else if (sEra.Find(_T("遂宁阶")) >= 0)   sTail = _T("Sn");
+    else if (sEra.Find(_T("蓬莱镇阶")) >= 0) sTail = _T("P");
+
+    if (sTail.IsEmpty())
+    {
+        if (sCause.Find(_T("冲洪积")) >= 0)      sSup = _T("al+pl");
+        else if (sCause.Find(_T("残坡积")) >= 0) sSup = _T("el+dl");
+        else if (sCause.Find(_T("填土")) >= 0)   sSup = _T("ml");
+        else if (sCause.Find(_T("冲积")) >= 0)   sSup = _T("al");
+        else if (sCause.Find(_T("洪积")) >= 0)   sSup = _T("pl");
+        else if (sCause.Find(_T("坡积")) >= 0)   sSup = _T("dl");
+        else if (sCause.Find(_T("残积")) >= 0)   sSup = _T("el");
+        else if (sCause.Find(_T("湖积")) >= 0)   sSup = _T("l");
+        else if (sCause.Find(_T("海积")) >= 0)   sSup = _T("m");
+        else if (sCause.Find(_T("风积")) >= 0)   sSup = _T("eol");
+        else if (sCause.Find(_T("冰积")) >= 0)   sSup = _T("gl");
+        else if (sCause.Find(_T("沼泽")) >= 0)   sSup = _T("h");
+    }
+
 
     sMain = szBase;
     return true;
@@ -1223,17 +1254,19 @@ static bool KsEraIdentity(const CString& sEra, const CString& sAccu, const CStri
 //不用 MText 堆叠、不用 Unicode 上下标字形，三段都是 ASCII，任何字体（含 SHX）都能正常出图
 static void KsDrawEraCode(AcDbBlockTableRecord* pMS, const CString& sMain, const CString& sSub,
                           const CString& sSup, const AcGePoint3d& ptAnchor,
-                          bool bToLeft, const ACHAR* pszStyle)
+                          bool bToLeft, const ACHAR* pszStyle, const CString& sTail)
 {
     if (pMS == NULL || sMain.IsEmpty()) return;
     const double H  = 2.0;    // 主字母字高
     const double HS = 1.2;    // 上下标字高
+    const double HT = 1.5;    // 阶代号字高（与 C 同基线）
     const double WF = 0.8;    // 宽高比
     const double CW = 0.62;   // ASCII 单字宽（相对字高）
     double wMain = sMain.GetLength() * H  * CW * WF;
     double wSub  = sSub.GetLength()  * HS * CW * WF;
     double wSup  = sSup.GetLength()  * HS * CW * WF;
-    double total = wMain + wSub + wSup;
+    double wTail = sTail.GetLength() * HT * CW * WF;
+    double total = wMain + wSub + wSup + wTail;
     // bToLeft：代号整体右对齐到 ptAnchor（末孔层名靠右，代号放其左侧）
     double x0 = bToLeft ? (ptAnchor.x - total) : ptAnchor.x;
     CUtils::AddDbText(pMS, sMain, AcGePoint3d(x0, ptAnchor.y, 0.0), H, pszStyle, DBTA_LEFT, WF);
@@ -1241,8 +1274,12 @@ static void KsDrawEraCode(AcDbBlockTableRecord* pMS, const CString& sMain, const
     if (!sSub.IsEmpty())
         CUtils::AddDbText(pMS, sSub, AcGePoint3d(x1, ptAnchor.y - 0.4, 0.0),
                           HS, pszStyle, DBTA_LEFT, WF);
+    double x2 = x1 + wSub;
+    if (!sTail.IsEmpty())
+        CUtils::AddDbText(pMS, sTail, AcGePoint3d(x2, ptAnchor.y, 0.0),
+                          HT, pszStyle, DBTA_LEFT, WF);
     if (!sSup.IsEmpty())
-        CUtils::AddDbText(pMS, sSup, AcGePoint3d(x1 + wSub, ptAnchor.y + 1.05, 0.0),
+        CUtils::AddDbText(pMS, sSup, AcGePoint3d(x2 + wTail, ptAnchor.y + 1.05, 0.0),
                           HS, pszStyle, DBTA_LEFT, WF);
 }
 
@@ -1361,12 +1398,12 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
                 CUtils::utf8ToTChar(cDes->valuestring, szDes, ARRAYSIZE(szDes));
                 sDesc = szDes;
             }
-            CString sEra, sAccu, sCause, sMain, sSub, sSup;
+            CString sEra, sAccu, sCause, sMain, sSub, sSup, sTail;
             KsDescField(sDesc, _T("地层年代"), sEra);
             KsDescField(sDesc, _T("堆积年代"), sAccu);
             KsDescField(sDesc, _T("地层成因"), sCause);
             if (txtId != AcDbObjectId::kNull
-                && KsEraIdentity(sEra, sAccu, sCause, sMain, sSub, sSup))
+                && KsEraIdentity(sEra, sAccu, sCause, sMain, sSub, sSup, sTail))
             {
                 double nameW = 0.0, nameH = 0.0;
                 CUtils::GetEntExtentById(txtId, nameW, nameH);
@@ -1375,7 +1412,7 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
                 // 末孔层名靠左（右对齐），代号接层名左侧；其余孔接层名右侧
                 AcGePoint3d ptCode(bLastCol ? (pt.x - nameW - GAP) : (pt.x + nameW + GAP),
                                    pt.y, 0.0);
-                KsDrawEraCode(pModelSpace, sMain, sSub, sSup, ptCode, bLastCol, pszStyleName);
+                KsDrawEraCode(pModelSpace, sMain, sSub, sSup, ptCode, bLastCol, pszStyleName, sTail);
             }
         }
         index++;
