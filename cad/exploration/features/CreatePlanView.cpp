@@ -452,8 +452,10 @@ void CCreatePlanView::ChangeText(AcDbObjectId blkDefId,AcDbObjectId styleId, ACH
 // 剖切位置线：按本项目「剖面图参数」里的剖面组，一条剖线一条多段线；两端画剖切符号与剖面编号（理正标准）
 // 剖切位置线专用颜色：7 = 白色（深色底）/ 黑色（浅色底）自适应，随图面背景反相显示
 #define KS_SECTION_COLOR   7
-// 剖切线宽：0 = 细线（按图面最小线宽显示），不再用 0.5/0.7 这类几何宽度（米级坐标下过粗）
-#define KS_SECTION_WIDTH   0.0
+// 剖切线宽（几何宽度，图面单位与钻孔坐标同尺度）：0 = 细线太窄，0.5 过粗，取细线的 3 倍 0.15
+#define KS_SECTION_WIDTH   0.15
+// 短剖切线略粗于剖线本体，保持理正图面层次
+#define KS_SECTION_WIDTH_TICK  0.21
 
 // 把已入库实体显式设为指定 ACI 颜色（用于文字等无颜色入参的接口）
 static bool KsSetEntColor(const AcDbObjectId& id, Adesk::UInt16 nColor)
@@ -599,7 +601,7 @@ void CCreatePlanView::DrawCutSymbol(const AcGePoint3d& ptEnd, double dx, double 
 	std::vector<AcGePoint3d> tick;
 	tick.push_back(AcGePoint3d(ptEnd.x - px * TICK / 2.0, ptEnd.y - py * TICK / 2.0, 0.0));
 	tick.push_back(AcGePoint3d(ptEnd.x + px * TICK / 2.0, ptEnd.y + py * TICK / 2.0, 0.0));
-	CUtils::AddDbPolyline(pModelSpace, tick, KS_SECTION_WIDTH, false, NULL, KS_SECTION_COLOR);
+	CUtils::AddDbPolyline(pModelSpace, tick, KS_SECTION_WIDTH_TICK, false, NULL, KS_SECTION_COLOR);
 
 	// 方向箭头（指向剖视方向）
 	double vbx = -dx * dSign, vby = -dy * dSign;
