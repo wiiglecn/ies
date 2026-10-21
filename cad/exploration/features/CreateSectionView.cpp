@@ -1252,35 +1252,68 @@ static bool KsEraIdentity(const CString& sEra, const CString& sAccu, const CStri
 
 //直接画出时代成因代号：主字母 + 下标年代 + 上标成因，排成 Q4ml 的样式（4 在下、ml 在上）
 //不用 MText 堆叠、不用 Unicode 上下标字形，三段都是 ASCII，任何字体（含 SHX）都能正常出图
+//地层代号专用字体:正体罗马字(Windows 自带),XScale 固定为 1,宽度完全由实体 widthFactor 决定
+//避免西文部分被 SLNormal 里的 SHX 单线体带偏(C1Y、Q4ml 这类代号很吃字形)
+static const ACHAR* KS_ERA_STYLE = _T("KS_ERA");
+static const ACHAR* KS_ERA_FONT  = _T("Times New Roman");
+
+//画一段代号并返回它在图面上的真实宽度;量不到时才退回按字数估算
+static double KsDrawEraSeg(AcDbBlockTableRecord* pMS, std::vector<AcDbObjectId>& ids,
+                           const CString& s, double x, double y, double h,
+                           const ACHAR* pszStyle, double wf)
+{
+    if (s.IsEmpty()) return 0.0;
+    AcDbObjectId id = CUtils::AddDbText(pMS, s, AcGePoint3d(x, y, 0.0), h,
+                                        pszStyle, DBTA_LEFT, wf);
+    if (id == AcDbObjectId::kNull) return s.GetLength() * h * 0.62;
+    ids.push_back(id);
+    double w = 0.0, hh = 0.0;
+    if (CUtils::GetEntExtentById(id, w, hh) && w > 0.01) return w;
+    return s.GetLength() * h * 0.62;
+}
+
+//整体横向平移:末孔层名靠右时代号要右端到 ptAnchor,画完才知道总宽,故反向平移补偿
+static void KsShiftEraTexts(const std::vector<AcDbObjectId>& ids, double dx)
+{
+    if (fabs(dx) < 0.001) return;
+    AcGeMatrix3d mat = AcGeMatrix3d::translation(AcGeVector3d(dx, 0.0, 0.0));
+    for (size_t i = 0; i < ids.size(); ++i)
+    {
+        AcDbEntity* pEnt = NULL;
+        if (acdbOpenObject(pEnt, ids[i], AcDb::kForWrite) == Acad::eOk)
+        {
+            pEnt->transformBy(mat);
+            pEnt->close();
+        }
+    }
+}
+
+//直接画出时代成因代号:主字母 + 下标统 + 阶 + 上标成因
+//不用 MText 堆叠、不用 Unicode 上下标字形,各段都是 ASCII,任何字体都不会出方框
 static void KsDrawEraCode(AcDbBlockTableRecord* pMS, const CString& sMain, const CString& sSub,
                           const CString& sSup, const AcGePoint3d& ptAnchor,
                           bool bToLeft, const ACHAR* pszStyle, const CString& sTail)
 {
     if (pMS == NULL || sMain.IsEmpty()) return;
+
+    const ACHAR* pszEra = pszStyle;
+    if (!CUtils::EnsureTextStyle(KS_ERA_STYLE, KS_ERA_FONT, 0.0, 1.0).isNull())
+        pszEra = KS_ERA_STYLE;
+
     const double H  = 2.0;    // 主字母字高
     const double HS = 1.2;    // 上下标字高
     const double HT = 1.5;    // 阶代号字高（与 C 同基线）
     const double WF = 0.8;    // 宽高比
-    const double CW = 0.62;   // ASCII 单字宽（相对字高）
-    double wMain = sMain.GetLength() * H  * CW * WF;
-    double wSub  = sSub.GetLength()  * HS * CW * WF;
-    double wSup  = sSup.GetLength()  * HS * CW * WF;
-    double wTail = sTail.GetLength() * HT * CW * WF;
-    double total = wMain + wSub + wSup + wTail;
-    // bToLeft：代号整体右对齐到 ptAnchor（末孔层名靠右，代号放其左侧）
-    double x0 = bToLeft ? (ptAnchor.x - total) : ptAnchor.x;
-    CUtils::AddDbText(pMS, sMain, AcGePoint3d(x0, ptAnchor.y, 0.0), H, pszStyle, DBTA_LEFT, WF);
-    double x1 = x0 + wMain;
-    if (!sSub.IsEmpty())
-        CUtils::AddDbText(pMS, sSub, AcGePoint3d(x1, ptAnchor.y - 0.4, 0.0),
-                          HS, pszStyle, DBTA_LEFT, WF);
-    double x2 = x1 + wSub;
-    if (!sTail.IsEmpty())
-        CUtils::AddDbText(pMS, sTail, AcGePoint3d(x2, ptAnchor.y, 0.0),
-                          HT, pszStyle, DBTA_LEFT, WF);
-    if (!sSup.IsEmpty())
-        CUtils::AddDbText(pMS, sSup, AcGePoint3d(x2 + wTail, ptAnchor.y + 1.05, 0.0),
-                          HS, pszStyle, DBTA_LEFT, WF);
+
+    double x = ptAnchor.x;
+    double y = ptAnchor.y;
+    std::vector<AcDbObjectId> ids;
+    x += KsDrawEraSeg(pMS, ids, sMain, x, y,        H,  pszEra, WF);
+    x += KsDrawEraSeg(pMS, ids, sSub,  x, y - 0.4,  HS, pszEra, WF);
+    x += KsDrawEraSeg(pMS, ids, sTail, x, y,        HT, pszEra, WF);
+    x += KsDrawEraSeg(pMS, ids, sSup,  x, y + 1.05, HS, pszEra, WF);
+
+    if (bToLeft) KsShiftEraTexts(ids, ptAnchor.x - x);
 }
 
 
