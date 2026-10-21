@@ -25,6 +25,7 @@
 
 // Initialize static member
 cJSON* CUtils::s_pJsonConfig = NULL;
+CString CUtils::s_projectName = _T("");
 
 CUtils::CUtils(void)
 {
@@ -929,4 +930,127 @@ cJSON* CUtils::GetJsonObjectItemUtf8(cJSON* root, const TCHAR* key)
     TCharToUtf8(key, utf8Key, sizeof(utf8Key));
 
     return cJSON_GetObjectItemCaseSensitive(root, utf8Key);
+}
+
+//=====================================================================
+// 项目隔离：项目级数据文件
+//   旧实现把业务请求落盘为固定名 project/钻探编录表.json，不同项目互相覆盖；
+//   现改为 {项目名}-xxx.json，路径统一由 GetArxFolder() 推导，杜绝硬编码目录。
+//=====================================================================
+CString CUtils::SanitizeProjectName(const TCHAR* pszName)
+{
+	CString sRet;
+	if (pszName == NULL)
+		return sRet;
+	int nLen = (int)_tcslen(pszName);
+	for (int i = 0; i < nLen; ++i)
+	{
+		TCHAR ch = pszName[i];
+		if (ch == _T('\\') || ch == _T('/') || ch == _T(':') || ch == _T('*') ||
+			ch == _T('?') || ch == _T('\"') || ch == _T('<') || ch == _T('>') ||
+			ch == _T('|') || ch < _T(' '))
+			continue;
+		sRet += ch;
+	}
+	sRet.TrimLeft();
+	sRet.TrimRight();
+	if (sRet.GetLength() > 64)
+		sRet = sRet.Left(64);
+	return sRet;
+}
+void CUtils::SetProjectName(const TCHAR* pszName)
+{
+	s_projectName = SanitizeProjectName(pszName);
+}
+CString CUtils::GetProjectName()
+{
+	return s_projectName;
+}
+CString CUtils::GetProjectFilePath(const TCHAR* pszFileTitle)
+{
+	CString sRet;
+	if (s_projectName.IsEmpty() || pszFileTitle == NULL)
+		return sRet;
+	CString strDir = GetArxFolder();
+	strDir.Replace(_T("\\"), _T("/"));
+	strDir.TrimRight(_T('/'));
+	sRet.Format(_T("%s/project/%s-%s.json"), strDir.GetString(),
+			s_projectName.GetString(), pszFileTitle);
+	return sRet;
+}
+bool CUtils::WriteUtf8File(const TCHAR* pszFilePath, const char* pszUtf8)
+{
+	if (pszFilePath == NULL || pszUtf8 == NULL)
+		return false;
+	CString strPath(pszFilePath);
+	strPath.Replace(_T("\\"), _T("/"));
+	int nPos = strPath.ReverseFind(_T('/'));
+	if (nPos > 0)
+	{
+		CString strDir = strPath.Left(nPos);
+		::CreateDirectory(strDir, NULL);   // 已存在时失败，忽略返回值
+	}
+	FILE* fp = _tfopen(pszFilePath, _T("wb"));
+	if (fp == NULL)
+		return false;
+	size_t nLen = strlen(pszUtf8);
+	size_t nWrote = fwrite(pszUtf8, 1, nLen, fp);
+	fclose(fp);
+	return nWrote == nLen;
+}
+cJSON* CUtils::FindHoleNode(cJSON* pRoot, const TCHAR* pszHoleRef)
+{
+	if (pRoot == NULL || pszHoleRef == NULL)
+		return NULL;
+	char utf8Ref[256] = { 0 };
+	TCharToUtf8(pszHoleRef, utf8Ref, sizeof(utf8Ref));
+	cJSON* item = cJSON_GetObjectItemCaseSensitive(pRoot, utf8Ref);
+	if (item != NULL)
+		return item;
+	// 未命中时再按「钻孔编号」字段兜底（业务编号与 key 不一致的场景）
+	char utf8Key[64] = { 0 };
+	TCharToUtf8(_T("钻孔编号"), utf8Key, sizeof(utf8Key));
+	cJSON_ArrayForEach(item, pRoot)
+	{
+		cJSON* jsNo = cJSON_GetObjectItemCaseSensitive(item, utf8Key);
+		if (jsNo != NULL && jsNo->valuestring != NULL &&
+			strcmp(jsNo->valuestring, utf8Ref) == 0)
+			return item;
+	}
+	return NULL;
+}
+CString CUtils::GetHoleDisplayNo(cJSON* pHoleNode, const TCHAR* pszKey)
+{
+	CString sRet;
+	if (pHoleNode != NULL)
+	{
+		cJSON* jsNo = GetJsonObjectItemUtf8(pHoleNode, _T("钻孔编号"));
+		if (jsNo != NULL && jsNo->valuestring != NULL)
+		{
+			TCHAR szBuf[256] = { 0 };
+			if (utf8ToTChar(jsNo->valuestring, szBuf, ARRAYSIZE(szBuf)))
+				sRet = szBuf;
+		}
+	}
+	if (sRet.IsEmpty())
+	{
+		if (pHoleNode != NULL)
+			CUtils::acutPrintf(_T("[平面图 WARN] 孔缺少「钻孔编号」字段，暂时用其数据键 %s 作为编号\n"), pszKey);
+		sRet = pszKey == NULL ? _T("") : pszKey;
+	}
+	return sRet;
+}
+bool CUtils::ResolveHoleBlock(cJSON* pBlockConfig, const TCHAR* pszHoleType,
+	TCHAR* pszBlockName, int nBufCount, const TCHAR* pszFallback)
+{
+	bool bHit = FindBlockNameByHoleName(pBlockConfig, pszHoleType, pszBlockName, nBufCount);
+	if (bHit && pszBlockName != NULL && pszBlockName[0] != _T('\0'))
+		return true;
+	CUtils::acutPrintf(_T("[平面图 WARN] 钻孔类型「%s」未在图例符号表中登记，已回退默认符号「%s」，请以图例为准核对\n"),
+		pszHoleType == NULL ? _T("") : pszHoleType, pszFallback);
+	if (pszBlockName == NULL || nBufCount <= 0)
+		return false;
+	_tcsncpy(pszBlockName, pszFallback, nBufCount - 1);
+	pszBlockName[nBufCount - 1] = _T('\0');
+	return false;
 }

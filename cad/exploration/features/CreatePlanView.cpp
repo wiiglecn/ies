@@ -4,6 +4,7 @@
 #include "cJSON.h"
 #include "utils.h"
 #include "CreatePlanView.h"
+#include <math.h>
 
 CCreatePlanView::CCreatePlanView():CCreateBaseView()
 {
@@ -141,15 +142,18 @@ void CCreatePlanView::Execute()
 				}
 				CUtils::utf8ToTChar(columnTry->valuestring, holeName, ARRAYSIZE(holeName));
 			}
-			
+
+			// 钻孔显示编号：优先用业务字段「钻孔编号」，缺失时回落数据键（内部会告警）；与剖面图、图例保持同源
+			CString sDisplayNo = CUtils::GetHoleDisplayNo(item, arrayName);
+
 
 			// 名字 → 图例名：如 "鉴别孔" → "GKJBK"
             TCHAR blockSingleName[128] = { 0 };
-            if (!CUtils::FindBlockNameByHoleName(s_blockConfigData, holeName,
-                                      blockSingleName, ARRAYSIZE(blockSingleName)))
+            // 钻孔类型 -> 图块符号：与图例共用同一解析，未命中会告警并回落 GKJBK
+            if (!CUtils::ResolveHoleBlock(s_blockConfigData, holeName, blockSingleName,
+                                          ARRAYSIZE(blockSingleName), _T("GKJBK")))
             {
-				//默认值
-				_tcscpy(blockSingleName, _T("GKJBK"));
+                // 回落符号已由 ResolveHoleBlock 写入
             }
 			// ★ 去重收集（放在这里，即使后续 continue 也能收集到）
 			bool bExists = false;
@@ -240,7 +244,7 @@ void CCreatePlanView::Execute()
                 bFirstSaved        = true;
             }
 
-			ChangeText(blkDefId,styleId,arrayName,elevation_str,depth_str);
+			ChangeText(blkDefId,styleId,(ACHAR*)(LPCTSTR)sDisplayNo,elevation_str,depth_str);
 
 
             //break;
@@ -274,8 +278,13 @@ void CCreatePlanView::Execute()
 	CUtils::acutPrintf(_T("[平面图] 底图∪钻孔范围：X[%.2f~%.2f] Y[%.2f~%.2f]\n"),
 		allMinX, allMaxX, allMinY, allMaxY);
 
+	// 剖切位置线：读本项目的「剖面图参数」，按孔序连线并在两端画剖切符号与编号
+	std::vector<CString> arrSectionTitles;
+	DrawSectionLines(bSwapXY, arrSectionTitles);
+
 	CreateLegend(arrUsedHoles, fistCadBlockUrl,firstBlockStyleName,
-		AcGePoint3d(allMinX, allMinY, 0.0), AcGePoint3d(allMaxX, allMaxY, 0.0), bHasAll);
+		AcGePoint3d(allMinX, allMinY, 0.0), AcGePoint3d(allMaxX, allMaxY, 0.0), bHasAll,
+		arrSectionTitles);
 
 	this->commitTrans();
 	this->actionEnd();
@@ -440,12 +449,156 @@ void CCreatePlanView::ChangeText(AcDbObjectId blkDefId,AcDbObjectId styleId, ACH
 	pBTR->close();
 }
 
+// 剖切位置线：按本项目「剖面图参数」里的剖面组，一条剖线一条多段线；两端画剖切符号与剖面编号（理正标准）
+void CCreatePlanView::DrawSectionLines(bool bSwapXY, std::vector<CString>& arrSectionTitles)
+{
+	CString strSecPath = CUtils::GetProjectFilePath(_T("剖面图参数"));
+	if (strSecPath.IsEmpty())
+	{
+		CUtils::acutPrintf(_T("[平面图 WARN] 项目未确定，跳过剖切位置线\n"));
+		return;
+	}
+	cJSON* secRoot = CUtils::LoadJsonFile(strSecPath.GetString());
+	if (secRoot == NULL)
+	{
+		CUtils::acutPrintf(_T("[平面图 WARN] 未读到剖面图参数（%s），本次不画剖切位置线\n"), strSecPath.GetString());
+		return;
+	}
+	cJSON* items = CUtils::GetJsonObjectItemUtf8(secRoot, _T("剖面组"));
+	if (items == NULL)
+	{
+		CUtils::acutPrintf(_T("[平面图 WARN] 剖面参数中无「剖面组」，本次不画剖线\n"));
+		cJSON_Delete(secRoot);
+		return;
+	}
+	if (CUtils::EnsureLayer(_T("勘察剖切线")).isNull())
+	{
+		CUtils::acutPrintf(_T("[CAD ERROR] 创建图层失败：勘察剖切线\n"));
+		cJSON_Delete(secRoot);
+		return;
+	}
+	CUtils::EraseLayerEntities(this->pModelSpace, _T("勘察剖切线"));
+
+	cJSON* item = NULL;
+	cJSON_ArrayForEach(item, items)
+	{
+		if (item == NULL) continue;
+		TCHAR szTitle[128] = { 0 };
+		cJSON* cTitle = CUtils::GetJsonObjectItemUtf8(item, _T("标题"));
+		if (cTitle != NULL && cTitle->valuestring != NULL)
+			CUtils::utf8ToTChar(cTitle->valuestring, szTitle, ARRAYSIZE(szTitle));
+		CString sTitle(szTitle);
+		if (sTitle.IsEmpty()) sTitle = _T("未命名剖面");
+
+		cJSON* gpsObj = CUtils::GetJsonObjectItemUtf8(item, _T("勘察组"));
+		if (gpsObj == NULL)
+		{
+			CUtils::acutPrintf(_T("[平面图 WARN] 剖面 %s 缺少「勘察组」孔序，跳过\n"), sTitle.GetString());
+			continue;
+		}
+
+		std::vector<AcGePoint3d> arrPts;
+		cJSON* gpObj = NULL;
+		cJSON_ArrayForEach(gpObj, gpsObj)
+		{
+			if (gpObj == NULL || !cJSON_IsString(gpObj)) continue;
+			TCHAR szRef[128] = { 0 };
+			CUtils::utf8ToTChar(gpObj->valuestring, szRef, ARRAYSIZE(szRef));
+			// 允许用 key 或「钻孔编号」引用，保证与平面图孔位一一对应
+			cJSON* holeNode = CUtils::FindHoleNode(s_pJsonData, szRef);
+			if (holeNode == NULL)
+			{
+				CUtils::acutPrintf(_T("[平面图 WARN] 剖面 %s 的孔 %s 不在本次数据中，已跳过\n"), sTitle.GetString(), szRef);
+				continue;
+			}
+			cJSON* sx = CUtils::GetJsonObjectItemUtf8(holeNode, _T("X坐标(m)"));
+			cJSON* sy = CUtils::GetJsonObjectItemUtf8(holeNode, _T("Y坐标(m)"));
+			if (sx == NULL || sy == NULL || !cJSON_IsNumber(sx) || !cJSON_IsNumber(sy))
+			{
+				CUtils::acutPrintf(_T("[平面图 WARN] 剖面 %s 的孔 %s 缺坐标，已跳过\n"), sTitle.GetString(), szRef);
+				continue;
+			}
+			double dX = sx->valuedouble, dY = sy->valuedouble;
+			AcGePoint3d pt;
+			if (bSwapXY) { pt.x = dY; pt.y = dX; }
+			else         { pt.x = dX; pt.y = dY; }
+			arrPts.push_back(pt);
+		}
+		if (arrPts.size() < 2)
+		{
+			CUtils::acutPrintf(_T("[平面图 WARN] 剖面 %s 有效孔不足 2 个，跳过该剖线\n"), sTitle.GetString());
+			continue;
+		}
+
+		// 剖线本体（实线，红色）
+		CUtils::AddDbPolyline(pModelSpace, arrPts, 0.5, false, NULL, 1);
+
+		// 两端剖切符号：沿剖线方向两侧外伸，带垂直短剖切线、方向箭头与剖面编号
+		size_t n = arrPts.size();
+		AcGePoint3d ptA = arrPts[0], ptB = arrPts[n - 1];
+		double vx = ptB.x - ptA.x, vy = ptB.y - ptA.y;
+		double len = sqrt(vx * vx + vy * vy);
+		if (len < 1e-6) continue;
+		vx /= len; vy /= len;
+		DrawCutSymbol(ptA, vx, vy, -1.0, sTitle);
+		DrawCutSymbol(ptB, vx, vy,  1.0, sTitle);
+
+		CUtils::acutPrintf(_T("[平面图] 剖线 %s：%d 个孔\n"), sTitle.GetString(), (int)n);
+		arrSectionTitles.push_back(sTitle);
+	}
+	cJSON_Delete(secRoot);
+}
+
+// 剖线端部的剖切符号：外伸粗实线 + 垂直短剖切线 + 方向箭头 + 剖面编号
+void CCreatePlanView::DrawCutSymbol(const AcGePoint3d& ptEnd, double dx, double dy,
+	double dSign, const CString& sTitle)
+{
+	const double EXT   = 8.0;   // 端部外伸长度
+	const double TICK  = 6.0;   // 垂直短剖切线长度
+	const double ARROW = 4.0;   // 箭头翼长
+
+	AcGePoint3d ptTip(ptEnd.x + dx * dSign * EXT, ptEnd.y + dy * dSign * EXT, 0.0);
+
+	// 外伸粗实线（指示剖切位置）
+	std::vector<AcGePoint3d> arr;
+	arr.push_back(ptEnd);
+	arr.push_back(ptTip);
+	CUtils::AddDbPolyline(pModelSpace, arr, 0.5, false, NULL, 1);
+
+	// 垂直于剖线的短剖切线
+	double px = -dy, py = dx;
+	std::vector<AcGePoint3d> tick;
+	tick.push_back(AcGePoint3d(ptEnd.x - px * TICK / 2.0, ptEnd.y - py * TICK / 2.0, 0.0));
+	tick.push_back(AcGePoint3d(ptEnd.x + px * TICK / 2.0, ptEnd.y + py * TICK / 2.0, 0.0));
+	CUtils::AddDbPolyline(pModelSpace, tick, 0.7, false, NULL, 1);
+
+	// 方向箭头（指向剖视方向）
+	double vbx = -dx * dSign, vby = -dy * dSign;
+	double cs = cos(0.35), sn = sin(0.35);   // 翼张角约 20 度
+	std::vector<AcGePoint3d> a1;
+	a1.push_back(ptTip);
+	a1.push_back(AcGePoint3d(ptTip.x + (vbx * cs - vby * sn) * ARROW,
+		ptTip.y + (vbx * sn + vby * cs) * ARROW, 0.0));
+	CUtils::AddDbPolyline(pModelSpace, a1, 0.5, false, NULL, 1);
+
+	std::vector<AcGePoint3d> a2;
+	a2.push_back(ptTip);
+	a2.push_back(AcGePoint3d(ptTip.x + (vbx * cs + vby * sn) * ARROW,
+		ptTip.y + (-vbx * sn + vby * cs) * ARROW, 0.0));
+	CUtils::AddDbPolyline(pModelSpace, a2, 0.5, false, NULL, 1);
+
+	// 剖面编号（与剖面图标题一致）
+	AcGePoint3d ptTxt(ptTip.x + dx * dSign * 2.5, ptTip.y + dy * dSign * 2.5, 0.0);
+	CUtils::AddDbText(pModelSpace, sTitle.GetString(), ptTxt, 3.0, pszStyleName, DBTA_CENTER, 0.8);
+}
+
 void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
                                 const CString& fistCadBlockUrl,
                     			const CString& blockStyleName,
                     			const AcGePoint3d& allMin,
                     			const AcGePoint3d& allMax,
-                    			bool bHasAll)
+                    			bool bHasAll,
+                    			const std::vector<CString>& arrSectionTitles)
 {
 	if (arrUsedHoles.empty())
 		return;
@@ -531,11 +684,11 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 
 	CString& holeName = arrUsedHoles[0];
 	TCHAR blockSingleName[128] = { 0 };
-	if (!CUtils::FindBlockNameByHoleName(s_blockConfigData, holeName,
-								blockSingleName, ARRAYSIZE(blockSingleName)))
+	// 钻孔类型 -> 图块符号：与图例共用同一解析，未命中会告警并回落 GKJBK
+	if (!CUtils::ResolveHoleBlock(s_blockConfigData, holeName, blockSingleName,
+	                              ARRAYSIZE(blockSingleName), _T("GKJBK")))
 	{
-		//默认值
-		_tcscpy(blockSingleName, _T("GKJBK"));
+	    // 回落符号已由 ResolveHoleBlock 写入
 	}
 
 	CString cadBlockUrl;
@@ -608,11 +761,11 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 	for (size_t k = 0; k < arrUsedHoles.size(); ++k)
     {
         holeName = arrUsedHoles[k];  
-		if (!CUtils::FindBlockNameByHoleName(s_blockConfigData, holeName,
-								blockSingleName, ARRAYSIZE(blockSingleName)))
+		// 钻孔类型 -> 图块符号：与图例共用同一解析，未命中会告警并回落 GKJBK
+		if (!CUtils::ResolveHoleBlock(s_blockConfigData, holeName, blockSingleName,
+		                              ARRAYSIZE(blockSingleName), _T("GKJBK")))
 		{
-			//默认值
-			_tcscpy(blockSingleName, _T("GKJBK"));
+		    // 回落符号已由 ResolveHoleBlock 写入
 		}
 		cadBlockUrl.Format(_T("support/block/%s.dwg"), blockSingleName);
 		cadBlockUrl = strFilePath + cadBlockUrl;
@@ -649,18 +802,24 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 		ptDraw.y -=10.5;
 	}
 
-	//地质剖面线及编号
+	//地质剖面线及编号：编号直接取自剖面图参数（与剖面图标题、图上剖线一一对应）
+	if (arrSectionTitles.empty())
+	{
+		CUtils::acutPrintf(_T("[平面图 WARN] 本次未提供剖面参数，图例中无剖线编号\n"));
+	}
+	for (size_t iSec = 0; iSec < arrSectionTitles.size(); ++iSec)
 	{
 		CUtils::AddDbRect(pModelSpace,ptDraw,16.0,8.0,1.0);
 
 		AcGePoint3d ptDraw_inner(ptDraw);
 		ptDraw_inner.x -=3.5;
-		CUtils::AddDbText(pModelSpace,_T("1"),
-								ptDraw_inner,2.7,pszStyleName,DBTA_CENTER,dWidthFactor);
+		CUtils::AddDbText(pModelSpace,arrSectionTitles[iSec].GetString(),
+							ptDraw_inner,2.7,pszStyleName,DBTA_CENTER,dWidthFactor);
 
 		ptDraw_inner.x +=7.3;
-		CUtils::AddDbText(pModelSpace,_T("1`"),
-								ptDraw_inner,2.7,pszStyleName,DBTA_CENTER,dWidthFactor);
+		CString sNoTick = arrSectionTitles[iSec] + _T("′");
+		CUtils::AddDbText(pModelSpace,sNoTick.GetString(),
+							ptDraw_inner,2.7,pszStyleName,DBTA_CENTER,dWidthFactor);
 
 		AcGePoint3d ptDraw_line_start(ptDraw),ptDraw_line_end(ptDraw);
 		ptDraw_line_start.x -=3.0;
@@ -670,16 +829,14 @@ void CCreatePlanView::CreateLegend(std::vector<CString>& arrUsedHoles,
 		AcDbObjectId lineId = AcDbObjectId::kNull;
 		Acad::ErrorStatus es = pModelSpace->appendAcDbEntity(lineId, pLine);
 		if (es == Acad::eOk)
-			pLine->close();                  
+			pLine->close();
 		else
-			delete pLine;    
-
+			delete pLine;
 
 		AcGePoint3d ptDraw_txt(ptDraw);
 		ptDraw_txt.x +=13.0;
 		CUtils::AddDbText(pModelSpace,_T("地质剖面线及编号"),
-								ptDraw_txt,height_txt,pszStyleName,DBTA_LEFT,dWidthFactor);
-
+							ptDraw_txt,height_txt,pszStyleName,DBTA_LEFT,dWidthFactor);
 
 		ptDraw.y -=10.5;
 	}

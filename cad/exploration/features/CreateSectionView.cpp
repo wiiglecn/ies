@@ -261,7 +261,13 @@ void CCreateSectionView::Execute()
 {
 	if (!prepare()) return;
 
-	CString cadSectionConfigUrl= strFilePath + _T("project/剖面图参数.json");
+	// 项目级数据文件：{ project }剖面图参数.json（与平面图、钻孔数据同属一个项目）
+	CString cadSectionConfigUrl = CUtils::GetProjectFilePath(_T("剖面图参数"));
+	if (cadSectionConfigUrl.IsEmpty())
+	{
+		CUtils::acutPrintf(_T("[CAD ERROR] 未确定项目，无法定位剖面参数文件\n"));
+		return;
+	}
 	// 解析 JSON（失败时内部已打印错误，这里保留原有业务提示）
     s_ConfigData = CUtils::LoadJsonFile(cadSectionConfigUrl.GetString());   // 静默模式
     if (s_ConfigData == NULL) {
@@ -1829,17 +1835,44 @@ void CCreateSectionView::drawHeader(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gp
     const double centerX = basePt.x + PAGE_WIDTH / 2.0;    // 图幅水平中心
     double yTitle = basePt.y + 272.0;                      // 顶部留白区内下移，不贴顶
 
-    // 1) 标题 + 剖面编号（编号 = 总页数------当前页码′）
+    // 1) 标题 + 剖面编号：编号优先取接口的「标题」（如 A-A），多页时补组内页码 -N
     CString sNo;
-    sNo.Format(_T("%d------%d′"), pageCount, pageNo);
+    CString sSectionTitle;
+    {
+        cJSON* cTitle = CUtils::GetJsonObjectItemUtf8(itemObj, _T("标题"));
+        if (cTitle != NULL && cTitle->valuestring != NULL && cTitle->valuestring[0] != '\0')
+        {
+            TCHAR szTitle[128] = { 0 };
+            if (CUtils::utf8ToTChar(cTitle->valuestring, szTitle, ARRAYSIZE(szTitle)))
+                sSectionTitle = szTitle;
+        }
+    }
+    if (!sSectionTitle.IsEmpty())
+    {
+        sNo = sSectionTitle;
+        if (pageCount > 1)
+        {
+            CString sSuffix;
+            sSuffix.Format(_T("-%d"), pageNo);
+            sNo += sSuffix;
+        }
+    }
+    else
+    {
+        // 接口未提供标题时才回退页码编号，并告警
+        CUtils::acutPrintf(_T("[剖面图 WARN] 剖面组未提供「标题」，编号暂用页码形式\n"));
+        sNo.Format(_T("%d------%d′"), pageCount, pageNo);
+    }
 
     // 估宽用于整体居中（汉字宽≈字高；数字/′≈0.6 倍字高，横线≈0.45 倍）
     double wTitle = 7.0 * H_TITLE;                          // “工程地质剖面图”7 个汉字
     double wNo = 0.0;
     for (int k = 0; k < sNo.GetLength(); ++k)
     {
-        if (sNo[k] == _T('-')) wNo += 0.45 * H_TITLE;
-        else                   wNo += 0.60 * H_TITLE;
+        TCHAR ch = sNo[k];
+        if (ch == _T('-'))          wNo += 0.45 * H_TITLE;
+        else if (ch > (TCHAR)0x2E80) wNo += 1.00 * H_TITLE;   // 中日韩字符按全宽估
+        else                         wNo += 0.60 * H_TITLE;
     }
     const double GAP = 16.0;
     double xTitle = centerX - (wTitle + GAP + wNo) / 2.0;
@@ -1855,6 +1888,15 @@ void CCreateSectionView::drawHeader(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gp
         AcGePoint3d p1(xTitle - 5.0, yTitle - 3.0, 0.0);
         AcGePoint3d p2(xNo + wNo + 5.0, yTitle - 3.0, 0.0);
         CUtils::AddLine(pModelSpace,p1,p2);
+    }
+
+    // 页码副标注：总页数------当前页码′（与接口编号并存）
+    if (pageCount > 1)
+    {
+        CString sPage;
+        sPage.Format(_T("%d------%d′"), pageCount, pageNo);
+        CUtils::AddDbText(pModelSpace, sPage.GetString(),
+            AcGePoint3d(centerX, yTitle - 8.0, 0.0), H_SUB, pszStyleName, DBTA_CENTER, 1.0);
     }
 
     // 2) 比例尺行（水平居中）

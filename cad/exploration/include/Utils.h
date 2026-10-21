@@ -39,6 +39,7 @@ class CUtils
 {
 protected:
 	static cJSON* s_pJsonConfig;  // 静态成员变量，用于存储 JSON 配置
+	static CString s_projectName;    // 当前项目名（空=未确定）
 public:
 	CUtils(void);
 public:
@@ -147,6 +148,23 @@ public:
 	static cJSON* GetJsonConfigDirect();
 	static cJSON* GetJsonConfig();
 	static void FreeJsonConfig();
+	// ===== 项目隔离：项目级数据文件命名 =====
+	// 净化项目名：去除文件名非法字符与首尾空白并限长；结果为空表示不可用
+	static CString SanitizeProjectName(const TCHAR* pszName);
+	// 当前项目名（空串表示未确定，此时不允许读写任何项目文件）
+	static void SetProjectName(const TCHAR* pszName);
+	static CString GetProjectName();
+	// project/{项目名}-{pszFileTitle}.json 全路径；项目名未确定时返回空串
+	static CString GetProjectFilePath(const TCHAR* pszFileTitle);
+	// 以 UTF-8 写文本文件（父目录不存在时自动创建）；成功 true
+	static bool WriteUtf8File(const TCHAR* pszFilePath, const char* pszUtf8);
+	// 按 JSON key 或「钻孔编号」字段查找钻孔节点；找不到返回 NULL
+	static cJSON* FindHoleNode(cJSON* pRoot, const TCHAR* pszHoleRef);
+	// 钻孔显示编号：优先取字段「钻孔编号」，缺失回落 pszKey 并告警
+	static CString GetHoleDisplayNo(cJSON* pHoleNode, const TCHAR* pszKey);
+	// 图例/平面图共用的「钻孔类型 -> 图块名」解析；未命中打告警并回落兜底符号
+	static bool ResolveHoleBlock(cJSON* pBlockConfig, const TCHAR* pszHoleType,
+		TCHAR* pszBlockName, int nBufCount, const TCHAR* pszFallback);
 #ifdef _CAD2005
 	static void safeVsnprintfVC7(char* szBuffer, size_t bufferSize, const char* pszFmt, va_list args);
 #endif

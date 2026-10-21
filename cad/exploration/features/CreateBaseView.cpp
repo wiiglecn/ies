@@ -247,8 +247,13 @@ bool CCreateBaseView::prepare()
 {
 	strFilePath = CUtils::GetArxFolder();
 	strFilePath.Replace(_T("\\"), _T("/"));
-	CString strUrl;
-	strUrl = strFilePath + _T("project/钻探编录表.json");
+	// 项目级数据文件：{ project }钻探编录表.json（文件名带项目名，杜绝跨项目串数据）
+	CString strUrl = CUtils::GetProjectFilePath(_T("钻探编录表"));
+	if (strUrl.IsEmpty())
+	{
+		CUtils::acutPrintf(_T("[CAD ERROR] 未确定项目，无法定位数据文件。请通过 7100 接口传入 project_name，或让每个孔携带一致的「工程名称」\n"));
+		return false;
+	}
 
 	// 解析 JSON（失败时内部已打印错误，这里保留原有业务提示）
     s_pJsonData = CUtils::LoadJsonFile(strUrl.GetString());   // 静默模式

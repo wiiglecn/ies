@@ -210,6 +210,39 @@ void HandleAiCommand(struct mg_connection* nc,
 // Helper to check if string ends with suffix
 // Compatible with VC8
 
+// 解析本次请求的项目名：body 顶层 project_name / 工程名称 优先，
+// 其次取每个孔的「工程名称」字段（要求全孔一致）；无法确定时返回空串
+static std::string KsResolveProjectName(cJSON* root, cJSON* boreholeData)
+{
+	const char* bodyKeys[] = { "project_name", "projectName", "工程名称" };
+
+	if (root) {
+		for (int i = 0; i < (int)(sizeof(bodyKeys) / sizeof(bodyKeys[0])); ++i) {
+			cJSON* node = cJSON_GetObjectItem(root, bodyKeys[i]);
+			if (node && cJSON_IsString(node) && node->valuestring && node->valuestring[0] != '\0')
+				return node->valuestring;
+		}
+	}
+
+	std::string ret;
+	bool bInconsistent = false;
+	cJSON* item = NULL;
+	cJSON_ArrayForEach(item, boreholeData) {
+		cJSON* node = item ? cJSON_GetObjectItemCaseSensitive(item, "工程名称") : NULL;
+		if (!node || !node->valuestring || node->valuestring[0] == '\0')
+			continue;
+		if (ret.empty())
+			ret = node->valuestring;
+		else if (ret != node->valuestring)
+			bInconsistent = true;
+	}
+	if (bInconsistent) {
+		CUtils::acutPrintf(_T("[7100] ERROR: 各孔「工程名称」不一致，无法确定唯一项目名\n"));
+		return std::string();
+	}
+	return ret;
+}
+
 void HandleAiTool(struct mg_connection* nc,
 				  struct mg_http_message* hm,
                   const std::map<std::string, std::string>& params,
@@ -227,7 +260,11 @@ void HandleAiTool(struct mg_connection* nc,
 	CUtils::acutPrintf(_T("[7100] 请求体长度: %d 字节\n"), (int)body.size());
 
 	// 日志：追加写入本地7100_request.log
-	FILE* fpLog = fopen("D:/project/ies/cad/exploration/7100_request.log", "a+");
+	CString strLogDir = CUtils::GetArxFolder();
+	strLogDir.Replace(_T("\\"), _T("/"));
+	strLogDir.TrimRight(_T('/'));
+	CString strLogPath = strLogDir + _T("/7100_request.log");
+	FILE* fpLog = _tfopen(strLogPath, _T("a+"));
 	if (fpLog) {
 		SYSTEMTIME st;
 		GetLocalTime(&st);
@@ -289,41 +326,65 @@ void HandleAiTool(struct mg_connection* nc,
         return;
     }
 
-	// Business interface: save request params directly, no field conversion
+	// 业务接口：参数原样落盘，不做字段转换
 	if (nCommandID == WM_USER_FEATURE_COLUMNVIEW || nCommandID == WM_USER_FEATURE_PLANVIEW || nCommandID == WM_USER_FEATURE_SECTIONVIEW) {
-		CUtils::acutPrintf(_T("[7100] Business interface detected, cmd ID: %d\n"), nCommandID);
+		CUtils::acutPrintf(_T("[7100] 业务接口，命令号: %d\n"), nCommandID);
+
+		// 每次请求先清空项目上下文，杜绝沿用上一次请求的项目名
+		CUtils::SetProjectName(_T(""));
+
 		cJSON* boreholeData = cJSON_GetObjectItem(root, "borehole_data");
 		if (!boreholeData) {
-			CUtils::acutPrintf(_T("[7100] ERROR: borehole_data missing in request\n"));
+			CUtils::acutPrintf(_T("[7100] ERROR: 请求缺少 borehole_data\n"));
 		} else {
 			int holeCount = cJSON_GetArraySize(boreholeData);
-			CUtils::acutPrintf(_T("[7100] Received %d borehole entries\n"), holeCount);
+			CUtils::acutPrintf(_T("[7100] 收到 %d 个钻孔\n"), holeCount);
 
-			char* pPrinted = cJSON_Print(boreholeData);
-			if (pPrinted) {
-				// Write to exact path: arx folder root, where business code reads from
-				FILE* fp1 = fopen("D:/project/ies/cad/exploration/Debug/钻探编录表.json", "w");
-				if (fp1) { fwrite(pPrinted, 1, strlen(pPrinted), fp1); fclose(fp1); }
-				// Also keep legacy paths as fallback
-				FILE* fp2 = fopen("D:/project/ies/cad/exploration/project/钻探编录表.json", "w");
-				if (fp2) { fwrite(pPrinted, 1, strlen(pPrinted), fp2); fclose(fp2); }
-				FILE* fp3 = fopen("D:/project/ies/cad/exploration/Release/钻探编录表.json", "w");
-				if (fp3) { fwrite(pPrinted, 1, strlen(pPrinted), fp3); fclose(fp3); }
-				free(pPrinted);
+			// ① 解析项目名 -> 落盘文件名 {项目名}-xxx.json
+			std::string projectName = KsResolveProjectName(root, boreholeData);
+			if (projectName.empty()) {
+				CUtils::acutPrintf(_T("[7100] ERROR: 无法确定项目名。请传 project_name，或让每个孔携带一致的「工程名称」；本次不落盘\n"));
+			} else {
+				TCHAR szProject[256] = {0};
+				if (CUtils::utf8ToTChar(projectName.c_str(), szProject, ARRAYSIZE(szProject))) {
+					CUtils::SetProjectName(szProject);
+					CUtils::acutPrintf(_T("[7100] 项目: %s\n"), szProject);
+				}
 			}
-			// Remove custom hole insert logic, let original business code draw holes from saved file
+
+			if (!CUtils::GetProjectName().IsEmpty()) {
+				char* pPrinted = cJSON_Print(boreholeData);
+				if (pPrinted) {
+					CString strPath = CUtils::GetProjectFilePath(_T("钻探编录表"));
+					if (strPath.IsEmpty() || !CUtils::WriteUtf8File(strPath, pPrinted)) {
+						CUtils::acutPrintf(_T("[7100] ERROR: 写入钻孔数据失败: %s\n"), strPath.GetString());
+					} else {
+						CUtils::acutPrintf(_T("[7100] 钻孔数据已写入: %s\n"), strPath.GetString());
+					}
+					free(pPrinted);
+				}
+			}
 		}
-		// Also write section_params from body to profile config files
+
+		// ② 剖面参数按同一项目名落盘（缺失时平面图不画剖线）
 		cJSON* sectionParams = cJSON_GetObjectItem(root, "section_params");
 		if (sectionParams) {
-			char* pSecPrinted = cJSON_Print(sectionParams);
-			if (pSecPrinted) {
-				FILE* fpS1 = fopen("D:/project/ies/cad/exploration/Debug/剖面图参数.json", "w");
-				if (fpS1) { fwrite(pSecPrinted, 1, strlen(pSecPrinted), fpS1); fclose(fpS1); }
-				FILE* fpS2 = fopen("D:/project/ies/cad/exploration/project/剖面图参数.json", "w");
-				if (fpS2) { fwrite(pSecPrinted, 1, strlen(pSecPrinted), fpS2); fclose(fpS2); }
-				free(pSecPrinted);
+			if (CUtils::GetProjectName().IsEmpty()) {
+				CUtils::acutPrintf(_T("[7100] ERROR: 项目名未定，section_params 未落盘\n"));
+			} else {
+				char* pSecPrinted = cJSON_Print(sectionParams);
+				if (pSecPrinted) {
+					CString strSecPath = CUtils::GetProjectFilePath(_T("剖面图参数"));
+					if (strSecPath.IsEmpty() || !CUtils::WriteUtf8File(strSecPath, pSecPrinted)) {
+						CUtils::acutPrintf(_T("[7100] ERROR: 写入剖面参数失败: %s\n"), strSecPath.GetString());
+					} else {
+						CUtils::acutPrintf(_T("[7100] 剖面参数已写入: %s\n"), strSecPath.GetString());
+					}
+					free(pSecPrinted);
+				}
 			}
+		} else {
+			CUtils::acutPrintf(_T("[7100] 本次请求未带 section_params，平面图不画剖切位置线\n"));
 		}
 	}
 
