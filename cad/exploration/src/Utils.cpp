@@ -1040,12 +1040,43 @@ CString CUtils::GetHoleDisplayNo(cJSON* pHoleNode, const TCHAR* pszKey)
 	}
 	return sRet;
 }
+// 理正习惯叫法 → 图块名（block_define.json 未登记时的补充别名，按理正符号库口径）
+struct KsHoleTypeAlias { const TCHAR* pszType; const TCHAR* pszBlock; };
+static const KsHoleTypeAlias g_ksHoleTypeAlias[] = {
+    {_T("技术孔"),         _T("GKkzzk")},   // 控制钻孔（技术孔）
+    {_T("控制钻孔"),       _T("GKkzzk")},
+    {_T("控制性勘察孔"),   _T("GKkzzk")},
+    {_T("一般钻孔"),       _T("GKybzk")},   // 一般钻孔（鉴别孔）
+    {_T("一般性勘察孔"),   _T("GKybzk")},
+    {_T("鉴别孔"),         _T("GKybzk")},
+    {_T("工程观测孔"),     _T("GKgck")},
+    {_T("观测孔"),         _T("GKgck")},
+    {_T("普通钻孔"),       _T("GKzk")},
+    {_T("钻孔"),           _T("GKzk")},
+};
 bool CUtils::ResolveHoleBlock(cJSON* pBlockConfig, const TCHAR* pszHoleType,
 	TCHAR* pszBlockName, int nBufCount, const TCHAR* pszFallback)
 {
 	bool bHit = FindBlockNameByHoleName(pBlockConfig, pszHoleType, pszBlockName, nBufCount);
 	if (bHit && pszBlockName != NULL && pszBlockName[0] != _T('\0'))
 		return true;
+
+	// 图例符号表未登记时，按理正习惯叫法再匹配一次
+	if (pszHoleType != NULL && pszHoleType[0] != _T('\0'))
+	{
+		for (int i = 0; i < (int)(sizeof(g_ksHoleTypeAlias) / sizeof(g_ksHoleTypeAlias[0])); ++i)
+		{
+			if (_tcscmp(pszHoleType, g_ksHoleTypeAlias[i].pszType) == 0)
+			{
+				if (pszBlockName == NULL || nBufCount <= 0) return true;
+				_tcsncpy(pszBlockName, g_ksHoleTypeAlias[i].pszBlock, nBufCount - 1);
+				pszBlockName[nBufCount - 1] = _T('\0');
+				CUtils::acutPrintf(_T("[平面图 INFO] 钻孔类型「%s」按理正别名匹配到符号 %s\n"),
+					pszHoleType, g_ksHoleTypeAlias[i].pszBlock);
+				return true;
+			}
+		}
+	}
 	CUtils::acutPrintf(_T("[平面图 WARN] 钻孔类型「%s」未在图例符号表中登记，已回退默认符号「%s」，请以图例为准核对\n"),
 		pszHoleType == NULL ? _T("") : pszHoleType, pszFallback);
 	if (pszBlockName == NULL || nBufCount <= 0)
