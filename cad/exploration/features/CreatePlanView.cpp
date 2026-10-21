@@ -452,6 +452,8 @@ void CCreatePlanView::ChangeText(AcDbObjectId blkDefId,AcDbObjectId styleId, ACH
 // 剖切位置线：按本项目「剖面图参数」里的剖面组，一条剖线一条多段线；两端画剖切符号与剖面编号（理正标准）
 // 剖切位置线专用颜色：7 = 白色（深色底）/ 黑色（浅色底）自适应，随图面背景反相显示
 #define KS_SECTION_COLOR   7
+// 剖切线宽：0 = 细线（按图面最小线宽显示），不再用 0.5/0.7 这类几何宽度（米级坐标下过粗）
+#define KS_SECTION_WIDTH   0.0
 
 // 把已入库实体显式设为指定 ACI 颜色（用于文字等无颜色入参的接口）
 static bool KsSetEntColor(const AcDbObjectId& id, Adesk::UInt16 nColor)
@@ -491,8 +493,14 @@ void CCreatePlanView::DrawSectionLines(bool bSwapXY, std::vector<CString>& arrSe
 		cJSON_Delete(secRoot);
 		return;
 	}
+	// 记录并保护当前图层：剖线必须画在「勘察剖切线」上，画完恢复，避免图例等后续实体被误画进来
+	AcDbDatabase* pDb = acdbHostApplicationServices()->workingDatabase();
+	AcDbObjectId idOldLayer = (pDb != NULL) ? pDb->clayer() : AcDbObjectId::kNull;
 	CUtils::EraseLayerEntities(this->pModelSpace, _T("勘察剖切线"));
 	// 剖面线图层固定白色：剖切位置线、剖切符号、剖面编号均随背景反相显示为白
+
+	int nTotal = cJSON_GetArraySize(items), nDrawn = 0;
+	CUtils::acutPrintf(_T("[平面图] 剖面组共 %d 组，开始绘制剖切位置线\n"), nTotal);
 
 	cJSON* item = NULL;
 	cJSON_ArrayForEach(item, items)
@@ -546,7 +554,7 @@ void CCreatePlanView::DrawSectionLines(bool bSwapXY, std::vector<CString>& arrSe
 		}
 
 		// 剖线本体（实线，白色）
-		CUtils::AddDbPolyline(pModelSpace, arrPts, 0.5, false, NULL, KS_SECTION_COLOR);
+		CUtils::AddDbPolyline(pModelSpace, arrPts, KS_SECTION_WIDTH, false, NULL, KS_SECTION_COLOR);
 
 		// 两端剖切符号：沿剖线方向两侧外伸，带垂直短剖切线、方向箭头与剖面编号
 		size_t n = arrPts.size();
@@ -558,9 +566,15 @@ void CCreatePlanView::DrawSectionLines(bool bSwapXY, std::vector<CString>& arrSe
 		DrawCutSymbol(ptA, vx, vy, -1.0, sTitle);
 		DrawCutSymbol(ptB, vx, vy,  1.0, sTitle);
 
-		CUtils::acutPrintf(_T("[平面图] 剖线 %s：%d 个孔\n"), sTitle.GetString(), (int)n);
+		CUtils::acutPrintf(_T("[平面图] 剖线 %s：%d 个孔，已画出\n"), sTitle.GetString(), (int)n);
 		arrSectionTitles.push_back(sTitle);
+		++nDrawn;
 	}
+	// 恢复进入前的当前图层
+	if (pDb != NULL && !idOldLayer.isNull())
+		pDb->setClayer(idOldLayer);
+	CUtils::acutPrintf(_T("[平面图] 剖线绘制完成：共 %d 组，画出 %d 条，跳过 %d 条\n"),
+		nTotal, nDrawn, nTotal - nDrawn);
 	cJSON_Delete(secRoot);
 }
 
@@ -568,9 +582,9 @@ void CCreatePlanView::DrawSectionLines(bool bSwapXY, std::vector<CString>& arrSe
 void CCreatePlanView::DrawCutSymbol(const AcGePoint3d& ptEnd, double dx, double dy,
 	double dSign, const CString& sTitle)
 {
-	const double EXT   = 8.0;   // 端部外伸长度
-	const double TICK  = 6.0;   // 垂直短剖切线长度
-	const double ARROW = 4.0;   // 箭头翼长
+	const double EXT   = 4.0;   // 端部外伸长度
+	const double TICK  = 3.0;   // 垂直短剖切线长度
+	const double ARROW = 2.0;   // 箭头翼长
 
 	AcGePoint3d ptTip(ptEnd.x + dx * dSign * EXT, ptEnd.y + dy * dSign * EXT, 0.0);
 
@@ -578,14 +592,14 @@ void CCreatePlanView::DrawCutSymbol(const AcGePoint3d& ptEnd, double dx, double 
 	std::vector<AcGePoint3d> arr;
 	arr.push_back(ptEnd);
 	arr.push_back(ptTip);
-	CUtils::AddDbPolyline(pModelSpace, arr, 0.5, false, NULL, KS_SECTION_COLOR);
+	CUtils::AddDbPolyline(pModelSpace, arr, KS_SECTION_WIDTH, false, NULL, KS_SECTION_COLOR);
 
 	// 垂直于剖线的短剖切线
 	double px = -dy, py = dx;
 	std::vector<AcGePoint3d> tick;
 	tick.push_back(AcGePoint3d(ptEnd.x - px * TICK / 2.0, ptEnd.y - py * TICK / 2.0, 0.0));
 	tick.push_back(AcGePoint3d(ptEnd.x + px * TICK / 2.0, ptEnd.y + py * TICK / 2.0, 0.0));
-	CUtils::AddDbPolyline(pModelSpace, tick, 0.7, false, NULL, KS_SECTION_COLOR);
+	CUtils::AddDbPolyline(pModelSpace, tick, KS_SECTION_WIDTH, false, NULL, KS_SECTION_COLOR);
 
 	// 方向箭头（指向剖视方向）
 	double vbx = -dx * dSign, vby = -dy * dSign;
@@ -594,17 +608,17 @@ void CCreatePlanView::DrawCutSymbol(const AcGePoint3d& ptEnd, double dx, double 
 	a1.push_back(ptTip);
 	a1.push_back(AcGePoint3d(ptTip.x + (vbx * cs - vby * sn) * ARROW,
 		ptTip.y + (vbx * sn + vby * cs) * ARROW, 0.0));
-	CUtils::AddDbPolyline(pModelSpace, a1, 0.5, false, NULL, KS_SECTION_COLOR);
+	CUtils::AddDbPolyline(pModelSpace, a1, KS_SECTION_WIDTH, false, NULL, KS_SECTION_COLOR);
 
 	std::vector<AcGePoint3d> a2;
 	a2.push_back(ptTip);
 	a2.push_back(AcGePoint3d(ptTip.x + (vbx * cs + vby * sn) * ARROW,
 		ptTip.y + (-vbx * sn + vby * cs) * ARROW, 0.0));
-	CUtils::AddDbPolyline(pModelSpace, a2, 0.5, false, NULL, KS_SECTION_COLOR);
+	CUtils::AddDbPolyline(pModelSpace, a2, KS_SECTION_WIDTH, false, NULL, KS_SECTION_COLOR);
 
 	// 剖面编号（与剖面图标题一致）
-	AcGePoint3d ptTxt(ptTip.x + dx * dSign * 2.5, ptTip.y + dy * dSign * 2.5, 0.0);
-	AcDbObjectId idTxt = CUtils::AddDbText(pModelSpace, sTitle.GetString(), ptTxt, 3.0, pszStyleName, DBTA_CENTER, 0.8);
+	AcGePoint3d ptTxt(ptTip.x + dx * dSign * 1.5, ptTip.y + dy * dSign * 1.5, 0.0);
+	AcDbObjectId idTxt = CUtils::AddDbText(pModelSpace, sTitle.GetString(), ptTxt, 1.8, pszStyleName, DBTA_CENTER, 0.8);
 	KsSetEntColor(idTxt, KS_SECTION_COLOR);   // 编号与剖线同色
 }
 
