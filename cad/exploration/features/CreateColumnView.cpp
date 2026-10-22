@@ -393,15 +393,16 @@ void CCreateColumnView::Execute()
 					cJSON* cSoi = CUtils::GetJsonObjectItemUtf8(rowTry,_T("地层名称"));  // 当前列“土层文字”
 					if (cSoi != NULL && cJSON_IsString(cSoi)){
                         std::vector<CString> arrSeg;
-                        if (CUtils::SplitUtf8(cSoi->valuestring, '-', arrSeg) > 0)
+                        // “大类-土名”取后半段；无 '-' 时整串即土名（如 粉质黏土/石灰岩），arrSeg[1] 会越界
+						if (CUtils::SplitUtf8(cSoi->valuestring, '-', arrSeg) > 0)
                         {
-                            soilPatName=arrSeg[1].GetString();
+                            soilPatName = (arrSeg.size() > 1) ? arrSeg[1] : arrSeg[0];
 
 							AcGePoint3d ptDrawSoi(ptDraw);
 							ptDrawSoi.x += space_no + space_mc/2;
 							ptDrawSoi.y += hDraw/2;
 
-							CUtils::AddDbText(pModelSpace,(ACHAR*)arrSeg[1].GetString(),
+							CUtils::AddDbText(pModelSpace,(ACHAR*)((arrSeg.size() > 1) ? arrSeg[1] : arrSeg[0]).GetString(),
                             ptDrawSoi,2.1,pszStyleName,DBTA_CENTER,dWidthFactor);
 
                         }
