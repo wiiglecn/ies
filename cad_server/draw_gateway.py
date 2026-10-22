@@ -870,7 +870,7 @@ def draw_column():
             pn = _resolve_project_name(bh_cn)
             bf = _project_file(pn, "钻探编录表")
             _write_json(bf, bh_cn)
-            body_for_cad = {"boreholeData": json.load(open(bf, encoding="utf-8"))}
+            body_for_cad = {"boreholeData": list(json.load(open(bf, encoding="utf-8")).values())}
             if pn:
                 body_for_cad["projectName"] = pn
             result = _call_cad(VIEW_ROUTES["column"], timeout=COLUMN_TIMEOUT, body=body_for_cad)
@@ -927,7 +927,7 @@ def draw_section():
                 _write_json(sf, _translate_section(sp))
             # 读落盘后的中文 JSON 作为 body，ARX 从 body 读参数而非旧文件
             body_for_cad = {
-                "boreholeData": json.load(open(bf, encoding="utf-8")),
+                "boreholeData": list(json.load(open(bf, encoding="utf-8")).values()),
             }
             if pn:
                 body_for_cad["projectName"] = pn
@@ -1054,14 +1054,14 @@ def draw_plan():
 
             # 读落盘后的中文 JSON 作为 body
             body_for_cad = {
-                "boreholeData": json.load(open(bf, encoding="utf-8")),
+                "boreholeData": list(json.load(open(bf, encoding="utf-8")).values()),
             }
             if pn:
                 body_for_cad["projectName"] = pn
             if sp is not None:
                 body_for_cad["sectionParams"] = json.load(open(sf, encoding="utf-8"))
             if os.path.exists(PLAN_BASE_FILE):
-                body_for_cad["plan_base"] = json.load(open(PLAN_BASE_FILE, encoding="utf-8"))
+                body_for_cad["planBase"] = json.load(open(PLAN_BASE_FILE, encoding="utf-8"))
             result = _call_cad(VIEW_ROUTES["plan"], timeout=PLAN_TIMEOUT, body=body_for_cad)
         except requests.exceptions.Timeout:
             return jsonify({
@@ -1143,7 +1143,7 @@ def draw():
         for v in views:
             try:
                 body_for_cad = {
-                    "boreholeData": json.load(open(BOREHOLE_FILE, encoding="utf-8")),
+                    "boreholeData": list(json.load(open(BOREHOLE_FILE, encoding="utf-8")).values()),
                 }
                 if section_params is not None:
                     body_for_cad["sectionParams"] = json.load(open(SECTION_FILE, encoding="utf-8"))
