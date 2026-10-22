@@ -375,7 +375,7 @@ void CCreateSectionView::Execute()
 				cJSON* gpObj = NULL;
 				cJSON_ArrayForEach(gpObj, gpsObj){
 					if (gpObj == NULL || !cJSON_IsString(gpObj)) continue;
-					cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+					cJSON* zkObj = CUtils::FindHoleNodeUtf8(s_pJsonData, gpObj->valuestring);
 					if (zkObj == NULL) continue;
 					cJSON* topObj = CUtils::GetJsonObjectItemUtf8(zkObj,_T("孔口高程(m)"));
 					double top = CUtils::JsonValToDouble(topObj);
@@ -646,7 +646,7 @@ void CCreateSectionView::drawTable(AcGePoint3d& basePt, cJSON* gpsObj)
 	{
 		cJSON* gpObj = cJSON_GetArrayItem(gpsObj, idx);
 		if (gpObj == NULL || !cJSON_IsString(gpObj)) continue;
-		cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+		cJSON* zkObj = CUtils::FindHoleNodeUtf8(s_pJsonData, gpObj->valuestring);
 		if (zkObj == NULL) continue;
 		holes[idx].valid = true;
 		cJSON* xObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("X坐标(m)"));
@@ -902,7 +902,7 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 
 	cJSON_ArrayForEach(gpObj, gpsObj){
 		if (gpObj == NULL || !cJSON_IsString(gpObj)) continue;
-		cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+		cJSON* zkObj = CUtils::FindHoleNodeUtf8(s_pJsonData, gpObj->valuestring);
 		{
 			cJSON* elevationObj = CUtils::GetJsonObjectItemUtf8(zkObj,_T("孔口高程(m)"));
 			if (elevationObj == NULL) continue;
@@ -959,7 +959,7 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 	cJSON_ArrayForEach(gpObj, gpsObj){
 		if (gpObj == NULL || !cJSON_IsString(gpObj)) continue;
 		{
-			cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+			cJSON* zkObj = CUtils::FindHoleNodeUtf8(s_pJsonData, gpObj->valuestring);
 			cJSON* elevationObj = CUtils::GetJsonObjectItemUtf8(zkObj,_T("孔口高程(m)"));
 			if (elevationObj == NULL) continue;
 			double top =  CUtils::JsonValToDouble(elevationObj);
@@ -1008,7 +1008,7 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 	cJSON_ArrayForEach(gpObj, gpsObj){
 		if (gpObj == NULL || !cJSON_IsString(gpObj)) continue;
 		{
-			cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+			cJSON* zkObj = CUtils::FindHoleNodeUtf8(s_pJsonData, gpObj->valuestring);
 			cJSON* elevationObj = CUtils::GetJsonObjectItemUtf8(zkObj,_T("孔口高程(m)"));
 			if (elevationObj == NULL) continue;
 			double top =  CUtils::JsonValToDouble(elevationObj);
@@ -1128,7 +1128,7 @@ void CCreateSectionView::drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
     {
         if (gpObj == NULL || !cJSON_IsString(gpObj)) { index++; continue; }
 
-        cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+        cJSON* zkObj = CUtils::FindHoleNodeUtf8(s_pJsonData, gpObj->valuestring);
         if (zkObj == NULL) { index++; continue; }
         cJSON* elevationObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("孔口高程(m)"));
         if (elevationObj == NULL) { index++; continue; }
@@ -1354,7 +1354,7 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
     {
         if (gpObj == NULL || !cJSON_IsString(gpObj)) { index++; continue; }
 
-        cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+        cJSON* zkObj = CUtils::FindHoleNodeUtf8(s_pJsonData, gpObj->valuestring);
         if (zkObj == NULL) { index++; continue; }
         cJSON* layerObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("地层列表"));
         if (layerObj == NULL) { index++; continue; }
@@ -1640,7 +1640,7 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
     cJSON_ArrayForEach(gpObj, gpsObj)
     {
         if (gpObj == NULL || !cJSON_IsString(gpObj)) { index++; continue; }
-        cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+        cJSON* zkObj = CUtils::FindHoleNodeUtf8(s_pJsonData, gpObj->valuestring);
         if (zkObj == NULL) { index++; continue; }
         cJSON* layerObj = CUtils::GetJsonObjectItemUtf8(zkObj, _T("地层列表"));
         if (layerObj == NULL) { index++; continue; }
@@ -1922,7 +1922,7 @@ void CCreateSectionView::drawHeader(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gp
         cJSON_ArrayForEach(gpObj, gpsObj)
         {
             if (gpObj == NULL || !cJSON_IsString(gpObj)) continue;
-            cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+            cJSON* zkObj = CUtils::FindHoleNodeUtf8(s_pJsonData, gpObj->valuestring);
             if (zkObj == NULL) continue;
             cJSON* cP = CUtils::GetJsonObjectItemUtf8(zkObj,_T("工程名称"));
             if (cP != NULL && cJSON_IsString(cP) && cP->valuestring[0] != '\0')
@@ -2095,7 +2095,7 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const S
         int idx = 0;
         cJSON_ArrayForEach(gpObj, gpsObj){
             if (gpObj == NULL || !cJSON_IsString(gpObj)) { idx++; continue; }
-            cJSON* zkObj = cJSON_GetObjectItem(s_pJsonData, gpObj->valuestring);
+            cJSON* zkObj = CUtils::FindHoleNodeUtf8(s_pJsonData, gpObj->valuestring);
             if (zkObj == NULL) { idx++; continue; }
 
             KsDrillHole hole;

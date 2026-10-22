@@ -1004,20 +1004,53 @@ cJSON* CUtils::FindHoleNode(cJSON* pRoot, const TCHAR* pszHoleRef)
 		return NULL;
 	char utf8Ref[256] = { 0 };
 	TCharToUtf8(pszHoleRef, utf8Ref, sizeof(utf8Ref));
-	cJSON* item = cJSON_GetObjectItemCaseSensitive(pRoot, utf8Ref);
+	return FindHoleNodeUtf8(pRoot, utf8Ref);
+}
+cJSON* CUtils::FindHoleNodeUtf8(cJSON* pRoot, const char* pszUtf8Ref)
+{
+	if (pRoot == NULL || pszUtf8Ref == NULL || pszUtf8Ref[0] == '\0')
+		return NULL;
+	// 旧形态：以孔号为键的对象，可直接按键名取
+	cJSON* item = cJSON_GetObjectItemCaseSensitive(pRoot, pszUtf8Ref);
 	if (item != NULL)
 		return item;
-	// 未命中时再按「钻孔编号」字段兜底（业务编号与 key 不一致的场景）
+	// 新形态：钻孔对象数组，按「钻孔编号」字段匹配
 	char utf8Key[64] = { 0 };
 	TCharToUtf8(_T("钻孔编号"), utf8Key, sizeof(utf8Key));
 	cJSON_ArrayForEach(item, pRoot)
 	{
 		cJSON* jsNo = cJSON_GetObjectItemCaseSensitive(item, utf8Key);
 		if (jsNo != NULL && jsNo->valuestring != NULL &&
-			strcmp(jsNo->valuestring, utf8Ref) == 0)
+			strcmp(jsNo->valuestring, pszUtf8Ref) == 0)
 			return item;
 	}
 	return NULL;
+}
+CString CUtils::GetHoleKey(cJSON* pHoleNode, int nIndex)
+{
+	CString sRet;
+	if (pHoleNode != NULL)
+	{
+		TCHAR szBuf[256] = { 0 };
+		cJSON* jsNo = GetJsonObjectItemUtf8(pHoleNode, _T("钻孔编号"));
+		if (jsNo != NULL && jsNo->valuestring != NULL &&
+			utf8ToTChar(jsNo->valuestring, szBuf, ARRAYSIZE(szBuf)))
+		{
+			sRet = szBuf;
+		}
+		if (sRet.IsEmpty() && pHoleNode->string != NULL)
+		{
+			TCHAR szKey[256] = { 0 };
+			if (utf8ToTChar(pHoleNode->string, szKey, ARRAYSIZE(szKey)))
+				sRet = szKey;
+		}
+	}
+	if (sRet.IsEmpty())
+	{
+		sRet.Format(_T("KsHole_%d"), nIndex);
+		acutPrintf(_T("[WARN] 第 %d 个钻孔缺「钻孔编号」，块名暂用 %s\n"), nIndex, sRet.GetString());
+	}
+	return sRet;
 }
 CString CUtils::GetHoleDisplayNo(cJSON* pHoleNode, const TCHAR* pszKey)
 {

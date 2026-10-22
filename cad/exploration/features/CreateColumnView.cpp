@@ -172,11 +172,16 @@ void CCreateColumnView::Execute()
         }
     }
 
+	int nHoleIndex = 0;
     cJSON_ArrayForEach(item, s_pJsonData) {
+		++nHoleIndex;
         // 处理每个属性
         if (item != NULL) {
-            const char* blockName = (item->string != NULL) ? item->string : "(匿名数组)";
-            CUtils::acutPrintf(_T("[数组] %hs，共 %d 个元素\n"),
+			// 主键取「钻孔编号」字段，不再依赖 JSON 对象键名（数组形态没有键名）
+			char holeKeyUtf8[256] = { 0 };
+			CUtils::TCharToUtf8(CUtils::GetHoleKey(item, nHoleIndex), holeKeyUtf8, sizeof(holeKeyUtf8));
+            const char* blockName = holeKeyUtf8;
+            CUtils::acutPrintf(_T("[钻孔] %hs，共 %d 个元素\n"),
                             blockName, cJSON_GetArraySize(item));
 
 			ACHAR arrayName[256] = { 0 };

@@ -566,6 +566,53 @@ def _resolve_auto_zoom():
     return True
 
 
+def _sanitize_project_name(name):
+    """项目名净化：剔除 \\/:*?"<>| 与控制字符、去首尾空白、截断 64 字符。"""
+    if not name:
+        return ""
+    import re
+    s = str(name).strip()
+    s = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "", s)
+    return s[:64]
+
+
+def _resolve_project_name(bh_translated=None):
+    """project_name 解析：JSON body / form 优先 → borehole_data 第一孔 工程名称 兜底。
+
+    bh_translated: 已 _translate_borehole 后的中文键结构化 borehole_data dict（用于兜底取工程名称）。
+    返回净化后的项目名字符串；取不到返回空串。
+    """
+    # 1) JSON body
+    try:
+        body = request.get_json(silent=True) or {}
+    except Exception:
+        body = {}
+    if isinstance(body, dict):
+        for k in ("projectName", "project_name", "工程名称"):
+            if k in body and body[k]:
+                return _sanitize_project_name(body[k])
+    # 2) form
+    for k in ("projectName", "project_name", "工程名称"):
+        v = request.form.get(k)
+        if v:
+            return _sanitize_project_name(v)
+    # 3) borehole_data 第一孔 工程名称 兜底
+    if isinstance(bh_translated, dict) and bh_translated:
+        first = next(iter(bh_translated.values()))
+        if isinstance(first, dict):
+            pn = first.get("工程名称") or first.get("projectName") or first.get("project_name") or ""
+            if pn:
+                return _sanitize_project_name(pn)
+    return ""
+
+
+def _project_file(project_name, suffix):
+    """返回 project/{项目名}-{suffix}.json 路径。项目名为空时回退到旧固定名。"""
+    if project_name:
+        return os.path.join(PROJECT_DIR, f"{project_name}-{suffix}.json")
+    return os.path.join(PROJECT_DIR, suffix + ".json")
+
+
 # ============================================================
 # SSRF 三函数（G2：ssrf_safe / ssrf_whitelist_check / resolve_redirects）
 # ============================================================
@@ -819,8 +866,13 @@ def draw_column():
 
     with _lock:
         try:
-            _write_json(BOREHOLE_FILE, _translate_borehole(bh))
-            body_for_cad = {"borehole_data": json.load(open(BOREHOLE_FILE, encoding="utf-8"))}
+            bh_cn = _translate_borehole(bh)
+            pn = _resolve_project_name(bh_cn)
+            bf = _project_file(pn, "钻探编录表")
+            _write_json(bf, bh_cn)
+            body_for_cad = {"boreholeData": json.load(open(bf, encoding="utf-8"))}
+            if pn:
+                body_for_cad["projectName"] = pn
             result = _call_cad(VIEW_ROUTES["column"], timeout=COLUMN_TIMEOUT, body=body_for_cad)
         except requests.exceptions.Timeout:
             return jsonify({"status": "error",
@@ -866,15 +918,21 @@ def draw_section():
 
     with _lock:
         try:
-            _write_json(BOREHOLE_FILE, _translate_borehole(bh))
+            bh_cn = _translate_borehole(bh)
+            pn = _resolve_project_name(bh_cn)
+            bf = _project_file(pn, "钻探编录表")
+            sf = _project_file(pn, "剖面图参数") if sp is not None else None
+            _write_json(bf, bh_cn)
             if sp is not None:
-                _write_json(SECTION_FILE, _translate_section(sp))
+                _write_json(sf, _translate_section(sp))
             # 读落盘后的中文 JSON 作为 body，ARX 从 body 读参数而非旧文件
             body_for_cad = {
-                "borehole_data": json.load(open(BOREHOLE_FILE, encoding="utf-8")),
+                "boreholeData": json.load(open(bf, encoding="utf-8")),
             }
+            if pn:
+                body_for_cad["projectName"] = pn
             if sp is not None:
-                body_for_cad["section_params"] = json.load(open(SECTION_FILE, encoding="utf-8"))
+                body_for_cad["sectionParams"] = json.load(open(sf, encoding="utf-8"))
             result = _call_cad(VIEW_ROUTES["section"], timeout=SECTION_TIMEOUT, body=body_for_cad)
         except requests.exceptions.Timeout:
             return jsonify({"status": "error",
@@ -933,6 +991,7 @@ def draw_plan():
     try:
         bh = _resolve_form_json("borehole_data", required=True)
         pb = _resolve_form_json("plan_base", required=False)
+        sp = _resolve_form_json("section_params", required=False)
     except ValueError as e:
         return jsonify({"status": "error", "message": str(e)}), 400
     if not isinstance(bh, dict):
@@ -976,7 +1035,13 @@ def draw_plan():
     # ===== 锁内：落盘 + 调 CAD（plan 视图 300s） =====
     with _lock:
         try:
-            _write_json(BOREHOLE_FILE, _translate_borehole(bh))
+            bh_cn = _translate_borehole(bh)
+            pn = _resolve_project_name(bh_cn)
+            bf = _project_file(pn, "钻探编录表")
+            sf = _project_file(pn, "剖面图参数") if sp is not None else None
+            _write_json(bf, bh_cn)
+            if sp is not None:
+                _write_json(sf, _translate_section(sp))
             if pb is not None:
                 cfg = dict(pb)
                 if dwg:
@@ -989,8 +1054,12 @@ def draw_plan():
 
             # 读落盘后的中文 JSON 作为 body
             body_for_cad = {
-                "borehole_data": json.load(open(BOREHOLE_FILE, encoding="utf-8")),
+                "boreholeData": json.load(open(bf, encoding="utf-8")),
             }
+            if pn:
+                body_for_cad["projectName"] = pn
+            if sp is not None:
+                body_for_cad["sectionParams"] = json.load(open(sf, encoding="utf-8"))
             if os.path.exists(PLAN_BASE_FILE):
                 body_for_cad["plan_base"] = json.load(open(PLAN_BASE_FILE, encoding="utf-8"))
             result = _call_cad(VIEW_ROUTES["plan"], timeout=PLAN_TIMEOUT, body=body_for_cad)
@@ -1074,10 +1143,10 @@ def draw():
         for v in views:
             try:
                 body_for_cad = {
-                    "borehole_data": json.load(open(BOREHOLE_FILE, encoding="utf-8")),
+                    "boreholeData": json.load(open(BOREHOLE_FILE, encoding="utf-8")),
                 }
                 if section_params is not None:
-                    body_for_cad["section_params"] = json.load(open(SECTION_FILE, encoding="utf-8"))
+                    body_for_cad["sectionParams"] = json.load(open(SECTION_FILE, encoding="utf-8"))
                 results[v] = _call_cad(VIEW_ROUTES[v], body=body_for_cad)
             except Exception as e:
                 errors[v] = f"{type(e).__name__}: {e}"

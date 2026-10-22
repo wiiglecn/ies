@@ -210,11 +210,27 @@ void HandleAiCommand(struct mg_connection* nc,
 // Helper to check if string ends with suffix
 // Compatible with VC8
 
-// 解析本次请求的项目名：body 顶层 project_name / 工程名称 优先，
+// 请求体顶层字段统一使用驼峰命名：projectName / boreholeData / sectionParams。
+// 旧的下划线命名仍可读（打 WARN 提示迁移），后续版本将移除兼容。
+static cJSON* KsGetBodyItem(cJSON* root, const char* pszCamel, const char* pszLegacy)
+{
+	if (!root)
+		return NULL;
+	cJSON* node = cJSON_GetObjectItem(root, pszCamel);
+	if (node)
+		return node;
+	node = cJSON_GetObjectItem(root, pszLegacy);
+	if (node)
+		CUtils::acutPrintf(_T("[7100] WARN: 字段 \"%hs\" 已重命名为 \"%hs\"，请改用驼峰命名\n"), pszLegacy, pszCamel);
+	return node;
+}
+
+// 解析本次请求的项目名：body 顶层 projectName（旧 project_name）/ 工程名称 优先，
 // 其次取每个孔的「工程名称」字段（要求全孔一致）；无法确定时返回空串
 static std::string KsResolveProjectName(cJSON* root, cJSON* boreholeData)
 {
-	const char* bodyKeys[] = { "project_name", "projectName", "工程名称" };
+	// 驼峰优先，下划线为兼容旧调用方
+	const char* bodyKeys[] = { "projectName", "project_name", "工程名称" };
 
 	if (root) {
 		for (int i = 0; i < (int)(sizeof(bodyKeys) / sizeof(bodyKeys[0])); ++i) {
@@ -333,17 +349,35 @@ void HandleAiTool(struct mg_connection* nc,
 		// 每次请求先清空项目上下文，杜绝沿用上一次请求的项目名
 		CUtils::SetProjectName(_T(""));
 
-		cJSON* boreholeData = cJSON_GetObjectItem(root, "borehole_data");
+		cJSON* boreholeData = KsGetBodyItem(root, "boreholeData", "borehole_data");
 		if (!boreholeData) {
-			CUtils::acutPrintf(_T("[7100] ERROR: 请求缺少 borehole_data\n"));
+			CUtils::acutPrintf(_T("[7100] ERROR: 请求缺少 boreholeData\n"));
 		} else {
+			// 约定格式为钻孔对象数组；旧的「孔号->对象」map 形态仍兼容，但打 WARN
+			if (!cJSON_IsArray(boreholeData)) {
+				CUtils::acutPrintf(_T("[7100] WARN: boreholeData 应为钻孔对象数组，当前是对象形态（旧格式），仅向后兼容\n"));
+			}
 			int holeCount = cJSON_GetArraySize(boreholeData);
 			CUtils::acutPrintf(_T("[7100] 收到 %d 个钻孔\n"), holeCount);
+
+			// 数组形态下「钻孔编号」就是主键，缺失会导致按孔号查不到（剖线/柱状图块名退化）
+			{
+				int nMissNo = 0;
+				cJSON* holeItem = NULL;
+				cJSON_ArrayForEach(holeItem, boreholeData) {
+					cJSON* jsNo = cJSON_GetObjectItemCaseSensitive(holeItem, "钻孔编号");
+					if (jsNo == NULL || !cJSON_IsString(jsNo) ||
+						jsNo->valuestring == NULL || jsNo->valuestring[0] == '\0')
+						++nMissNo;
+				}
+				if (nMissNo > 0)
+					CUtils::acutPrintf(_T("[7100] WARN: %d 个钻孔缺「钻孔编号」，按孔号取值会失败\n"), nMissNo);
+			}
 
 			// ① 解析项目名 -> 落盘文件名 {项目名}-xxx.json
 			std::string projectName = KsResolveProjectName(root, boreholeData);
 			if (projectName.empty()) {
-				CUtils::acutPrintf(_T("[7100] ERROR: 无法确定项目名。请传 project_name，或让每个孔携带一致的「工程名称」；本次不落盘\n"));
+				CUtils::acutPrintf(_T("[7100] ERROR: 无法确定项目名。请传 projectName，或让每个孔携带一致的「工程名称」；本次不落盘\n"));
 			} else {
 				TCHAR szProject[256] = {0};
 				if (CUtils::utf8ToTChar(projectName.c_str(), szProject, ARRAYSIZE(szProject))) {
@@ -367,10 +401,10 @@ void HandleAiTool(struct mg_connection* nc,
 		}
 
 		// ② 剖面参数按同一项目名落盘（缺失时平面图不画剖线）
-		cJSON* sectionParams = cJSON_GetObjectItem(root, "section_params");
+		cJSON* sectionParams = KsGetBodyItem(root, "sectionParams", "section_params");
 		if (sectionParams) {
 			if (CUtils::GetProjectName().IsEmpty()) {
-				CUtils::acutPrintf(_T("[7100] ERROR: 项目名未定，section_params 未落盘\n"));
+				CUtils::acutPrintf(_T("[7100] ERROR: 项目名未定，sectionParams 未落盘\n"));
 			} else {
 				char* pSecPrinted = cJSON_Print(sectionParams);
 				if (pSecPrinted) {
@@ -384,7 +418,7 @@ void HandleAiTool(struct mg_connection* nc,
 				}
 			}
 		} else {
-			CUtils::acutPrintf(_T("[7100] 本次请求未带 section_params，平面图不画剖切位置线\n"));
+			CUtils::acutPrintf(_T("[7100] 本次请求未带 sectionParams，平面图不画剖切位置线\n"));
 		}
 	}
 

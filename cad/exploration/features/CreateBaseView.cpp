@@ -251,7 +251,7 @@ bool CCreateBaseView::prepare()
 	CString strUrl = CUtils::GetProjectFilePath(_T("钻探编录表"));
 	if (strUrl.IsEmpty())
 	{
-		CUtils::acutPrintf(_T("[CAD ERROR] 未确定项目，无法定位数据文件。请通过 7100 接口传入 project_name，或让每个孔携带一致的「工程名称」\n"));
+		CUtils::acutPrintf(_T("[CAD ERROR] 未确定项目，无法定位数据文件。请通过 7100 接口传入 projectName，或让每个孔携带一致的「工程名称」\n"));
 		return false;
 	}
 

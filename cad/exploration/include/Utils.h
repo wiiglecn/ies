@@ -160,6 +160,10 @@ public:
 	static bool WriteUtf8File(const TCHAR* pszFilePath, const char* pszUtf8);
 	// 按 JSON key 或「钻孔编号」字段查找钻孔节点；找不到返回 NULL
 	static cJSON* FindHoleNode(cJSON* pRoot, const TCHAR* pszHoleRef);
+	// UTF-8 版：先按对象键名直查（旧对象形态），再按「钻孔编号」字段匹配（数组形态）
+	static cJSON* FindHoleNodeUtf8(cJSON* pRoot, const char* pszUtf8Ref);
+	// 取钻孔主键（块名/显示名来源）：优先字段「钻孔编号」，回落对象键名，都没有用序号生成
+	static CString GetHoleKey(cJSON* pHoleNode, int nIndex);
 	// 钻孔显示编号：优先取字段「钻孔编号」，缺失回落 pszKey 并告警
 	static CString GetHoleDisplayNo(cJSON* pHoleNode, const TCHAR* pszKey);
 	// 图例/平面图共用的「钻孔类型 -> 图块名」解析；未命中打告警并回落兜底符号
