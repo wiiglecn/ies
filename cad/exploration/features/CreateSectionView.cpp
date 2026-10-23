@@ -66,9 +66,14 @@ static const double KS_TB_MINH   = 2.0;      // 长名字自动缩字的下限
 // 图签值专用文字样式（TrueType 仿宋）。
 // 图框自带的 STANDARD 是 txt.shx + gbcbig.shx —— gbcbig 是 **GB2312 大字体，只有 6763 个常用字**，
 // 公司名里的「昇」这类 GBK 扩展区汉字（GBK 0x954E）没有字形，CAD 会画成 "?"（2026-10-23 用户反馈）。
-// 仿宋 simfang.ttf 覆盖 GBK 全字集，且与图框里「岩土名称 / 高程系统 / 标注栏项目」等样式同一字体。
-static const TCHAR* KS_TB_STYLE = _T("图签文字");
-static const TCHAR* KS_TB_FONT  = _T("simfang.ttf");
+// 仿宋覆盖 GBK 全字集，且与图框里「岩土名称 / 高程系统 / 标注栏项目」等样式同一字体。
+// 【坑 2026-10-23】EnsureTextStyle 第 2 参是 **typeface 字体名**（平面图传"宋体"、年代代号传
+// "Times New Roman"）。曾传字体文件名 "simfang.ttf"，setFont 找不到该 typeface → 样式字体解析
+// 失败 → 图签值格全部汉字变 "???"。必须传字体名"仿宋"（simfang.ttf 的字体名）。
+// 样式名换成"图签仿宋"：旧样式"图签文字"已带坏字体存进测试图，EnsureTextStyle 查到即返回
+// 不修复，只有改名才能强制重建。
+static const TCHAR* KS_TB_STYLE = _T("图签仿宋");
+static const TCHAR* KS_TB_FONT  = _T("仿宋");
 
 // 估宽：汉字/全角按 1.33×字高，ASCII 按 0.60×字高。
 // 1.33 是 2026-10-23 按图面实测校正的：SLNormal 下 7 个汉字（工程地质剖面图）
