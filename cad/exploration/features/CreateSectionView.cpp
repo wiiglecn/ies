@@ -62,13 +62,32 @@ static const double KS_TB_PAD    = 2.1;      // 值格内左边距（图签标签自身的内缩
 static const double KS_TB_HEIGHT = 3.44736;  // 与图签标签同字高
 static const double KS_TB_MINH   = 2.0;      // 长名字自动缩字的下限
 
-// 估宽：汉字/全角按 1.0×字高，ASCII 按 0.6×字高（与 drawHeader 的估宽口径一致）
+// 估宽：汉字/全角按 1.33×字高，ASCII 按 0.60×字高。
+// 1.33 是 2026-10-23 按图面实测校正的：SLNormal 下 7 个汉字（工程地质剖面图）
+// 实际宽约 65，而老口径 1.0×7 只算 49 —— 少算 16 正好等于标题与编号的间隔，
+// 这就是「编号压在“图”字上」的根因。此函数只用于「量不到实体包围盒」时兜底。
 static double KsTextWidth(const CString& s, double h)
 {
     double w = 0.0;
     for (int i = 0; i < s.GetLength(); ++i)
-        w += (s[i] > (TCHAR)0x2E80) ? 1.00 * h : 0.60 * h;
+        w += (s[i] > (TCHAR)0x2E80) ? 1.33 * h : 0.60 * h;
     return w;
+}
+
+// 把已落库的文字实体挪到 (x, y)：左对齐时 position 生效，同时同步对齐点
+static void KsMoveDbText(const AcDbObjectId& id, double x, double y)
+{
+    if (id.isNull()) return;
+    AcDbEntity* pEnt = NULL;
+    if (acdbOpenObject(pEnt, id, AcDb::kForWrite) != Acad::eOk || pEnt == NULL) return;
+    AcDbText* pTxt = AcDbText::cast(pEnt);
+    if (pTxt != NULL)
+    {
+        AcGePoint3d pt(x, y, 0.0);
+        pTxt->setPosition(pt);
+        pTxt->setAlignmentPoint(pt);
+    }
+    pEnt->close();
 }
 
 // 往图签值格写一行：与标签同基线、左对齐，超宽按比例缩字高（不低于 KS_TB_MINH）
@@ -2020,29 +2039,38 @@ void CCreateSectionView::drawHeader(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gp
         sNo.Format(_T("%d------%d′"), pageCount, pageNo);
     }
 
-    // 估宽用于整体居中（汉字宽≈字高；数字/′≈0.6 倍字高，横线≈0.45 倍）
-    double wTitle = 7.0 * H_TITLE;                          // “工程地质剖面图”7 个汉字
-    double wNo = 0.0;
-    for (int k = 0; k < sNo.GetLength(); ++k)
-    {
-        TCHAR ch = sNo[k];
-        if (ch == _T('-'))          wNo += 0.45 * H_TITLE;
-        else if (ch > (TCHAR)0x2E80) wNo += 1.00 * H_TITLE;   // 中日韩字符按全宽估
-        else                         wNo += 0.60 * H_TITLE;
-    }
+    // ★标题与编号分两段文字，位置由「实测文字宽度」决定（2026-10-23 修多剖面组编号压标题）：
+    //   旧写法用「汉字宽≈字高」估宽、再按固定 GAP 排位。图面 SLNormal 的实际字宽是 1.33 倍字高
+    //   （7 个汉字实测约 65，估算只有 49），标题实际右端比估算多出 16，正好吃掉 GAP
+    //   → 编号压在“图”字上。每组各画一次表头，所以第 2 个剖面组开始一眼就能看出。
+    //   现在先把两段文字落在临时位置、量出真实包围盒宽度，再按总宽整体居中挪位；
+    //   量不到时才用 KsTextWidth 兜底（系数已按实测校正），保证间距永远留得住。
     const double GAP = 16.0;
-    double xTitle = centerX - (wTitle + GAP + wNo) / 2.0;
-    double xNo    = xTitle + wTitle + GAP;
+    AcGePoint3d ptTmp(centerX, yTitle, 0.0);
+    AcDbObjectId idTitle = CUtils::AddDbText(pModelSpace,_T("工程地质剖面图"),
+        ptTmp,H_TITLE,pszStyleName,DBTA_LEFT,1.0);
+    AcDbObjectId idNo = AcDbObjectId::kNull;
+    if (!sNo.IsEmpty())
+        idNo = CUtils::AddDbText(pModelSpace,sNo.GetString(),
+            ptTmp,H_TITLE,pszStyleName,DBTA_LEFT,1.0);
 
-    CUtils::AddDbText(pModelSpace,_T("工程地质剖面图"),
-        AcGePoint3d(xTitle,yTitle,0.0),H_TITLE,pszStyleName,DBTA_LEFT,1.0);
-    CUtils::AddDbText(pModelSpace,sNo.GetString(),
-        AcGePoint3d(xNo,yTitle,0.0),H_TITLE,pszStyleName,DBTA_LEFT,1.0);
+    double wTitle = 0.0, wNo = 0.0, hTmp = 0.0;
+    if (idTitle.isNull() || !CUtils::GetEntExtentById(idTitle, wTitle, hTmp) || wTitle <= 0.0)
+        wTitle = KsTextWidth(_T("工程地质剖面图"), H_TITLE);
+    if (!idNo.isNull() &&
+        (!CUtils::GetEntExtentById(idNo, wNo, hTmp) || wNo <= 0.0))
+        wNo = KsTextWidth(sNo, H_TITLE);
 
-    // 标题行下划线（两端各外伸 5）
+    const double wTotal = wTitle + (idNo.isNull() ? 0.0 : GAP + wNo);
+    const double xTitle = centerX - wTotal / 2.0;
+    KsMoveDbText(idTitle, xTitle, yTitle);
+    if (!idNo.isNull())
+        KsMoveDbText(idNo, xTitle + wTitle + GAP, yTitle);
+
+    // 标题行下划线：长度与实测总宽一致，两端各外伸 5
     {
         AcGePoint3d p1(xTitle - 5.0, yTitle - 3.0, 0.0);
-        AcGePoint3d p2(xNo + wNo + 5.0, yTitle - 3.0, 0.0);
+        AcGePoint3d p2(xTitle + wTotal + 5.0, yTitle - 3.0, 0.0);
         CUtils::AddLine(pModelSpace,p1,p2);
     }
 
@@ -2480,16 +2508,19 @@ double CCreateSectionView::getRuleHeight(const SectionRulerInfo& rule,double dep
 {
 	return rule.labelY+(depth-rule.min_zk_int)*rule.unitPerM;
 }
-// 右下角图签填值（每页一次）：
-//   工程名称 ← 孔内「工程名称」；勘察单位 ← 孔内「公司名称」（别名 勘察单位/单位名称）；
-//   图名 ← 剖面「标题」 + 工程地质剖面图（如 B-B工程地质剖面图）
+// 右下角图签填值（每页一次），字段口径由用户 2026-10-23 定稿（接口保持原样，全部取孔内字段）：
+//   勘察单位 ← 孔内「公司名称」（别名 勘察单位 / 单位名称）；
+//   工程名称 ← 孔内「工程名称」；
+//   图名     ← 剖面「标题」原样（就是图面抬头，如 B-B），不拼「工程地质剖面图」后缀。
 // 只写值不画格线：格线与左侧标签都是 support/<版本>/钻孔剖面图.dwg 块里的实体。
 void CCreateSectionView::drawTitleBlock(AcGePoint3d& basePt, cJSON* itemObj, cJSON* gpsObj, int pageNo)
 {
     CString sProj = KsFindFieldValue(gpsObj, s_pJsonData, _T("工程名称"), NULL, NULL);
+
+    // 勘察单位 = 孔内「公司名称」（公司名称就是勘察单位），别名 勘察单位 / 单位名称 兜底
     CString sUnit = KsFindFieldValue(gpsObj, s_pJsonData, _T("公司名称"), _T("勘察单位"), _T("单位名称"));
 
-    // 图名 = 剖面编号 + 工程地质剖面图
+    // 图名 = 剖面「标题」原样（图名就是图的标题，不拼后缀）
     CString sTitle(_T("工程地质剖面图"));
     {
         cJSON* cTitle = CUtils::GetJsonObjectItemUtf8(itemObj, _T("标题"));
@@ -2500,7 +2531,7 @@ void CCreateSectionView::drawTitleBlock(AcGePoint3d& basePt, cJSON* itemObj, cJS
             {
                 CString sNo(szT);
                 sNo.Trim();
-                if (!sNo.IsEmpty()) sTitle = sNo + _T("工程地质剖面图");
+                if (!sNo.IsEmpty()) sTitle = sNo;   // 只写标题本身，如 B-B
             }
         }
     }
@@ -2512,7 +2543,7 @@ void CCreateSectionView::drawTitleBlock(AcGePoint3d& basePt, cJSON* itemObj, cJS
     if (pageNo <= 1)
     {
         if (!bProj) CUtils::acutPrintf(_T("[剖面图 WARN] 孔数据缺「工程名称」，图签工程名称留空\n"));
-        if (!bUnit) CUtils::acutPrintf(_T("[剖面图 WARN] 孔数据缺「公司名称」，图签勘察单位留空（接口文档字段名：公司名称）\n"));
+        if (!bUnit) CUtils::acutPrintf(_T("[剖面图 WARN] 孔数据缺「公司名称」，图签勘察单位留空\n"));
         if (!bName) CUtils::acutPrintf(_T("[剖面图 WARN] 图签图名写入失败\n"));
     }
 }
