@@ -2511,7 +2511,7 @@ double CCreateSectionView::getRuleHeight(const SectionRulerInfo& rule,double dep
 // 右下角图签填值（每页一次），字段口径由用户 2026-10-23 定稿（接口保持原样，全部取孔内字段）：
 //   勘察单位 ← 孔内「公司名称」（别名 勘察单位 / 单位名称）；
 //   工程名称 ← 孔内「工程名称」；
-//   图名     ← 剖面「标题」原样（就是图面抬头，如 B-B），不拼「工程地质剖面图」后缀。
+//   图名     ← 「工程地质勘探图」+ 空格 + 剖面「标题」，如「工程地质勘探图 B-B」；无标题只写前缀。
 // 只写值不画格线：格线与左侧标签都是 support/<版本>/钻孔剖面图.dwg 块里的实体。
 void CCreateSectionView::drawTitleBlock(AcGePoint3d& basePt, cJSON* itemObj, cJSON* gpsObj, int pageNo)
 {
@@ -2520,8 +2520,9 @@ void CCreateSectionView::drawTitleBlock(AcGePoint3d& basePt, cJSON* itemObj, cJS
     // 勘察单位 = 孔内「公司名称」（公司名称就是勘察单位），别名 勘察单位 / 单位名称 兜底
     CString sUnit = KsFindFieldValue(gpsObj, s_pJsonData, _T("公司名称"), _T("勘察单位"), _T("单位名称"));
 
-    // 图名 = 剖面「标题」原样（图名就是图的标题，不拼后缀）
-    CString sTitle(_T("工程地质剖面图"));
+    // 图名 = 「工程地质勘探图」+ 空格 + 剖面「标题」，如「工程地质勘探图 B-B」；
+    // 剖面没给标题时只写前缀，不留半截空格。
+    CString sTitle(_T("工程地质勘探图"));
     {
         cJSON* cTitle = CUtils::GetJsonObjectItemUtf8(itemObj, _T("标题"));
         if (cTitle != NULL && cJSON_IsString(cTitle) && cTitle->valuestring != NULL && cTitle->valuestring[0] != '\0')
@@ -2531,7 +2532,8 @@ void CCreateSectionView::drawTitleBlock(AcGePoint3d& basePt, cJSON* itemObj, cJS
             {
                 CString sNo(szT);
                 sNo.Trim();
-                if (!sNo.IsEmpty()) sTitle = sNo;   // 只写标题本身，如 B-B
+                if (!sNo.IsEmpty())
+                    sTitle.Format(_T("工程地质勘探图 %s"), (LPCTSTR)sNo);
             }
         }
     }
