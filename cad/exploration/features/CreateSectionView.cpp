@@ -89,7 +89,18 @@ static bool KsAddTitleCellText(AcDbBlockTableRecord* pSpace, const CString& sTex
     AcDbObjectId id = CUtils::AddDbText(pSpace, sText.GetString(),
         AcGePoint3d(baseX + cell.valueLeft + KS_TB_PAD, baseY + cell.baselineY, 0.0),
         h, NULL, DBTA_LEFT, 1.0);   // NULL 样式 = 图签标签同一个 STANDARD，字面才一致
-    return id != AcDbObjectId::kNull;
+    if (id.isNull()) return false;
+
+    // 图层 0 + 颜色 7：与图签自带的标签完全一致（图面显白、打印为黑），
+    // 不跟随当前层颜色，避免上一次绘图把 CLAYER 改到彩色层后图签字变黄/变绿。
+    AcDbEntity* pEnt = NULL;
+    if (acdbOpenObject(pEnt, id, AcDb::kForWrite) == Acad::eOk && pEnt != NULL)
+    {
+        pEnt->setLayer(_T("0"));
+        pEnt->setColorIndex(7);   // 7 = 黑/白自适应
+        pEnt->close();
+    }
+    return true;
 }
 
 // 取字段值：先扫「本页孔」（顺序即出图顺序），全空再扫「全部孔」兜底；
