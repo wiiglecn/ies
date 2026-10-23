@@ -40,6 +40,8 @@ protected:
 	void drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule);
 	//画表头（每页）：工程地质剖面图 + 剖面编号(A------A′) + 下划线 + 比例尺行 + 工程名称(黄)
 	void drawHeader(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gpsObj,int pageNo,int pageCount);
+	//右下角图签：填 工程名称 / 勘察单位 / 图名（格线由 钻孔剖面图.dwg 块自带，只补值）
+	void drawTitleBlock(AcGePoint3d& basePt,cJSON* itemObj,cJSON* gpsObj,int pageNo);
 	//高度尺
 	double getRuleHeight(const SectionRulerInfo& rule,double depth);
 };

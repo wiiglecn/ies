@@ -41,6 +41,108 @@ static KsColLayout KsMakeColLayout(const AcGePoint3d& basePt, int cols)
     return L;
 }
 
+// ============ 右下角图签（工程名称 / 勘察单位 / 图名） ============
+// 图签的格线与「勘察单位 / 工程名称 / 图名 / 项目负责人 / 审定 / 审核 / 日期 / 图号」等
+// 标签文字都由 support/<版本>/钻孔剖面图.dwg 的块自带，插件**不画格线**，
+// 只往「标签右边那一格」里补值。三处值格实测（该 dwg 图幅 420×297，坐标相对图幅左下角）：
+//   勘察单位  标签(233.25,35.05)  值格 x 254.123~415.000  行 y 32.579~41.772
+//   工程名称  标签(233.25,25.86)  值格 x 254.123~415.000  行 y 23.386~32.579
+//   图　　名  标签(235.28,16.77)  值格 x 254.123~323.070  行 y 14.193~23.386
+// 值一律「与标签同基线、左对齐、内缩 2.1」，超宽自动缩字高（图名格只有 69 宽，需要缩）。
+struct KsTitleCell
+{
+    double valueLeft;    // 值格左界（文字起点 = valueLeft + KS_TB_PAD）
+    double valueRight;   // 值格右界（缩字判据）
+    double baselineY;    // 与左侧标签同一基线，保证横向对齐
+};
+static const KsTitleCell KS_CELL_UNIT  = { 254.1232, 415.0000, 35.05232 };  // 勘察单位
+static const KsTitleCell KS_CELL_PROJ  = { 254.1232, 415.0000, 25.85936 };  // 工程名称
+static const KsTitleCell KS_CELL_TNAME = { 254.1232, 323.0704, 16.77238 };  // 图名
+static const double KS_TB_PAD    = 2.1;      // 值格内左边距（图签标签自身的内缩量）
+static const double KS_TB_HEIGHT = 3.44736;  // 与图签标签同字高
+static const double KS_TB_MINH   = 2.0;      // 长名字自动缩字的下限
+
+// 估宽：汉字/全角按 1.0×字高，ASCII 按 0.6×字高（与 drawHeader 的估宽口径一致）
+static double KsTextWidth(const CString& s, double h)
+{
+    double w = 0.0;
+    for (int i = 0; i < s.GetLength(); ++i)
+        w += (s[i] > (TCHAR)0x2E80) ? 1.00 * h : 0.60 * h;
+    return w;
+}
+
+// 往图签值格写一行：与标签同基线、左对齐，超宽按比例缩字高（不低于 KS_TB_MINH）
+static bool KsAddTitleCellText(AcDbBlockTableRecord* pSpace, const CString& sText,
+                               const KsTitleCell& cell, double baseX, double baseY)
+{
+    if (sText.IsEmpty()) return false;
+
+    double avail = (cell.valueRight - cell.valueLeft) - KS_TB_PAD * 2.0;
+    double h = KS_TB_HEIGHT;
+    double w = KsTextWidth(sText, h);
+    if (avail > 1.0 && w > avail)
+    {
+        h = h * avail / w;
+        if (h < KS_TB_MINH) h = KS_TB_MINH;   // 名字过长时宁可压到最小字高，也不截断
+    }
+
+    AcDbObjectId id = CUtils::AddDbText(pSpace, sText.GetString(),
+        AcGePoint3d(baseX + cell.valueLeft + KS_TB_PAD, baseY + cell.baselineY, 0.0),
+        h, NULL, DBTA_LEFT, 1.0);   // NULL 样式 = 图签标签同一个 STANDARD，字面才一致
+    return id != AcDbObjectId::kNull;
+}
+
+// 取字段值：先扫「本页孔」（顺序即出图顺序），全空再扫「全部孔」兜底；
+// keys 最多 3 个候选字段名（主名 + 别名），取第一个非空值
+static CString KsFindFieldValue(cJSON* gpsObj, cJSON* allHoles,
+                                const TCHAR* k1, const TCHAR* k2, const TCHAR* k3)
+{
+    const TCHAR* keys[3] = { k1, k2, k3 };
+
+    for (int pass = 0; pass < 2; ++pass)
+    {
+        if (pass == 0)
+        {
+            if (gpsObj == NULL) continue;
+            cJSON* gp = NULL;
+            cJSON_ArrayForEach(gp, gpsObj)
+            {
+                if (gp == NULL || !cJSON_IsString(gp) || gp->valuestring == NULL) continue;
+                cJSON* hole = CUtils::FindHoleNodeUtf8(allHoles, gp->valuestring);
+                if (hole == NULL) continue;
+                for (int k = 0; k < 3; ++k)
+                {
+                    if (keys[k] == NULL) continue;
+                    cJSON* c = CUtils::GetJsonObjectItemUtf8(hole, keys[k]);
+                    if (c == NULL || !cJSON_IsString(c) || c->valuestring == NULL || c->valuestring[0] == '\0')
+                        continue;
+                    TCHAR sz[256] = { 0 };
+                    if (CUtils::utf8ToTChar(c->valuestring, sz, ARRAYSIZE(sz))) return CString(sz);
+                }
+            }
+        }
+        else
+        {
+            // 兜底：数组/对象两种形态都能迭代（子节点都是「孔对象」）
+            cJSON* hole = NULL;
+            cJSON_ArrayForEach(hole, allHoles)
+            {
+                if (hole == NULL) continue;
+                for (int k = 0; k < 3; ++k)
+                {
+                    if (keys[k] == NULL) continue;
+                    cJSON* c = CUtils::GetJsonObjectItemUtf8(hole, keys[k]);
+                    if (c == NULL || !cJSON_IsString(c) || c->valuestring == NULL || c->valuestring[0] == '\0')
+                        continue;
+                    TCHAR sz[256] = { 0 };
+                    if (CUtils::utf8ToTChar(c->valuestring, sz, ARRAYSIZE(sz))) return CString(sz);
+                }
+            }
+        }
+    }
+    return CString();
+}
+
 // 标尺标定基准：drawRuler 计算一次，供 drawColumn/drawLineFix 共用
 struct SectionRulerInfo
 {
@@ -520,6 +622,9 @@ void CCreateSectionView::Execute()
 					}
 					pBlkRef->close();
 				}
+
+				// 右下角图签：补 工程名称 / 勘察单位 / 图名（格线由块自带）
+				drawTitleBlock(basePt, item, pageGps, pg+1);
 
 				drawHeader(basePt,item,pageGps,pg+1,pageCount);
 				drawTable(basePt, pageGps);
@@ -2363,4 +2468,40 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const S
 double CCreateSectionView::getRuleHeight(const SectionRulerInfo& rule,double depth)
 {
 	return rule.labelY+(depth-rule.min_zk_int)*rule.unitPerM;
+}
+// 右下角图签填值（每页一次）：
+//   工程名称 ← 孔内「工程名称」；勘察单位 ← 孔内「公司名称」（别名 勘察单位/单位名称）；
+//   图名 ← 剖面「标题」 + 工程地质剖面图（如 B-B工程地质剖面图）
+// 只写值不画格线：格线与左侧标签都是 support/<版本>/钻孔剖面图.dwg 块里的实体。
+void CCreateSectionView::drawTitleBlock(AcGePoint3d& basePt, cJSON* itemObj, cJSON* gpsObj, int pageNo)
+{
+    CString sProj = KsFindFieldValue(gpsObj, s_pJsonData, _T("工程名称"), NULL, NULL);
+    CString sUnit = KsFindFieldValue(gpsObj, s_pJsonData, _T("公司名称"), _T("勘察单位"), _T("单位名称"));
+
+    // 图名 = 剖面编号 + 工程地质剖面图
+    CString sTitle(_T("工程地质剖面图"));
+    {
+        cJSON* cTitle = CUtils::GetJsonObjectItemUtf8(itemObj, _T("标题"));
+        if (cTitle != NULL && cJSON_IsString(cTitle) && cTitle->valuestring != NULL && cTitle->valuestring[0] != '\0')
+        {
+            TCHAR szT[128] = { 0 };
+            if (CUtils::utf8ToTChar(cTitle->valuestring, szT, ARRAYSIZE(szT)))
+            {
+                CString sNo(szT);
+                sNo.Trim();
+                if (!sNo.IsEmpty()) sTitle = sNo + _T("工程地质剖面图");
+            }
+        }
+    }
+
+    bool bProj = KsAddTitleCellText(pModelSpace, sProj, KS_CELL_PROJ, basePt.x, basePt.y);
+    bool bUnit = KsAddTitleCellText(pModelSpace, sUnit, KS_CELL_UNIT, basePt.x, basePt.y);
+    bool bName = KsAddTitleCellText(pModelSpace, sTitle, KS_CELL_TNAME, basePt.x, basePt.y);
+
+    if (pageNo <= 1)
+    {
+        if (!bProj) CUtils::acutPrintf(_T("[剖面图 WARN] 孔数据缺「工程名称」，图签工程名称留空\n"));
+        if (!bUnit) CUtils::acutPrintf(_T("[剖面图 WARN] 孔数据缺「公司名称」，图签勘察单位留空（接口文档字段名：公司名称）\n"));
+        if (!bName) CUtils::acutPrintf(_T("[剖面图 WARN] 图签图名写入失败\n"));
+    }
 }
