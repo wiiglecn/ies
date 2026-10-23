@@ -350,6 +350,7 @@ def _normalize_one_hole(hole_no: str, rows: list) -> dict[str, Any]:
         "depth":              _to_float(_cell(row2, 18)),
         "hole_type":          (str(_cell(row2, 14)).strip() if _cell(row2, 14) is not None else ""),
         "project_name":       (str(_cell(row2, 1)).strip() if _cell(row2, 1) is not None else ""),
+        "company":            (str(_cell(rows[0], 0)).strip() if _cell(rows[0], 0) is not None else ""),
         "site":               (str(_cell(row3, 1)).strip() if _cell(row3, 1) is not None else ""),
         "date_start":         (str(_cell(row3, 11)).strip() if _cell(row3, 11) is not None else ""),
         "date_end":           (str(_cell(row4, 11)).strip() if _cell(row4, 11) is not None else ""),
