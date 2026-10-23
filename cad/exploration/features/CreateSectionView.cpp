@@ -11,6 +11,36 @@
 
 #define PAGE_WIDTH 420.0
 
+// ============ 列布局（表格分格与钻孔柱体共用同一套几何） ============
+// 图纸横向：| 23 页边 | 30 标签列 | <----- 数据/钻孔列区 -----> | 23 页边 |
+//   列区左界 = basePt.x + 23 + 30  → 标尺右缘，也是表格数据区左界
+//   列区右界 = basePt.x + 420 - 23 → 表格数据区右界
+// n 列等分：第 i 列中心 = left + (i+0.5)*pitch
+//   —— 即「把数据区切成 n 份，每根钻孔落在自己那份的正中」
+// ★横向量一律走 center(i)/edge(i)，不要再用「柱右缘 + i×列距」的老写法：
+//   那是「柱右缘锚定」，会让最左柱中心偏到份外、首末格宽度也不均。
+struct KsColLayout
+{
+    int    n;
+    double left;
+    double right;
+    double pitch;
+    double center(int i) const { return left + (i + 0.5) * pitch; }   // 第 i 份正中
+    double edge(int i)   const { return left + i * pitch; }           // 第 i 份左界
+};
+
+static KsColLayout KsMakeColLayout(const AcGePoint3d& basePt, int cols)
+{
+    const double PAGE_LEFT = 23.0;   // 左右页边距
+    const double LABEL_W   = 30.0;   // 表格左侧标签列宽（"孔深/钻孔间距/动探击数"）
+    KsColLayout L;
+    L.n     = (cols > 0) ? cols : 1;
+    L.left  = basePt.x + PAGE_LEFT + LABEL_W;
+    L.right = basePt.x + PAGE_WIDTH - PAGE_LEFT;
+    L.pitch = (L.right - L.left) / L.n;
+    return L;
+}
+
 // 标尺标定基准：drawRuler 计算一次，供 drawColumn/drawLineFix 共用
 struct SectionRulerInfo
 {
@@ -362,8 +392,8 @@ void CCreateSectionView::Execute()
 	//   孔多时自动收窄，避免 6 孔被拆成 "5+1" 两页、末页只剩一个孔挤在左边。
 	const double PAGE_LEFT     = 23.0;   // 左右页边距，与 drawColumn 等函数的 left 一致
 	const double MIN_COL_PITCH = 42.0;   // 最小列距：柱宽 15 + 层底标注约 17 + 余量
-	// 可均分的列宽总和：与各绘制函数 width_per = (PAGE_WIDTH-left*2-30-23*2)/nCols 一致
-	double width_cols_total = PAGE_WIDTH - PAGE_LEFT*2 - 30.0 - 23.0*2;
+	// 可均分的列宽总和：与 KsMakeColLayout 的 (right - left) 一致 = 420-23-30-23
+	double width_cols_total = PAGE_WIDTH - PAGE_LEFT*2 - 30.0;
 	int maxHolesPerPage = (int)(width_cols_total / MIN_COL_PITCH + 1e-6);
 	if (maxHolesPerPage < 1) maxHolesPerPage = 1;
 	CUtils::acutPrintf(_T("[剖面图] 排版参数：可均分列宽 %.1f，最小列距 %.1f → 每页最多 %d 孔\n"),
@@ -706,26 +736,23 @@ void CCreateSectionView::drawTable(AcGePoint3d& basePt, cJSON* gpsObj)
 	}
 	if (n > 0)
 	{
-		// 横向布点（与 drawColumn 完全一致）
-		double width_valid = PAGE_WIDTH - left*2 - 30;
-		double width_per   = (width_valid - 23*2) / n;
-		double left_pre    = basePt.x + left*2 + 30.0;
-		const double COL_W = 15.0;
+		// ★列布局：数据区按本页孔数 n 等分成 n 份，柱体与表格格同源
+		KsColLayout lay = KsMakeColLayout(basePt, n);
 
-		// 钻孔列中心（与 drawColumn 柱中心严格一致）
+		// 钻孔列中心 = 第 i 份的正中（与 drawColumn 柱中心严格一致）
 		std::vector<double> c(n);
-		for (int i = 0; i < n; ++i) c[i] = left_pre + i*width_per - COL_W*0.5;
+		for (int i = 0; i < n; ++i) c[i] = lay.center(i);
 
-		// 数据区 x 范围
-		double dataLeft  = pt1.x + 30.0;
-		double dataRight = pt1.x + width_table;
+		// 数据区 x 范围 = 列区范围
+		double dataLeft  = lay.left;
+		double dataRight = lay.right;
 
-		// 竖向分界线：相邻钻孔柱中心的中点
+		// 竖向分界线：n 等分线（每份的边界，首末格因此与中间格等宽）
 		pt2.y = pt1.y;
 		pt3.y = pt1.y + height*rows;
-		for (int i = 1; i < n; ++i)
+		for (int i = 1; i < lay.n; ++i)
 		{
-			double bx = (c[i-1] + c[i]) * 0.5;
+			double bx = lay.edge(i);
 			if (bx <= dataLeft || bx >= dataRight) continue;
 			pt2.x = bx; pt3.x = bx;
 			CUtils::AddLine(pModelSpace, pt2, pt3);
@@ -903,21 +930,19 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 			
 	cJSON* gpObj = NULL;
 
-	double left=23.0;
-	double width_valid = PAGE_WIDTH-left*2 - 30;
-
 	int gpRows = cJSON_GetArraySize(gpsObj);
 	if (gpRows == 0) return;
-	int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 分页列数
+	int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 本页列数
 	
 	ACHAR* layerName = _T("地质-钻孔");
 	CUtils::EnsureLayer(layerName,true);
 
-	double width_per = (width_valid-23*2) / nCols;
+	// ★列布局：数据区按本页孔数等分，第 i 孔居中于第 i 份
+	KsColLayout lay = KsMakeColLayout(basePt, nCols);
+	const double COL_W = 15.0;
 	double width_b = 3.0;
 
 	AcGePoint3d pt1,pt2;
-	double left_pre = basePt.x+left*2+30.0;
 	int index=0;
 
 	cJSON_ArrayForEach(gpObj, gpsObj){
@@ -947,7 +972,7 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 			totalDepth = CUtils::JsonValToDouble(cTo);
 			double bottom_min = top - totalDepth;
 
-			pt1.x = left_pre+index*width_per;
+			pt1.x = lay.center(index) + COL_W*0.5;      // ★柱右缘 = 本份正中 + 半个柱宽
 			pt1.y = getRuleHeight(rule,bottom_max);
 
 			pt2.x=pt1.x;
@@ -1003,7 +1028,7 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 				double depth = bottomObj->valuedouble;
 				double bottom = top - depth;
 
-				pt1.x = left_pre+index*width_per+3.0;
+				pt1.x = lay.center(index) + COL_W*0.5 + 3.0;
 				double yLabel = getRuleHeight(rule,bottom);
 				if (bHasLastLabel && (lastLabelY - yLabel) < LABEL_GAP)
 				{
@@ -1081,7 +1106,7 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
                                           patName, ARRAYSIZE(patName)))
                 {
 					AcGePoint2d r1,r2,r3,r4;
-					r1.x = left_pre+index*width_per - 15.0;
+					r1.x = lay.center(index) - COL_W*0.5;
 					r1.y = getRuleHeight(rule,secondbottom); 
 
 					r2.x = r1.x + 15.0;
@@ -1124,17 +1149,15 @@ void CCreateSectionView::drawColumn(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
 
 }
 //画钻孔标准表示：孔号（上）— 横线（中）— 孔口高程（下），整体悬在地面线上方
-//位置与 drawColumn 的柱体严格对齐：柱右缘 x = left_pre + index*width_per，柱左缘 = x - 15
+//位置与 drawColumn 的柱体严格对齐：柱右缘 x = 本份正中 + 7.5，柱左缘 = x - 15
 void CCreateSectionView::drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const SectionRulerInfo& rule)
 {
     int gpRows = cJSON_GetArraySize(gpsObj);
     if (gpRows == 0) return;
     int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 分页列数
 
-    double left         = 23.0;
-    double width_valid  = PAGE_WIDTH - left*2 - 30;
-    double width_per    = (width_valid - 23*2) / nCols;
-    double left_pre     = basePt.x + left*2 + 30.0;
+    // ★列布局：数据区按本页孔数等分，第 i 孔居中于第 i 份
+    KsColLayout lay     = KsMakeColLayout(basePt, nCols);
     const double COL_W  = 15.0;               // 柱宽，与 drawColumn / drawLineDrill 一致
 
     ACHAR* layerName = _T("地质-钻孔");
@@ -1158,7 +1181,7 @@ void CCreateSectionView::drawHoleNo(AcGePoint3d& basePt,cJSON* gpsObj,const Sect
         TCHAR szNo[64] = { 0 };
         CUtils::utf8ToTChar(gpObj->valuestring, szNo, ARRAYSIZE(szNo));
 
-        double xR  = left_pre + index*width_per;          // 柱右缘
+        double xR  = lay.center(index) + COL_W*0.5;       // 柱右缘
         double xL  = xR - COL_W;                          // 柱左缘
         double lineY = getRuleHeight(rule, top);          // 地面线 y
 
@@ -1352,10 +1375,8 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
     if (gpRows == 0) return;
     int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 分页列数
 
-    double left         = 23.0;
-    double width_valid  = PAGE_WIDTH - left*2 - 30;
-    double width_per    = (width_valid - 23*2) / nCols;
-    double left_pre     = basePt.x + left*2 + 30.0;
+    // ★列布局：数据区按本页孔数等分，第 i 孔居中于第 i 份
+    KsColLayout lay     = KsMakeColLayout(basePt, nCols);
     const double COL_W  = 15.0;               // 柱宽，与 drawColumn / drawHoleNo 一致
 
     ACHAR* layerName = _T("地质-文字");
@@ -1387,8 +1408,9 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
         // 本页最后一列(最后一根钻孔):土层名称改放柱体左侧并右对齐,
         // 避免名称向右伸出图幅、与右侧高程/标尺等数据重叠
         bool bLastCol = (index == nCols - 1);
-        double x = bLastCol ? (left_pre + index*width_per - COL_W - 1.5)   // 柱左缘左侧
-                            : (left_pre + index*width_per + 1.5);          // 柱右缘右侧
+        double xR = lay.center(index) + COL_W*0.5;                        // 柱右缘
+        double x = bLastCol ? (xR - COL_W - 1.5)                          // 柱左缘左侧
+                            : (xR + 1.5);                                 // 柱右缘右侧
         int hAlign = bLastCol ? DBTA_RIGHT : DBTA_LEFT;
 
         for (int ii = 0; ii < segCount; ++ii)
@@ -1644,10 +1666,8 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
     if (gpRows == 0) return;
     int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 分页列数
 
-    double left = 23.0;
-    double width_valid = PAGE_WIDTH - left*2 - 30;
-    double width_per = (width_valid - 23*2) / nCols;
-    double left_pre = basePt.x + left*2 + 30.0;
+    // ★列布局：数据区按本页孔数等分，第 i 孔居中于第 i 份
+    KsColLayout lay = KsMakeColLayout(basePt, nCols);
 
     ACHAR* symLayer = _T("地质-符号");
     CUtils::EnsureLayer(symLayer, true);
@@ -1668,7 +1688,7 @@ void CCreateSectionView::drawSampleMark(AcGePoint3d& basePt,cJSON* gpsObj,const 
         if (elevationObj == NULL) { index++; continue; }
         double top = CUtils::JsonValToDouble(elevationObj);
 
-        double xC = left_pre + index*width_per - 7.5;   // 柱体水平中心（柱右缘-7.5）
+        double xC = lay.center(index);                  // 柱体水平中心 = 第 i 份正中
 
         std::vector<KsMarkItem> marks;                  // 本孔全部标志
         int segCount = cJSON_GetArraySize(layerObj);
@@ -2100,12 +2120,9 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const S
     int gpRows = cJSON_GetArraySize(gpsObj);
     if (gpRows == 0) return;                 // ★不再要求 2 孔：单孔也画柱内横线
 
-    // ---- 横向布点：与 drawColumn 完全一致 ----
-    double left = 23.0;
-    double width_valid = PAGE_WIDTH - left*2 - 30;
-    int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 分页列数
-    double width_per  = (width_valid - 23*2) / nCols;
-    double left_pre   = basePt.x + left*2 + 30.0;
+    // ---- 横向布点：与 drawColumn / 表格同源（第 i 孔居中于第 i 份）----
+    int nCols = (m_pageCols > gpRows) ? m_pageCols : gpRows;   // 本页列数
+    KsColLayout lay = KsMakeColLayout(basePt, nCols);
     const double COL_W = 15.0;               // 柱宽，与 drawColumn 填充矩形一致
 
     // ---- 1. 解析勘察组所有钻孔 ----
@@ -2119,8 +2136,8 @@ void CCreateSectionView::drawLineDrill(AcGePoint3d& basePt,cJSON* gpsObj,const S
             if (zkObj == NULL) { idx++; continue; }
 
             KsDrillHole hole;
-            hole.x  = left_pre + idx*width_per;
-            hole.xL = hole.x - COL_W;        // ★柱左缘
+            hole.x  = lay.center(idx) + COL_W*0.5;   // 柱右缘
+            hole.xL = hole.x - COL_W;                // ★柱左缘
 
             cJSON* topObj = CUtils::GetJsonObjectItemUtf8(zkObj,_T("孔口高程(m)"));
             if (topObj != NULL) hole.top = CUtils::JsonValToDouble(topObj);
