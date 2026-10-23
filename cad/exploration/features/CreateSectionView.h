@@ -19,7 +19,7 @@ public:
 protected:
 	cJSON* s_ConfigData;
 	PatHatchLoader* patLoader;
-	int m_pageCols;   // 本页固定列数(分页用):>0 时各绘制函数按此列数布点,末页不足则右侧留白;0=按数组实际长度
+	int m_pageCols;   // 本页列数：Execute 按「本页实际钻孔数」赋值，各绘制函数据此把整幅宽度均分给 n 列
 
 
 	//画标注表格（含每个钻孔列的孔深/钻孔间距/动探击数）

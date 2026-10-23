@@ -163,7 +163,7 @@ static bool KsSegDrawn(std::vector<CString>& drawn, double x1, double y1, double
     return false;
 }
 //
-CCreateSectionView::CCreateSectionView(void):CCreateBaseView(),s_ConfigData(NULL),patLoader(NULL)
+CCreateSectionView::CCreateSectionView(void):CCreateBaseView(),s_ConfigData(NULL),patLoader(NULL),m_pageCols(0)
 {
 }
 //
@@ -356,7 +356,19 @@ void CCreateSectionView::Execute()
 	patLoader->RegisterPatFile(cadPatUrl);
 
 	int index = 1;
-	const int HOLES_PER_PAGE = 5;          // 每页钻孔数
+
+	// ★每页孔数不再固定 5 孔（2026-10-23）：每页容量由「图纸可用列宽 / 最小列距」推导，
+	//   页内再按本页实际孔数均分宽度 —— 孔少时孔距自动变宽（2 孔占满整幅），
+	//   孔多时自动收窄，避免 6 孔被拆成 "5+1" 两页、末页只剩一个孔挤在左边。
+	const double PAGE_LEFT     = 23.0;   // 左右页边距，与 drawColumn 等函数的 left 一致
+	const double MIN_COL_PITCH = 42.0;   // 最小列距：柱宽 15 + 层底标注约 17 + 余量
+	// 可均分的列宽总和：与各绘制函数 width_per = (PAGE_WIDTH-left*2-30-23*2)/nCols 一致
+	double width_cols_total = PAGE_WIDTH - PAGE_LEFT*2 - 30.0 - 23.0*2;
+	int maxHolesPerPage = (int)(width_cols_total / MIN_COL_PITCH + 1e-6);
+	if (maxHolesPerPage < 1) maxHolesPerPage = 1;
+	CUtils::acutPrintf(_T("[剖面图] 排版参数：可均分列宽 %.1f，最小列距 %.1f → 每页最多 %d 孔\n"),
+		width_cols_total, MIN_COL_PITCH, maxHolesPerPage);
+
 	cJSON_ArrayForEach(item, items) {
         // 处理每个剖面
         if (item != NULL) 
@@ -366,7 +378,11 @@ void CCreateSectionView::Execute()
 
 			int holeCount = cJSON_GetArraySize(gpsObj);
 			if (holeCount == 0) continue;
-			int pageCount = (holeCount + HOLES_PER_PAGE - 1) / HOLES_PER_PAGE;
+			int pageCount = (holeCount + maxHolesPerPage - 1) / maxHolesPerPage;
+			if (pageCount < 1) pageCount = 1;
+			// ★均分每页孔数：余数摊到前几页，避免末页只剩 1 孔
+			int perPageBase  = holeCount / pageCount;
+			int perPageExtra = holeCount % pageCount;
 
 			// 整条剖面统一算高程范围,保证分页后各页竖向比例一致
 			double max_zk = 0;
@@ -437,11 +453,14 @@ void CCreateSectionView::Execute()
 				elevation_dig,  bHasDig  ? _T("") : _T("(接口未给,不画基础底设计标高线)"),
 				std::ceil(rulerTop));
 
-			// 分页绘制:每页最多 HOLES_PER_PAGE 个钻孔
+			// 分页绘制:每页孔数自适应,页内按本页实际孔数均分整幅宽度
 			for (int pg = 0; pg < pageCount; ++pg)
 			{
-				int startIdx = pg * HOLES_PER_PAGE;
-				int endIdx   = startIdx + HOLES_PER_PAGE;
+				int startIdx = 0;
+				for (int k = 0; k < pg; ++k)
+					startIdx += perPageBase + (k < perPageExtra ? 1 : 0);
+				int pageHoles = perPageBase + (pg < perPageExtra ? 1 : 0);
+				int endIdx    = startIdx + pageHoles;
 				if (endIdx > holeCount) endIdx = holeCount;
 
 				// 本页孔名子数组
@@ -452,7 +471,8 @@ void CCreateSectionView::Execute()
 					if (one != NULL) cJSON_AddItemToArray(pageGps, cJSON_Duplicate(one, 1));
 				}
 
-				m_pageCols = HOLES_PER_PAGE;   // 固定列数,末页不足时右侧留白
+				// ★列数 = 本页实际孔数：孔少则列宽变大(孔距变宽),孔多则自动收窄,不再右侧留白
+				m_pageCols = endIdx - startIdx;
 
 				// 图框图签
 				{
@@ -483,8 +503,8 @@ void CCreateSectionView::Execute()
 				drawLineFix(basePt,item,ruler);
 				drawLineDrill(basePt,pageGps,ruler);
 
-				CUtils::acutPrintf(_T("[剖面图] 第 %d 页:第 %d~%d 个孔(本剖面共 %d 孔,分 %d 页)\n"),
-					index, startIdx+1, endIdx, holeCount, pageCount);
+				CUtils::acutPrintf(_T("[剖面图] 第 %d 页:第 %d~%d 个孔(本剖面共 %d 孔,分 %d 页,本页 %d 列)\n"),
+					index, startIdx+1, endIdx, holeCount, pageCount, endIdx-startIdx);
 
 				basePt.x +=430.0;
 				index ++;
@@ -1364,7 +1384,7 @@ void CCreateSectionView::drawLayerName(AcGePoint3d& basePt,cJSON* gpsObj,const S
         double top = CUtils::JsonValToDouble(elevationObj);
 
         int segCount = cJSON_GetArraySize(layerObj);
-        // 本页最后一列(第 5 个钻孔):土层名称改放柱体左侧并右对齐,
+        // 本页最后一列(最后一根钻孔):土层名称改放柱体左侧并右对齐,
         // 避免名称向右伸出图幅、与右侧高程/标尺等数据重叠
         bool bLastCol = (index == nCols - 1);
         double x = bLastCol ? (left_pre + index*width_per - COL_W - 1.5)   // 柱左缘左侧
