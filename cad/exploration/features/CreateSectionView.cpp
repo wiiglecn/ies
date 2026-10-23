@@ -49,6 +49,7 @@ static KsColLayout KsMakeColLayout(const AcGePoint3d& basePt, int cols)
 //   ¹¤³ÌÃû³Æ  ±êÇ©(233.25,25.86)  Öµ¸ñ x 254.123~415.000  ÐÐ y 23.386~32.579
 //   Í¼¡¡¡¡Ãû  ±êÇ©(235.28,16.77)  Öµ¸ñ x 254.123~323.070  ÐÐ y 14.193~23.386
 // ÖµÒ»ÂÉ¡¸Óë±êÇ©Í¬»ùÏß¡¢×ó¶ÔÆë¡¢ÄÚËõ 2.1¡¹£¬³¬¿í×Ô¶¯Ëõ×Ö¸ß£¨Í¼Ãû¸ñÖ»ÓÐ 69 ¿í£¬ÐèÒªËõ£©¡£
+// ÖµÓÃ TrueType ·ÂËÎ£¨KS_TB_STYLE£©£¬ÒòÎª±êÇ©µÄ STANDARD ÊÇ gbcbig.shx£¬GB2312 ÒÔÍâµÄºº×ÖÈ±×ÖÐÎ¡£
 struct KsTitleCell
 {
     double valueLeft;    // Öµ¸ñ×ó½ç£¨ÎÄ×ÖÆðµã = valueLeft + KS_TB_PAD£©
@@ -61,6 +62,13 @@ static const KsTitleCell KS_CELL_TNAME = { 254.1232, 323.0704, 16.77238 };  // Í
 static const double KS_TB_PAD    = 2.1;      // Öµ¸ñÄÚ×ó±ß¾à£¨Í¼Ç©±êÇ©×ÔÉíµÄÄÚËõÁ¿£©
 static const double KS_TB_HEIGHT = 3.44736;  // ÓëÍ¼Ç©±êÇ©Í¬×Ö¸ß
 static const double KS_TB_MINH   = 2.0;      // ³¤Ãû×Ö×Ô¶¯Ëõ×ÖµÄÏÂÏÞ
+
+// Í¼Ç©Öµ×¨ÓÃÎÄ×ÖÑùÊ½£¨TrueType ·ÂËÎ£©¡£
+// Í¼¿ò×Ô´øµÄ STANDARD ÊÇ txt.shx + gbcbig.shx ¡ª¡ª gbcbig ÊÇ **GB2312 ´ó×ÖÌå£¬Ö»ÓÐ 6763 ¸ö³£ÓÃ×Ö**£¬
+// ¹«Ë¾ÃûÀïµÄ¡¸•N¡¹ÕâÀà GBK À©Õ¹Çøºº×Ö£¨GBK 0x954E£©Ã»ÓÐ×ÖÐÎ£¬CAD »á»­³É "?"£¨2026-10-23 ÓÃ»§·´À¡£©¡£
+// ·ÂËÎ simfang.ttf ¸²¸Ç GBK È«×Ö¼¯£¬ÇÒÓëÍ¼¿òÀï¡¸ÑÒÍÁÃû³Æ / ¸ß³ÌÏµÍ³ / ±ê×¢À¸ÏîÄ¿¡¹µÈÑùÊ½Í¬Ò»×ÖÌå¡£
+static const TCHAR* KS_TB_STYLE = _T("Í¼Ç©ÎÄ×Ö");
+static const TCHAR* KS_TB_FONT  = _T("simfang.ttf");
 
 // ¹À¿í£ººº×Ö/È«½Ç°´ 1.33¡Á×Ö¸ß£¬ASCII °´ 0.60¡Á×Ö¸ß¡£
 // 1.33 ÊÇ 2026-10-23 °´Í¼ÃæÊµ²âÐ£ÕýµÄ£ºSLNormal ÏÂ 7 ¸öºº×Ö£¨¹¤³ÌµØÖÊÆÊÃæÍ¼£©
@@ -90,24 +98,31 @@ static void KsMoveDbText(const AcDbObjectId& id, double x, double y)
     pEnt->close();
 }
 
-// ÍùÍ¼Ç©Öµ¸ñÐ´Ò»ÐÐ£ºÓë±êÇ©Í¬»ùÏß¡¢×ó¶ÔÆë£¬³¬¿í°´±ÈÀýËõ×Ö¸ß£¨²»µÍÓÚ KS_TB_MINH£©
+// ÍùÍ¼Ç©Öµ¸ñÐ´Ò»ÐÐ£ºÓë±êÇ©Í¬»ùÏß¡¢×ó¶ÔÆë£»Ð´ÍêÁ¿Êµ²â¿í¶È£¬³¬¿í°´±ÈÀýËõ×Ö¸ß£¨²»µÍÓÚ KS_TB_MINH£©¡£
+// ¡ï ÑùÊ½ÓÃ TrueType ·ÂËÎ£¨KS_TB_STYLE£©£¬²»ÓÃ STANDARD£ºSTANDARD µÄ gbcbig.shx Ö»ÓÐ GB2312 ³£ÓÃ×Ö£¬
+//   ¹«Ë¾ÃûÀïµÄ¡¸•N¡¹µÈ GBK À©Õ¹×Ö»á±»»­³É "?"¡£ÑùÊ½½¨²»³öÀ´²ÅÍË»Ø STANDARD£¬±£Ö¤ÖÁÉÙ²»Ê§°Ü¡£
 static bool KsAddTitleCellText(AcDbBlockTableRecord* pSpace, const CString& sText,
                                const KsTitleCell& cell, double baseX, double baseY)
 {
     if (sText.IsEmpty()) return false;
 
-    double avail = (cell.valueRight - cell.valueLeft) - KS_TB_PAD * 2.0;
-    double h = KS_TB_HEIGHT;
-    double w = KsTextWidth(sText, h);
-    if (avail > 1.0 && w > avail)
+    const ACHAR* pStyleName = NULL;   // NULL = STANDARD£¨¶µµ×£©
+    if (!CUtils::EnsureTextStyle(KS_TB_STYLE, KS_TB_FONT, 0.0, 1.0).isNull())
+        pStyleName = KS_TB_STYLE;
+    else
     {
-        h = h * avail / w;
-        if (h < KS_TB_MINH) h = KS_TB_MINH;   // Ãû×Ö¹ý³¤Ê±Äþ¿ÉÑ¹µ½×îÐ¡×Ö¸ß£¬Ò²²»½Ø¶Ï
+        static bool s_bWarnTbStyle = false;   // Ö»ÌáÊ¾Ò»´Î£¬±ðÃ¿Ò³Ë¢ÆÁ
+        if (!s_bWarnTbStyle)
+        {
+            s_bWarnTbStyle = true;
+            CUtils::acutPrintf(_T("[ÆÊÃæÍ¼ WARN] ½¨²»³öÎÄ×ÖÑùÊ½¡¸Í¼Ç©ÎÄ×Ö¡¹(%s)£¬Í¼Ç©ÖµÍË»Ø STANDARD£¬")
+                              _T("ÉúÆ§×Ö£¨Èç •N£©¿ÉÄÜÏÔÊ¾Îª ?\n"), KS_TB_FONT);
+        }
     }
 
     AcDbObjectId id = CUtils::AddDbText(pSpace, sText.GetString(),
         AcGePoint3d(baseX + cell.valueLeft + KS_TB_PAD, baseY + cell.baselineY, 0.0),
-        h, NULL, DBTA_LEFT, 1.0);   // NULL ÑùÊ½ = Í¼Ç©±êÇ©Í¬Ò»¸ö STANDARD£¬×ÖÃæ²ÅÒ»ÖÂ
+        KS_TB_HEIGHT, pStyleName, DBTA_LEFT, 1.0);
     if (id.isNull()) return false;
 
     // Í¼²ã 0 + ÑÕÉ« 7£ºÓëÍ¼Ç©×Ô´øµÄ±êÇ©ÍêÈ«Ò»ÖÂ£¨Í¼ÃæÏÔ°×¡¢´òÓ¡ÎªºÚ£©£¬
@@ -118,6 +133,25 @@ static bool KsAddTitleCellText(AcDbBlockTableRecord* pSpace, const CString& sTex
         pEnt->setLayer(_T("0"));
         pEnt->setColorIndex(7);   // 7 = ºÚ/°××ÔÊÊÓ¦
         pEnt->close();
+    }
+
+    // ³¬¿íÐ£Ñé£ºTrueType µÄ×Ö¿íÏµÊýÓë SHX ²»Í¬£¨ºº×ÖÔ¼ 1.0¡Á×Ö¸ß£¬SHX ÊÇ 1.33£©£¬
+    // ²»ÄÜÔÙÓÃ KsTextWidth Ô¤¹À£¬¸Ä³ÉÐ´ÍêÁ¿Êµ²â°üÎ§ºÐ£¬³¬ÁË²Å°´±ÈÀýÑ¹×Ö¸ß¡£
+    double avail = (cell.valueRight - cell.valueLeft) - KS_TB_PAD * 2.0;
+    double w = 0.0, hh = 0.0;
+    if (avail > 1.0 && CUtils::GetEntExtentById(id, w, hh) && w > avail)
+    {
+        double h2 = KS_TB_HEIGHT * avail / w;
+        if (h2 < KS_TB_MINH) h2 = KS_TB_MINH;   // Ãû×Ö¹ý³¤Ê±Äþ¿ÉÑ¹µ½×îÐ¡×Ö¸ß£¬Ò²²»½Ø¶Ï
+        if (h2 < KS_TB_HEIGHT)
+        {
+            AcDbText* pTxt = NULL;
+            if (acdbOpenObject(pTxt, id, AcDb::kForWrite) == Acad::eOk && pTxt != NULL)
+            {
+                pTxt->setHeight(h2);
+                pTxt->close();
+            }
+        }
     }
     return true;
 }
