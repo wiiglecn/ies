@@ -85,6 +85,7 @@ static const ToolRouteInfo toolRoutes[] = {
 
 	{ "/ai/tool/dispatch_command", "dispatch_command", WM_USER_TOOL_CMD },
     { "/ai/tool/get_drawing_units", "get_drawing_units", WM_USER_A_GETDRAWINGUNITS },
+    { "/ai/tool/open_document", "open_document", WM_USER_A_OPEN_DOCUMENT },
 
 	{ "/ai/tool/test", "test", WM_USER_TOOL_TEST },
 
@@ -430,7 +431,10 @@ void HandleAiTool(struct mg_connection* nc,
 		waitResult = WAIT_OBJECT_0;
 	}else{*/
 		pAcadWnd->PostMessage(WM_USER_TOOL, nCommandID, (LPARAM)pData);
-		waitResult = WaitForSingleObject(hEvent, 60*1000); 
+
+		// 打开图纸可能耗时较长（大图纸/网络路径），单独放宽超时时间
+		DWORD dwWaitTimeout = (nCommandID == WM_USER_A_OPEN_DOCUMENT) ? (5 * 60 * 1000) : (60 * 1000);
+		waitResult = WaitForSingleObject(hEvent, dwWaitTimeout); 
 	//}
 
      // 6. Wait for the event to be signaled by the main thread
@@ -453,9 +457,22 @@ void HandleAiTool(struct mg_connection* nc,
             //cJSON_AddStringToObject(responseRoot, "message", "Tool executed successfully");
             
         } else {
-            // No specific data returned
+            // 工具可把失败原因写入 resultJson.message，这里透传给调用方
             cJSON_AddStringToObject(responseRoot, "status", "error");
-            cJSON_AddStringToObject(responseRoot, "message", "Failed to execute");
+
+            cJSON* pMessageItem = NULL;
+            if (pData->resultJson != NULL && cJSON_IsObject(pData->resultJson))
+                pMessageItem = cJSON_GetObjectItem(pData->resultJson, "message");
+
+            if (pMessageItem != NULL && cJSON_IsString(pMessageItem) && pMessageItem->valuestring != NULL)
+                cJSON_AddStringToObject(responseRoot, "message", pMessageItem->valuestring);
+            else
+                cJSON_AddStringToObject(responseRoot, "message", "Failed to execute");
+
+            if (pData->resultJson != NULL) {
+                cJSON_AddItemToObject(responseRoot, "error", pData->resultJson);
+                pData->resultJson = NULL;
+            }
         }
 
         // Serialize the JSON object to a string

@@ -43,3 +43,14 @@
 请求体：“{}”
 ```
 
+4、打开 CAD 图纸
+
+```
+/ai/tool/open_document
+请求体：{"path":"D:/project","fileName":"plan.dwg"}
+或：    {"filePath":"D:/project/plan.dwg"}
+返回：  {"status":"success","data":{"filePath":"D:\\project\\plan.dwg","fileName":"plan.dwg","alreadyOpen":false,"documentCount":2}}
+```
+
+> 说明：仅支持 `.dwg` / `.dxf`；需在 AutoCAD 空闲（无命令执行、无模态对话框）时调用，否则返回错误提示稍后重试；若该图纸已打开则直接激活；打开过程中弹出的对话框（缺少字体、外部参照等）需人工处理。
+

@@ -54,7 +54,7 @@
 
 ## 3. AI Tools 功能清单（tools.json）
 
-共 **62 个工具**，按功能分为八大类。
+共 **63 个工具**，按功能分为八大类。
 
 ### 3.1 绘图类（15 个）
 
@@ -178,13 +178,38 @@
 - 通过 `acDocManager->sendStringToExecute()` 向当前文档发送 AutoCAD 命令字符串实现。
 - 代码中另实现有 `get_screenshot`（截取视口图像，GDI BitBlt + Base64 编码，返回 BMP 数据），**但未在 tools.json 中注册**，如需暴露给 AI 请补充声明。
 
-### 3.8 系统命令类（1 个）
+### 3.8 系统命令类（2 个）
 
 | 工具名 | 功能 | 主要参数 |
 |--------|------|----------|
 | `dispatch_command` | 直接执行任意 AutoCAD 命令 | `cmd`（如 `_u`、`_r`），可选 `args[]`（字符串/数字） |
+| `open_document` | 打开 DWG/DXF 图纸并激活为当前文档 | `filePath`（完整路径）或 `path` + `fileName` |
 
 > ⚠️ `dispatch_command` 为兜底通道，可执行任何 CAD 命令，AI 调用时需注意命令合法性校验。
+
+**`open_document` 说明**（`ToolGlobal::open_document`，路由 `POST /ai/tool/open_document`）：
+
+- **入参**：`filePath` 优先（如 `D:/project/plan.dwg`）；也可用 `path`（目录）+ `fileName`（文件名，含扩展名）拼接。字段兼容下划线写法 `file_path` / `file_name`。
+- **流程**：
+  1. 转为绝对路径，校验文件存在、不是目录、扩展名为 `.dwg` / `.dxf`；
+  2. 校验 `acDocManager->isApplicationContext()`（`appContextOpenDocument()` 只能在应用上下文中调用）；
+  3. 若图纸已在 AutoCAD 中打开，则 `activateDocument()` 直接激活；否则调用 `acDocManager->appContextOpenDocument()` 打开；
+  4. 返回 `filePath` / `fileName` / `alreadyOpen` / `documentCount`。
+- **限制**：命令或模态对话框执行期间不满足应用上下文，接口返回错误并提示稍后重试；该接口 HTTP 等待时间放宽为 5 分钟（普通工具为 60 秒）。
+- **注意**：打开过程中若 AutoCAD 弹出对话框（缺少字体、代理对象、外部参照未找到等），需人工处理，HTTP 请求会一直等待到超时。
+
+**请求 / 响应示例：**
+
+```json
+// POST http://localhost:7100/ai/tool/open_document
+{"path": "D:/project", "fileName": "plan.dwg"}
+
+// 成功
+{"status":"success","data":{"filePath":"D:\\project\\plan.dwg","fileName":"plan.dwg","alreadyOpen":false,"documentCount":2}}
+
+// 失败（文件不存在）
+{"status":"error","message":"file not found: D:\\project\\plan.dwg","error":{"message":"file not found: D:\\project\\plan.dwg","code":-3}}
+```
 
 ## 4. 定制业务功能
 
@@ -249,7 +274,7 @@ exploration/
 │   ├── ToolDrawBase.*       # 工具基类
 │   └── ...
 ├── res/
-│   ├── tools.json           # AI Tools 能力清单（62 个工具）
+│   ├── tools.json           # AI Tools 能力清单（63 个工具）
 │   └── tool.md              # 本文档
 ├── CLineHolePlacer.*        # 定制排孔功能
 ├── utils.*                  # 公用工具函数

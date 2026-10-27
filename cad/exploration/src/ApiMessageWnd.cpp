@@ -231,6 +231,9 @@ LRESULT CApiMessageWnd::HandleApiCommand(WPARAM wParam, LPARAM lParam)
         case WM_USER_A_GETDRAWINGUNITS:
             ToolGlobal::getInstance().get_drawing_units(params);
             break;
+        case WM_USER_A_OPEN_DOCUMENT:
+            ToolGlobal::getInstance().open_document(params);
+            break;
 
         case WM_USER_A_REGEN:
             ToolDraw::getInstance().regen();

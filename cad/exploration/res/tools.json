@@ -1005,6 +1005,31 @@
     {
         "type": "function",
         "function": {
+            "name": "open_document",
+            "description": "Opens a DWG/DXF drawing in AutoCAD and makes it the current document. If the drawing is already open it is activated instead. Provide either filePath (full path) or path + fileName. The call fails while a command or modal dialog is active.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filePath": {
+                        "type": "string",
+                        "description": "Full path of the drawing file, for example D:/project/plan.dwg (backslashes are also accepted). Takes precedence over path + fileName."
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": "Folder that contains the drawing, for example D:/project. Used together with fileName when filePath is absent."
+                    },
+                    "fileName": {
+                        "type": "string",
+                        "description": "Drawing file name with extension, for example plan.dwg"
+                    }
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "block_list",
             "description": "Lists all block definitions in the current AutoCAD drawing. Returns a JSON array of objects containing block name, handle, and flags.",
             "parameters": {

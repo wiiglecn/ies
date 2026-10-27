@@ -218,3 +218,208 @@ void ToolGlobal::CreateColumnView()
 	CCreateColumnView view;
 	view.Execute();
 }
+
+// ---------------------------------------------------------------------------
+// open_document: opens a drawing file (DWG/DXF) in the application context.
+//   request : {"filePath":"D:/dir/a.dwg"} or {"path":"D:/dir","fileName":"a.dwg"}
+//   response: {"status":"success","data":{"filePath":...,"fileName":...,
+//              "alreadyOpen":false,"documentCount":2}}
+//   note    : AcApDocManager::appContextOpenDocument() may only be called from
+//             the application context, so this handler is dispatched to the CAD
+//             main thread through WM_USER_A_OPEN_DOCUMENT.
+// ---------------------------------------------------------------------------
+static bool KsGetJsonText(cJSON* pRoot, const char* pszKey, std::string& strOut)
+{
+    if (pRoot == NULL || pszKey == NULL)
+        return false;
+
+    cJSON* pItem = cJSON_GetObjectItem(pRoot, pszKey);
+    if (pItem == NULL || !cJSON_IsString(pItem) || pItem->valuestring == NULL)
+        return false;
+    if (pItem->valuestring[0] == '\0')
+        return false;
+
+    strOut = pItem->valuestring;
+    return true;
+}
+
+// Case-insensitive path compare with unified separators.
+static bool KsIsSameFilePath(const CString& strLeftIn, const CString& strRightIn)
+{
+    CString strLeft(strLeftIn);
+    CString strRight(strRightIn);
+    strLeft.Replace(_T('/'), _T('\\'));
+    strRight.Replace(_T('/'), _T('\\'));
+    return strLeft.CompareNoCase(strRight) == 0;
+}
+
+static CString KsOpenDocumentStatusText(Acad::ErrorStatus es)
+{
+    switch (es) {
+    case Acad::eFileNotFound:
+        return CString(_T("file not found"));
+    case Acad::eFileAccessErr:
+        return CString(_T("file is locked or access denied"));
+    case Acad::eInvalidDwgVersion:
+        return CString(_T("unsupported drawing version"));
+    default:
+        break;
+    }
+
+    CString strText;
+    strText.Format(_T("open failed (Acad::ErrorStatus = %d)"), (int)es);
+    return strText;
+}
+
+// Fill the failure result; HandleAiTool forwards resultJson.message to the reply.
+static void KsSetOpenDocumentError(AiToolCommandData* pData, const CString& strMessage, int nCode)
+{
+    if (pData == NULL)
+        return;
+
+    cJSON* pResult = cJSON_CreateObject();
+    if (pResult != NULL) {
+        std::string strUtf8 = CUtils::CStringToUTF8(strMessage);
+        cJSON_AddStringToObject(pResult, "message", strUtf8.c_str());
+        cJSON_AddNumberToObject(pResult, "code", nCode);
+        pData->resultJson = pResult;
+    }
+
+    pData->ret = 1;
+    CUtils::acutPrintf(_T("[7100] open_document error(%d): %s\n"), nCode, strMessage.GetString());
+}
+
+void ToolGlobal::open_document(AiToolCommandData* data)
+{
+    if (data == NULL || data->jsonRoot == NULL) {
+        if (data != NULL)
+            data->ret = 1;
+        return;
+    }
+
+    // 1. Collect parameters: filePath first, otherwise path + fileName.
+    std::string strFilePath;
+    if (!KsGetJsonText(data->jsonRoot, "filePath", strFilePath))
+        KsGetJsonText(data->jsonRoot, "file_path", strFilePath);
+
+    std::string strFileName;
+    if (!KsGetJsonText(data->jsonRoot, "fileName", strFileName))
+        KsGetJsonText(data->jsonRoot, "file_name", strFileName);
+
+    std::string strFolder;
+    if (!KsGetJsonText(data->jsonRoot, "path", strFolder))
+        KsGetJsonText(data->jsonRoot, "folder", strFolder);
+
+    if (strFilePath.empty()) {
+        if (strFileName.empty()) {
+            KsSetOpenDocumentError(data, CString(_T("missing parameter: fileName (or filePath)")), -1);
+            return;
+        }
+
+        strFilePath = strFolder;
+        if (!strFilePath.empty()) {
+            char cLast = strFilePath[strFilePath.size() - 1];
+            if (cLast != '\\' && cLast != '/')
+                strFilePath += '\\';
+        }
+        strFilePath += strFileName;
+    }
+
+    // 2. Convert UTF-8 to TCHAR and resolve the absolute path.
+    TCHAR szPath[MAX_PATH * 2] = { 0 };
+    if (!CUtils::utf8ToTChar(strFilePath.c_str(), szPath, ARRAYSIZE(szPath))) {
+        KsSetOpenDocumentError(data, CString(_T("path is too long or contains invalid characters")), -2);
+        return;
+    }
+
+    TCHAR szFullPath[MAX_PATH * 2] = { 0 };
+    DWORD dwFullLen = ::GetFullPathName(szPath, ARRAYSIZE(szFullPath), szFullPath, NULL);
+
+    CString strFullPath;
+    if (dwFullLen > 0 && dwFullLen < ARRAYSIZE(szFullPath))
+        strFullPath = szFullPath;
+    else
+        strFullPath = szPath;
+
+    // 3. Validate: the file must exist and be a DWG/DXF drawing.
+    DWORD dwAttr = ::GetFileAttributes(strFullPath);
+    if (dwAttr == INVALID_FILE_ATTRIBUTES) {
+        KsSetOpenDocumentError(data, CString(_T("file not found: ")) + strFullPath, -3);
+        return;
+    }
+    if ((dwAttr & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+        KsSetOpenDocumentError(data, CString(_T("path is a directory, not a drawing file: ")) + strFullPath, -4);
+        return;
+    }
+
+    int nDot = strFullPath.ReverseFind(_T('.'));
+    int nSep = strFullPath.ReverseFind(_T('\\'));
+    if (nSep < 0)
+        nSep = strFullPath.ReverseFind(_T('/'));
+
+    CString strExt;
+    if (nDot > nSep)
+        strExt = strFullPath.Mid(nDot);
+    if (strExt.CompareNoCase(_T(".dwg")) != 0 && strExt.CompareNoCase(_T(".dxf")) != 0) {
+        KsSetOpenDocumentError(data, CString(_T("only .dwg / .dxf files can be opened: ")) + strFullPath, -5);
+        return;
+    }
+
+    // 4. appContextOpenDocument() only works in the application context.
+    if (acDocManager == NULL) {
+        KsSetOpenDocumentError(data, CString(_T("document manager is not available")), -6);
+        return;
+    }
+    if (!acDocManager->isApplicationContext()) {
+        KsSetOpenDocumentError(data, CString(_T("AutoCAD is busy (a command or dialog is running), please retry later")), -7);
+        return;
+    }
+
+    // 5. Activate the document directly if it is already open.
+    AcApDocument* pExistingDoc = NULL;
+    AcApDocumentIterator* pIter = acDocManager->newAcApDocumentIterator();
+    if (pIter != NULL) {
+        for (; !pIter->done(); pIter->step()) {
+            AcApDocument* pDoc = pIter->document();
+            if (pDoc == NULL || pDoc->fileName() == NULL)
+                continue;
+            if (KsIsSameFilePath(CString(pDoc->fileName()), strFullPath)) {
+                pExistingDoc = pDoc;
+                break;
+            }
+        }
+        delete pIter;
+    }
+
+    bool bAlreadyOpen = false;
+    if (pExistingDoc != NULL) {
+        acDocManager->activateDocument(pExistingDoc);
+        bAlreadyOpen = true;
+    } else {
+        Acad::ErrorStatus es = acDocManager->appContextOpenDocument(strFullPath);
+        if (es != Acad::eOk) {
+            KsSetOpenDocumentError(data, KsOpenDocumentStatusText(es) + CString(_T(": ")) + strFullPath, (int)es);
+            return;
+        }
+    }
+
+    // 6. Build the response.
+    CString strFileNameOut(strFullPath);
+    int nNamePos = strFullPath.ReverseFind(_T('\\'));
+    if (nNamePos >= 0)
+        strFileNameOut = strFullPath.Mid(nNamePos + 1);
+
+    cJSON* pResult = cJSON_CreateObject();
+    if (pResult != NULL) {
+        std::string strUtf8Path = CUtils::CStringToUTF8(strFullPath);
+        std::string strUtf8Name = CUtils::CStringToUTF8(strFileNameOut);
+        cJSON_AddStringToObject(pResult, "filePath", strUtf8Path.c_str());
+        cJSON_AddStringToObject(pResult, "fileName", strUtf8Name.c_str());
+        cJSON_AddBoolToObject(pResult, "alreadyOpen", bAlreadyOpen ? 1 : 0);
+        cJSON_AddNumberToObject(pResult, "documentCount", acDocManager->documentCount());
+        data->resultJson = pResult;
+    }
+
+    data->ret = 0;
+    CUtils::acutPrintf(_T("[7100] open_document ok: %s\n"), strFullPath.GetString());
+}

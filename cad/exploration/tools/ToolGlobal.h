@@ -10,6 +10,7 @@ public:
     
     void dispatch_command(AiToolCommandData* data);
     void get_drawing_units(AiToolCommandData* data);
+    void open_document(AiToolCommandData* data);
 
 
     static void CMD();
