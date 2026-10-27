@@ -36,7 +36,7 @@ static const FieldMap s_fieldMap[] = {
     { _T("[page_no]"),   _T("当前页"), _T(""), JV_STRING, _T("1") },
     { _T("[page_count]"),  _T("总页码"),  _T(""), JV_STRING, _T("1") },
     { _T("[project_name]"),  _T("工程名称"),  _T(""), JV_STRING, _T("") },
-    { _T("[project_no]"),  _T(""),  _T(""), JV_STRING , _T("") },
+    { _T("[project_no]"),  _T("工程编号"),  _T(""), JV_STRING , _T("") },
     { _T("[hole_no]"),  _T("钻孔编号"), _T(""), JV_STRING, _T("") },
     { _T("[elevation]"),  _T("孔口高程(m)"),  _T(""), JV_NUMBER, _T("") },
     { _T("[diameter]"),  _T(""),  _T(""), JV_STRING, _T("") },
